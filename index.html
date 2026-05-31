@@ -1,0 +1,1999 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHN - Dashboard Báo cáo ODO Xe Tải</title>
+    <meta name="description" content="Hệ thống theo dõi báo cáo ODO xe tải GHN - Khu vực Miền Bắc">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ============================================ */
+        /*  CSS - PHẦN GIAO DIỆN (Không cần chỉnh sửa) */
+        /* ============================================ */
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #1a1d27;
+            --bg-card: #21242f;
+            --bg-card-hover: #282c3a;
+            --border: #2d3143;
+            --text-primary: #e8eaed;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --success: #22c55e;
+            --success-bg: rgba(34, 197, 94, 0.1);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.1);
+            --info: #3b82f6;
+            --info-bg: rgba(59, 130, 246, 0.1);
+            --gradient-1: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --gradient-2: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            --gradient-3: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            --gradient-4: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 40%, rgba(34, 197, 94, 0.03) 0%, transparent 50%);
+            z-index: 0;
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-2%, -2%); }
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; position: relative; z-index: 1; }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 32px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .logo {
+            width: 52px; height: 52px;
+            background: linear-gradient(180deg, #4a9bd9 0%, #1a6fb5 50%, #0d5a9e 100%);
+            border-radius: 10px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 14px; color: white;
+            box-shadow: 0 4px 15px rgba(26, 111, 181, 0.4);
+            position: relative;
+            letter-spacing: 1px;
+        }
+        .logo svg {
+            width: 22px; height: 16px;
+            fill: white;
+            margin-bottom: 1px;
+        }
+        .header h1 { font-size: 22px; font-weight: 700; }
+        .header p { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+        .header-right { display: flex; align-items: center; gap: 12px; flex-direction: column; }
+        .status-badge {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 14px; border-radius: 20px;
+            font-size: 12px; font-weight: 500;
+            background: var(--success-bg); color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Warehouse tags */
+        .warehouse-tags {
+            display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;
+        }
+        .wh-tag {
+            padding: 3px 10px; border-radius: 12px;
+            font-size: 10px; font-weight: 600;
+            background: var(--info-bg); color: var(--info);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex; gap: 12px; margin-bottom: 24px;
+            flex-wrap: wrap; align-items: center;
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        select, input[type="month"] {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 160px;
+        }
+        select:hover, input:hover { border-color: var(--accent); }
+        select:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+        /* Stat Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent);
+            box-shadow: var(--shadow);
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+        }
+        .stat-card:nth-child(1)::before { background: var(--gradient-1); }
+        .stat-card:nth-child(2)::before { background: var(--gradient-2); }
+        .stat-card:nth-child(3)::before { background: var(--gradient-3); }
+        .stat-card:nth-child(4)::before { background: var(--gradient-4); }
+        .stat-card:nth-child(5)::before { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .stat-icon {
+            width: 44px; height: 44px;
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; margin-bottom: 16px;
+        }
+        .stat-card:nth-child(1) .stat-icon { background: rgba(99, 102, 241, 0.15); }
+        .stat-card:nth-child(2) .stat-icon { background: var(--success-bg); }
+        .stat-card:nth-child(3) .stat-icon { background: var(--warning-bg); }
+        .stat-card:nth-child(4) .stat-icon { background: var(--danger-bg); }
+        .stat-card:nth-child(5) .stat-icon { background: var(--info-bg); }
+        .stat-value { font-size: 32px; font-weight: 800; margin-bottom: 4px; }
+        .stat-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+
+        /* Sections */
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        .section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        .section-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .section-body { padding: 0; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; }
+        thead th {
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        tbody td {
+            padding: 12px 16px;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(45, 49, 67, 0.5);
+            transition: background 0.2s;
+        }
+        tbody tr:hover td { background: var(--bg-card-hover); }
+        .table-scroll { max-height: 500px; overflow-y: auto; }
+        .table-scroll::-webkit-scrollbar { width: 6px; }
+        .table-scroll::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        .table-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* Badges */
+        .badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 10px; border-radius: 6px;
+            font-size: 11px; font-weight: 600;
+        }
+        .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(34,197,94,0.2); }
+        .badge-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+        .badge-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(245,158,11,0.2); }
+        .badge-info { background: var(--info-bg); color: var(--info); border: 1px solid rgba(59,130,246,0.2); }
+
+        /* Progress bar */
+        .progress-bar-container {
+            width: 100%; height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease-out;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 20px; border: none; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: var(--gradient-1); color: white;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--accent-glow); }
+        .btn-danger { background: var(--gradient-4); color: white; }
+        .btn-success { background: var(--gradient-2); color: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+        /* Ranking cards */
+        .ranking-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; padding: 20px 24px; }
+        .ranking-card { background: var(--bg-secondary); border-radius: var(--radius-sm); padding: 16px; border: 1px solid var(--border); }
+        .ranking-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .rank-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 6px;
+            transition: background 0.2s;
+        }
+        .rank-item:hover { background: var(--bg-card); }
+        .rank-num {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 800; color: white;
+            flex-shrink: 0;
+        }
+        .rank-1 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .rank-2 { background: linear-gradient(135deg, #9ca3af, #6b7280); }
+        .rank-3 { background: linear-gradient(135deg, #92400e, #78350f); }
+        .rank-info { flex: 1; min-width: 0; }
+        .rank-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rank-detail { font-size: 11px; color: var(--text-muted); }
+        .rank-pct { font-size: 15px; font-weight: 800; flex-shrink: 0; }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 24px;
+            display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-icon { font-size: 24px; }
+        .toast-msg { font-size: 13px; font-weight: 500; }
+
+        /* Loading */
+        .loading-overlay {
+            display: flex; align-items: center; justify-content: center;
+            padding: 60px;
+            flex-direction: column; gap: 16px;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 4px; padding: 4px; background: var(--bg-secondary); border-radius: var(--radius-sm); }
+        .tab {
+            padding: 8px 18px; border-radius: 6px; border: none;
+            background: transparent; color: var(--text-secondary);
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            font-family: 'Inter', sans-serif; transition: all 0.2s;
+        }
+        .tab.active { background: var(--accent); color: white; }
+        .tab:hover:not(.active) { color: var(--text-primary); background: var(--bg-card); }
+
+        /* Refresh countdown */
+        .countdown { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+        @media (max-width: 768px) {
+            .header { flex-direction: column; gap: 12px; text-align: center; padding: 16px; }
+            .filter-bar { flex-direction: column; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .ranking-grid { grid-template-columns: 1fr; }
+            .container { padding: 10px; }
+        }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state p { font-size: 14px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <!-- ========== HEADER ========== -->
+    <header class="header" id="header">
+        <div class="header-left">
+            <div class="logo">
+                <svg viewBox="0 0 24 18" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6h-3V2c0-.6-.4-1-1-1H2c-.6 0-1 .4-1 1v11c0 .6.4 1 1 1h1.1c.4 1.2 1.5 2 2.9 2s2.5-.8 2.9-2h4.2c.4 1.2 1.5 2 2.9 2s2.5-.8 2.9-2H21c.6 0 1-.4 1-1V9c0-1.7-1.3-3-3-3zM6 14.5c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5zm10 0c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5zm4-3h-1v-3h-2V7h3c.6 0 1 .4 1 1v3.5z"/>
+                </svg>
+                GHN
+            </div>
+            <div>
+                <h1>Dashboard Báo cáo ODO</h1>
+                <p>Giao hàng nặng cồng kềnh — Quản lý 4 Kho Miền Bắc</p>
+                <div class="warehouse-tags">
+                    <span class="wh-tag">🏭 Hải Dương</span>
+                    <span class="wh-tag">🏭 Hải Phòng</span>
+                    <span class="wh-tag">🏭 Hưng Yên</span>
+                    <span class="wh-tag">🏭 Thái Bình</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span id="lastRefresh">Đang tải...</span>
+            </div>
+            <span class="countdown" id="countdown"></span>
+        </div>
+    </header>
+
+    <!-- ========== BỘ LỌC ========== -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label">Kỳ đối soát (26→25)</span>
+            <input type="month" id="filterMonth">
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Kho</span>
+            <select id="filterWarehouse">
+                <option value="">Tất cả 4 kho</option>
+                <option value="Hải Dương">Kho Hải Dương</option>
+                <option value="Hải Phòng">Kho Hải Phòng</option>
+                <option value="Hưng Yên">Kho Hưng Yên</option>
+                <option value="Thái Bình">Kho Thái Bình</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Nhân viên</span>
+            <select id="filterEmployee">
+                <option value="">Tất cả nhân viên</option>
+            </select>
+        </div>
+        <div class="filter-group" style="align-self: flex-end;">
+            <button class="btn btn-primary" onclick="sendTelegramReport()">
+                📤 Gửi báo cáo Telegram
+            </button>
+        </div>
+        <div class="filter-group" style="align-self: flex-end;">
+            <button class="btn btn-success" onclick="loadAllData()">
+                🔄 Làm mới dữ liệu
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ========== TABS ========== -->
+    <div style="margin-bottom: 24px; display: flex; justify-content: center;">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('daily', this)">📋 Bảng theo dõi</button>
+            <button class="tab" onclick="switchTab('ranking', this)">👤 Danh sách NV</button>
+            <button class="tab" onclick="switchTab('fraud', this)">🚨 Cảnh báo gian lận <span class="badge badge-danger" id="fraudBadge" style="margin-left:4px;font-size:11px;">0</span></button>
+            <button class="tab" onclick="switchTab('typo', this)">⚠️ Cảnh báo gõ sai <span class="badge badge-danger" id="typoBadge" style="margin-left:4px;font-size:11px;">0</span></button>
+        </div>
+    </div>
+
+    <!-- ========== TAB: BẢNG THEO DÕI HÀNG NGÀY ========== -->
+    <div class="section" id="tabDaily">
+        <div class="section-header">
+            <div class="section-title">📋 Bảng theo dõi báo cáo ODO theo ngày</div>
+            <span class="badge badge-info" id="totalRecords">0 bản ghi</span>
+        </div>
+        <div class="section-body">
+            <div class="table-scroll" id="dailyTableContainer">
+                <div class="loading-overlay" id="loadingDaily">
+                    <div class="spinner"></div>
+                    <span style="color: var(--text-muted); font-size: 13px;">Đang tải dữ liệu từ Google Sheet...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== TAB: XẾP HẠNG NHÂN VIÊN ========== -->
+    <div class="section" id="tabRanking" style="display:none;">
+        <div class="section-header">
+            <div class="section-title">👤 Danh sách nhân viên theo kho</div>
+        </div>
+        <div class="section-body">
+            <div class="ranking-grid" id="rankingGrid">
+                <div class="loading-overlay"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== TAB: CẢNH BÁO GÕ SAI ========== -->
+    <div class="section" id="tabTypo" style="display:none;">
+        <div class="section-header">
+            <div class="section-title">⚠️ Cảnh báo nhân viên gõ sai tên / mã NV / biển số</div>
+            <span class="badge badge-danger" id="typoCount">0 lỗi</span>
+        </div>
+        <div class="section-body">
+            <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">
+                Hệ thống so sánh tần suất xuất hiện của tên + mã NV + biển số. Tổ hợp xuất hiện nhiều nhất = <strong style="color:var(--success);">đúng</strong>.
+                Tổ hợp tương tự nhưng khác 1-2 ký tự = <strong style="color:var(--danger);">nghi ngờ gõ sai</strong>. Bấm "Sửa" để mở Google Sheet tại dòng đó.
+            </p>
+            <div class="table-scroll" id="typoTableContainer">
+                <div class="empty-state"><div class="icon">✅</div><p>Đang phân tích...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== TAB: CẢNH BÁO GIAN LẬN ========== -->
+    <div class="section" id="tabFraud" style="display:none;">
+        <div class="section-header">
+            <div class="section-title">🚨 Cảnh báo gian lận</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <span class="badge badge-danger" id="fraudCount">0 trường hợp</span>
+                <button class="btn btn-primary" onclick="sendFraudTelegram()" style="padding:6px 14px;font-size:12px;">
+                    📤 Gửi lên Telegram
+                </button>
+            </div>
+        </div>
+        <div class="section-body">
+            <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">
+                Danh sách các bản ghi có <strong style="color:var(--danger);">Km > 200</strong> hoặc <strong style="color:var(--danger);">Tăng ca > 3 tiếng</strong>.
+                Cần kiểm tra xác minh tính chính xác của dữ liệu.
+            </p>
+            <div class="table-scroll" id="fraudTableContainer">
+                <div class="empty-state"><div class="icon">✅</div><p>Đang phân tích...</p></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast">
+    <span class="toast-icon" id="toastIcon">✅</span>
+    <span class="toast-msg" id="toastMsg">Thao tác thành công!</span>
+</div>
+
+<script>
+/* ==============================================
+   JAVASCRIPT - PHẦN XỬ LÝ DỮ LIỆU
+   
+   CHÚ THÍCH CHO NGƯỜI KHÔNG BIẾT CODE:
+   - Phần này tự động chạy, bạn KHÔNG cần chỉnh sửa
+   - Nếu link Google Sheet thay đổi, chỉ cần sửa phần CONFIG bên dưới
+   ============================================== */
+
+// ====== CẤU HÌNH (Config) ======
+const CONFIG = {
+    // Link Google Sheet dữ liệu nhân viên điền ODO
+    SHEET_EMPLOYEE_ID: '1vI_rzcjX6F12SOm06QvEo9W2s5kiDjYcRtvm2kWuCXo',
+    SHEET_EMPLOYEE_GID: '409459817',
+
+    // Link Google Sheet đối soát nhà cung cấp xe
+    SHEET_SUPPLIER_ID: '14zXhTqxD7VsN_PE3OxNY7hLss8zxG4zUNT_cNN9QV90',
+    SHEET_SUPPLIER_GID: '0',
+
+    // Link Google Sheet danh sách NV chuẩn (master list)
+    SHEET_MASTER_ID: '1RMe38TNV-EoIAradnynYmk8mt7l9pNWqJELM9O84Wxc',
+    SHEET_MASTER_GID: '1254809645',
+
+    // Telegram Bot
+    TELEGRAM_TOKEN: '8261927820:AAGQ5__xC6fdh6eegzmxWnA_EyFRneu6deQ',
+    TELEGRAM_CHAT_ID: '-1002346875748',
+
+    // Tự động refresh mỗi 30 phút (đơn vị: miligiây)
+    REFRESH_INTERVAL: 30 * 60 * 1000,
+};
+
+// ====== 4 KHO ANH QUẢN LÝ ======
+// Bảng đối chiếu tên kho: tên dài (NV điền) ↔ tên ngắn (file NCC)
+const MY_WAREHOUSES = {
+    'Hải Dương': ['Kho Giao Hàng Nặng Hải Dương', 'Kho GXT Hải Dương'],
+    'Hải Phòng': ['Kho Giao Hàng Nặng Hải Phòng', 'Kho GXT Hải Phòng'],
+    'Hưng Yên':  ['Kho Giao Hàng Nặng Hưng Yên',  'Kho GXT Hưng Yên',
+                  'Kho Giao Hàng Nặng Miền Bắc',   'Kho GXT Miền Bắc',
+                  'Kho Giao Hàng Nặng Miền Bắng',  'Kho GXT Miền Bắng'],
+    'Thái Bình': ['Kho Giao Hàng Nặng Thái Bình',  'Kho GXT Thái Bình'],
+};
+
+// Hàm bỏ dấu tiếng Việt → ASCII (để so sánh không bị lỗi Unicode)
+function removeDiacritics(str) {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().trim();
+}
+
+// Hàm chuẩn hóa Unicode tiếng Việt
+function norm(str) {
+    return str ? str.normalize('NFC').toLowerCase().trim() : '';
+}
+
+// 4 kho: dùng từ khóa ASCII để match chắc chắn (tránh lỗi Unicode)
+const WAREHOUSE_KEYWORDS = {
+    'Hải Dương': ['hai duong'],
+    'Hải Phòng': ['hai phong'],
+    'Hưng Yên':  ['hung yen', 'mien bac', 'mien bang'],
+    'Thái Bình': ['thai binh'],
+};
+
+// Hàm kiểm tra 1 tên kho có thuộc 4 kho của mình không
+function isMyWarehouse(warehouseName) {
+    if (!warehouseName) return false;
+    const ascii = removeDiacritics(warehouseName);
+    for (const keywords of Object.values(WAREHOUSE_KEYWORDS)) {
+        if (keywords.some(kw => ascii.includes(kw))) return true;
+    }
+    return false;
+}
+
+// Hàm rút gọn tên kho cho gọn gàng
+function shortWarehouse(warehouseName) {
+    if (!warehouseName) return '';
+    const ascii = removeDiacritics(warehouseName);
+    for (const [short, keywords] of Object.entries(WAREHOUSE_KEYWORDS)) {
+        if (keywords.some(kw => ascii.includes(kw))) return short;
+    }
+    return warehouseName;
+}
+
+// ====== CHUẨN HÓA DẤU TIẾNG VIỆT ======
+// Đưa các dấu gõ sai kiểu cũ (OÀ, UỶ) về chuẩn mới (ÒA, ỦY)
+function normalizeTone(str) {
+    if (!str) return str;
+    return str
+        .replace(/OÀ/g, 'ÒA').replace(/OÁ/g, 'ÓA').replace(/OẢ/g, 'ỎA').replace(/OÃ/g, 'ÕA').replace(/OẠ/g, 'ỌA')
+        .replace(/OÈ/g, 'ÒE').replace(/OÉ/g, 'ÓE').replace(/OẺ/g, 'ỎE').replace(/OẼ/g, 'ÕE').replace(/OẸ/g, 'ỌE')
+        .replace(/UỲ/g, 'ÙY').replace(/UÝ/g, 'ÚY').replace(/UỶ/g, 'ỦY').replace(/UỸ/g, 'ŨY').replace(/UỴ/g, 'ỤY');
+}
+
+// ====== FORMAT BIỂN SỐ XE ======
+// Tự động thêm dấu gạch ngang chuẩn (VD: 17A53240 -> 17A-53240)
+function formatPlate(p) {
+    if (!p) return '';
+    let s = p.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const match = s.match(/^(\d{2}[A-Z]{1,2})(\d{4,5})$/);
+    if (match) {
+        return match[1] + '-' + match[2];
+    }
+    return s;
+}
+
+// ====== KỲ ĐỐI SOÁT NCC ======
+// Kỳ = từ ngày 26 tháng này → 25 tháng sau
+// VD: Kỳ 05/2026 = 26/05/2026 → 25/06/2026
+function getCycleRange(monthStr) {
+    if (!monthStr) return null;
+    const [y, m] = monthStr.split('-').map(Number);
+    const start = new Date(y, m - 1, 26); // 26 tháng này
+    const end = new Date(y, m, 25);       // 25 tháng sau
+    return { start, end };
+}
+
+function isInCycle(dateObj, monthStr) {
+    if (!dateObj || !monthStr) return false;
+    const range = getCycleRange(monthStr);
+    if (!range) return false;
+    // So sánh chỉ ngày (bỏ giờ)
+    const d = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+    return d >= range.start && d <= range.end;
+}
+
+// ====== LEVENSHTEIN DISTANCE (Đo độ tương tự 2 chuỗi) ======
+function levenshtein(a, b) {
+    if (!a || !b) return Math.max((a||'').length, (b||'').length);
+    const m = a.length, n = b.length;
+    const dp = Array.from({length: m + 1}, (_, i) => [i]);
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            dp[i][j] = a[i-1] === b[j-1]
+                ? dp[i-1][j-1]
+                : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+        }
+    }
+    return dp[m][n];
+}
+
+// ====== PHÁT HIỆN GÕ SAI (Typo Detection) ======
+// Logic: nhóm các (tên+mã+biển số) giống nhau theo tần suất.
+// Tổ hợp xuất hiện nhiều nhất = "đúng". Tổ hợp tương tự nhưng ít hơn = "sai".
+function detectTypos(data) {
+    // Bước 1: Đếm tần suất mỗi tổ hợp (tên, mã NV)
+    const freqMap = {}; // key = "TÊN|MÃ" → { count, entries[] }
+    data.forEach(e => {
+        const key = e.name + '|' + e.code;
+        if (!freqMap[key]) freqMap[key] = { name: e.name, code: e.code, count: 0, entries: [] };
+        freqMap[key].count++;
+        freqMap[key].entries.push(e);
+    });
+
+    // Bước 2: Sắp xếp theo tần suất giảm dần
+    const sorted = Object.values(freqMap).sort((a, b) => b.count - a.count);
+
+    // Bước 3: Đánh dấu canonical (đúng) vs typo (sai)
+    const canonical = []; // Những combo được coi là đúng
+    const typos = [];     // Những combo nghi ngờ sai
+
+    sorted.forEach(item => {
+        // Tìm xem item có giống combo nào đã đúng không
+        let bestMatch = null;
+        let bestScore = Infinity;
+
+        for (const can of canonical) {
+            const nameDist = levenshtein(item.name, can.name);
+            const codeDist = levenshtein(item.code, can.code);
+
+            // Cùng tên, mã khác 1-2 số → typo mã
+            // Cùng mã, tên khác 1-3 chữ → typo tên
+            // Cả hai đều gần → typo
+            const isSimilar = (
+                (nameDist <= 3 && codeDist <= 2 && (nameDist + codeDist) > 0) ||
+                (nameDist === 0 && codeDist > 0 && codeDist <= 3) ||
+                (codeDist === 0 && nameDist > 0 && nameDist <= 3)
+            );
+
+            if (isSimilar) {
+                const score = nameDist + codeDist;
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestMatch = can;
+                }
+            }
+        }
+
+        if (bestMatch && item.count < bestMatch.count) {
+            // Ít hơn → nghi sai
+            typos.push({
+                wrong: item,
+                correct: bestMatch,
+                nameDist: levenshtein(item.name, bestMatch.name),
+                codeDist: levenshtein(item.code, bestMatch.code)
+            });
+        } else {
+            // Nhiều hơn hoặc bằng → coi là đúng
+            canonical.push(item);
+        }
+    });
+
+    // Bước 4: Kiểm tra biển số NV gõ có trong danh sách chuẩn (Master) không
+    // (Bỏ dùng supplierData vì supplierData chỉ chứa các chuyến lỗi/chưa báo cáo, biển đúng có thể đã bị xóa)
+    const masterPlates = new Set();
+    const masterPlateList = [];
+    masterList.forEach(m => {
+        if (m.plate) {
+            const p = m.plate.toUpperCase().replace(/[\s\-\.]/g, '');
+            masterPlates.add(p);
+            masterPlateList.push(p);
+        }
+    });
+
+    const plateTypos = [];
+    const plateWrongMap = {}; // Gom các biển sai giống nhau
+
+    data.forEach(e => {
+        if (!e.plate) return;
+        const pNorm = e.plate.toUpperCase().replace(/[\s\-\.]/g, '');
+
+        // Kiểm tra có khớp chính xác với 1 biển nào đó trong danh sách Master không
+        if (masterPlates.has(pNorm)) return; // Đúng → bỏ qua
+
+        // Không có → nghi ngờ gõ sai. Tìm gợi ý đúng nhất.
+        let bestPlate = null;
+
+        // Ưu tiên 1: Tìm biển số cố định của chính NV đó trong Master list (dựa vào mã NV hoặc tên)
+        const matchedMaster = masterList.find(m => m.code === e.code || m.name === e.name);
+        if (matchedMaster && matchedMaster.plate) {
+            bestPlate = matchedMaster.plate;
+        } else {
+            // Ưu tiên 2: Tìm biển gần giống nhất trong toàn bộ Master list
+            let bestDist = Infinity;
+            for (const mp of masterPlateList) {
+                const dist = levenshtein(pNorm, mp);
+                if (dist < bestDist && dist <= 3) {
+                    bestDist = dist;
+                    bestPlate = mp;
+                }
+            }
+        }
+
+        // Gom theo biển sai
+        const key = pNorm;
+        if (!plateWrongMap[key]) {
+            plateWrongMap[key] = {
+                wrongPlate: e.plate,
+                correctPlate: formatPlate(bestPlate) || '(không tìm thấy)',
+                count: 0,
+                entries: []
+            };
+        }
+        plateWrongMap[key].count++;
+        plateWrongMap[key].entries.push(e);
+    });
+
+    Object.values(plateWrongMap).forEach(pw => {
+        plateTypos.push(pw);
+    });
+
+    // Bước 5: Đối chiếu với danh sách NV chuẩn (Master)
+    // So sánh tên+mã NV báo cáo với master list
+    const masterMismatches = [];
+    if (masterList.length > 0) {
+        // Gom unique NV từ báo cáo (theo mã)
+        const reportedByCode = {};
+        data.forEach(e => {
+            if (!e.code) return;
+            const key = e.code;
+            if (!reportedByCode[key]) {
+                reportedByCode[key] = { name: e.name, code: e.code, count: 0, entries: [] };
+            }
+            reportedByCode[key].count++;
+            reportedByCode[key].entries.push(e);
+        });
+
+        // So sánh từng NV trong master
+        masterList.forEach(master => {
+            const reported = reportedByCode[master.code];
+            if (!reported) return; // NV chưa báo cáo → bỏ qua
+
+            const nameDist = levenshtein(reported.name, master.name);
+            if (nameDist > 0 && nameDist <= 5) {
+                // Tên khác so với master
+                masterMismatches.push({
+                    reported: reported,
+                    master: master,
+                    type: 'name',
+                    distance: nameDist
+                });
+            }
+        });
+
+        // Tìm NV báo cáo có mã KHÔNG CÓ trong master
+        Object.values(reportedByCode).forEach(rep => {
+            const inMaster = masterList.some(m => m.code === rep.code);
+            if (!inMaster) {
+                // Tìm master gần nhất theo tên
+                let bestMaster = null;
+                let bestDist = Infinity;
+                for (const m of masterList) {
+                    const dist = levenshtein(rep.name, m.name);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestMaster = m;
+                    }
+                }
+                if (bestMaster && bestDist <= 3) {
+                    masterMismatches.push({
+                        reported: rep,
+                        master: bestMaster,
+                        type: 'code',
+                        distance: bestDist
+                    });
+                }
+            }
+        });
+    }
+
+    return { typos, plateTypos, masterMismatches };
+}
+
+// ====== BIẾN TOÀN CỤC ======
+let employeeData = [];   // Dữ liệu NV điền ODO (đã lọc theo 4 kho)
+let supplierData = [];   // Dữ liệu đối soát NCC (đã lọc theo 4 kho)
+let masterList = [];     // Danh sách NV chuẩn (master)
+let allEmployeeNames = new Set();
+let refreshTimer = null;
+let countdownTimer = null;
+let nextRefreshTime = null;
+
+// ====== KHỞI CHẠY ======
+document.addEventListener('DOMContentLoaded', () => {
+    // Đặt tháng hiện tại làm mặc định
+    const now = new Date();
+    document.getElementById('filterMonth').value = now.toISOString().slice(0, 7);
+
+    // Gắn sự kiện lọc
+    document.getElementById('filterMonth').addEventListener('change', renderAll);
+    document.getElementById('filterWarehouse').addEventListener('change', renderAll);
+    document.getElementById('filterEmployee').addEventListener('change', renderAll);
+
+    // Tải dữ liệu lần đầu
+    loadAllData();
+
+    // Hẹn giờ tự động refresh
+    startAutoRefresh();
+});
+
+// ====== HÀM TẢI DỮ LIỆU TỪ GOOGLE SHEET ======
+// Dùng JSONP (script injection) — KHÔNG BỊ LỖI CORS khi mở file từ máy tính
+// Cách hoạt động: tạo thẻ <script> trỏ tới Google Sheet, Google trả dữ liệu
+// qua hàm callback, không cần fetch() nên không bị chặn.
+let _jsonpCounter = 0;
+
+function fetchSheetJSONP(sheetId, gid) {
+    return new Promise((resolve, reject) => {
+        const callbackName = '_sheetCB_' + (++_jsonpCounter) + '_' + Date.now();
+        const timeoutMs = 30000; // timeout 30 giây
+
+        // Tạo hàm callback toàn cục
+        window[callbackName] = function(data) {
+            // Dọn dẹp
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            clearTimeout(timer);
+
+            if (!data || data.status !== 'ok') {
+                reject(new Error('Google Sheet trả về lỗi: ' + (data?.errors?.[0]?.message || 'Không rõ')));
+                return;
+            }
+
+            // Chuyển đổi từ format Google Viz sang mảng 2D đơn giản
+            const rows = [];
+            const table = data.table;
+
+            // Data rows (headers=1 nên không có header trong rows)
+            if (table.rows) {
+                table.rows.forEach(row => {
+                    const r = row.c.map(cell => {
+                        if (!cell) return '';
+                        // Ưu tiên formatted value (f) cho ngày tháng
+                        if (cell.f) return String(cell.f).normalize('NFC');
+                        if (cell.v === null || cell.v === undefined) return '';
+                        // Xử lý ngày dạng Date(yyyy,mm,dd...) từ Google Viz
+                        const sv = String(cell.v).normalize('NFC');
+                        const dateMatch = sv.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+                        if (dateMatch) {
+                            const dd = String(parseInt(dateMatch[3])).padStart(2, '0');
+                            const mm = String(parseInt(dateMatch[2]) + 1).padStart(2, '0');
+                            return dd + '/' + mm + '/' + dateMatch[1];
+                        }
+                        return sv;
+                    });
+                    rows.push(r);
+                });
+            }
+
+            resolve(rows);
+        };
+
+        // Timeout nếu Google không phản hồi
+        const timer = setTimeout(() => {
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            reject(new Error('Hết thời gian chờ (30s). Kiểm tra kết nối internet và quyền chia sẻ Google Sheet.'));
+        }, timeoutMs);
+
+        // Tạo thẻ <script> để tải dữ liệu (bypass CORS)
+        const script = document.createElement('script');
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&gid=${gid}&headers=1`;
+        script.onerror = () => {
+            delete window[callbackName];
+            clearTimeout(timer);
+            reject(new Error('Không thể kết nối Google Sheet. Kiểm tra internet hoặc quyền chia sẻ Sheet.'));
+        };
+        document.body.appendChild(script);
+    });
+}
+
+// ====== HÀM TẢI TOÀN BỘ DỮ LIỆU ======
+async function loadAllData() {
+    showLoading(true);
+    try {
+        // Tải song song cả 3 sheet bằng JSONP
+        const [empRows, supRows, masterRows] = await Promise.all([
+            fetchSheetJSONP(CONFIG.SHEET_EMPLOYEE_ID, CONFIG.SHEET_EMPLOYEE_GID),
+            fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID),
+            fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID)
+        ]);
+
+        // Debug log
+        console.log(`✅ Loaded: NV=${empRows.length} rows, NCC=${supRows.length} rows, Master=${masterRows.length} rows`);
+
+        // ═══════════════════════════════════════
+        // XỬ LÝ DANH SÁCH NV CHUẨN (Master)
+        // Cột: A=MãNV, B=Tên, C=Biển số, D=NCC, E=Loại xe, F=Tỉnh, G=Kho
+        // ═══════════════════════════════════════
+        masterList = [];
+        masterRows.forEach(r => {
+            if (!r || r.length < 3) return;
+            const code = (r[0] || '').replace(/[^0-9]/g, '').trim();
+            const name = normalizeTone((r[1] || '').trim().normalize('NFC').toUpperCase());
+            const plate = (r[2] || '').trim().toUpperCase().replace(/[\s\-\.]/g, '');
+            const ncc = (r[3] || '').trim();
+            const province = (r[5] || '').trim();
+            const warehouse = (r[6] || '').trim();
+            if (!code || !name) return;
+            masterList.push({ code, name, plate, ncc, province, warehouse });
+        });
+        console.log(`✅ Master list: ${masterList.length} NV`);
+
+        // ═══════════════════════════════════════
+        // XỬ LÝ DỮ LIỆU NHÂN VIÊN
+        // headers=1 → rows chỉ chứa data, bắt đầu từ index 0
+        // Chỉ lấy NV thuộc 4 kho anh quản lý
+        // ═══════════════════════════════════════
+        employeeData = [];
+        allEmployeeNames.clear();
+
+        for (let i = 0; i < empRows.length; i++) {
+            const r = empRows[i];
+            if (!r || r.length < 10) continue;
+
+            const fullName = (r[2] || '').trim();
+            if (!fullName) continue;
+
+            const warehouse = (r[6] || '').trim();
+
+            // ★ CHỈ LẤY NV THUỘC 4 KHO CỦA MÌNH ★
+            if (!isMyWarehouse(warehouse)) continue;
+
+            // Tách tên và mã NV
+            const parts = fullName.match(/^(.+?)\s+(\d{5,})$/);
+            // Chuẩn hóa tên viết HOA + NFC + Dấu tiếng việt để lọc trùng
+            const nameRaw = parts ? parts[1].trim() : fullName;
+            const name = normalizeTone(nameRaw.normalize('NFC').toUpperCase());
+            const code = parts ? parts[2].trim() : '';
+            const area = (r[3] || '').trim();
+            const dateStr = (r[4] || '').trim();
+            const plate = (r[9] || '').trim();
+            const supplier = (r[5] || '').trim();
+            const kmStart = (r[7] || '').trim();
+            const kmEnd = (r[12] || '').trim();
+            const hourStart = (r[8] || '').trim();
+            const hourEnd = (r[13] || '').trim();
+            const matchKey = (r[15] || '').trim(); // Column 16
+
+            // Parse ngày DD/MM/YYYY hoặc DD-MM-YYYY
+            const dateParts = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+            let dateObj = null;
+            if (dateParts) {
+                dateObj = new Date(parseInt(dateParts[3]), parseInt(dateParts[2]) - 1, parseInt(dateParts[1]));
+            }
+
+            const shortWH = shortWarehouse(warehouse);
+
+            // Lưu dòng gốc trong Sheet (headers=1 → data row 0 = sheet row 2)
+            const sheetRow = i + 2;
+
+            const entry = {
+                name, code, area, dateStr, dateObj, plate, supplier, warehouse, shortWH,
+                kmStart, kmEnd, hourStart, hourEnd, matchKey, fullName, sheetRow
+            };
+
+            employeeData.push(entry);
+            allEmployeeNames.add(name + (code ? ' ' + code : ''));
+        }
+
+        // ═══════════════════════════════════════
+        // SỬA TÊN NV BỊ GÕ NHẦM THÀNH BIỂN SỐ XE
+        // Nếu "tên" trông giống biển số (VD: 34C-32203), tìm NV thật
+        // đã chạy xe đó gần nhất rồi gán lại tên + mã đúng
+        // ═══════════════════════════════════════
+        const platePattern = /^\d{2}[A-Z]-?\d{3,5}\.?\d{0,2}$/i;
+        employeeData.forEach(entry => {
+            if (!platePattern.test(entry.name.replace(/\s/g, ''))) return;
+
+            const fakePlate = entry.name.replace(/\s/g, '');
+            const realEntries = employeeData.filter(e =>
+                !platePattern.test(e.name.replace(/\s/g, '')) &&
+                e.plate && e.plate.replace(/[\s\-.]/g, '') === fakePlate.replace(/[\s\-.]/g, '')
+            ).sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
+
+            if (realEntries.length > 0) {
+                const real = realEntries[0];
+                entry.name = real.name;
+                entry.code = real.code;
+            }
+        });
+
+        // ═══════════════════════════════════════
+        // CHUẨN HÓA TÊN + MÃ NV THEO TẦN SUẤT
+        // Tên xuất hiện nhiều nhất = ĐÚNG → gán cho tất cả entries tương tự
+        // VD: "NGUYỄN TRỌNG LÂM 3136388" (12 lần) vs "NGUYỄN TRỌNG LÂM" (2 lần, thiếu mã)
+        //     → gán mã 3136388 cho cả 2 lần thiếu đó
+        // ═══════════════════════════════════════
+        const freqMap = {};
+        employeeData.forEach(e => {
+            const key = e.name + '|' + e.code;
+            if (!freqMap[key]) freqMap[key] = { name: e.name, code: e.code, count: 0 };
+            freqMap[key].count++;
+        });
+
+        // Sắp xếp: ưu tiên mã NV 7 chữ số trước, sau đó theo tần suất giảm dần
+        const sortedCombos = Object.values(freqMap).sort((a, b) => {
+            const a7 = a.code && a.code.length === 7 ? 1 : 0;
+            const b7 = b.code && b.code.length === 7 ? 1 : 0;
+            if (b7 !== a7) return b7 - a7; // Mã 7 số lên trước
+            return b.count - a.count;       // Rồi mới theo tần suất
+        });
+        const canonicalList = [];
+
+        sortedCombos.forEach(item => {
+            let matched = null;
+            for (const can of canonicalList) {
+                const nameDist = levenshtein(item.name, can.name);
+                const codeDist = levenshtein(item.code, can.code);
+
+                // Cùng tên + mã khác chút
+                const isSimilar = (
+                    (nameDist <= 3 && codeDist <= 2 && (nameDist + codeDist) > 0) ||
+                    (nameDist === 0 && codeDist > 0 && codeDist <= 3) ||
+                    (codeDist === 0 && nameDist > 0 && nameDist <= 3) ||
+                    // Cùng tên, 1 bên thiếu mã hoặc mã sai số chữ số
+                    (nameDist <= 2 && (!item.code || !can.code)) ||
+                    // Cùng tên, 1 bên mã 7 số chuẩn, bên kia mã sai (khác độ dài)
+                    (nameDist <= 2 && can.code.length === 7 && item.code.length !== 7)
+                );
+                if (isSimilar) { matched = can; break; }
+            }
+            if (matched && item.count < matched.count) {
+                // item ít hơn → item sai, matched đúng
+                matched.aliases = matched.aliases || [];
+                matched.aliases.push(item);
+            } else {
+                canonicalList.push(item);
+            }
+        });
+
+        // Gán lại tên + mã đúng cho tất cả entries
+        employeeData.forEach(entry => {
+            for (const can of canonicalList) {
+                if (!can.aliases) continue;
+                for (const alias of can.aliases) {
+                    if (entry.name === alias.name && entry.code === alias.code) {
+                        entry.name = can.name;
+                        entry.code = can.code;
+                        return;
+                    }
+                }
+            }
+        });
+
+        // ═══════════════════════════════════════
+        // XỬ LÝ DỮ LIỆU NCC
+        // headers=1 → Google tự bỏ header, bắt đầu từ index 0
+        // Chỉ lấy chuyến xe thuộc 4 kho
+        // ═══════════════════════════════════════
+        supplierData = [];
+        for (let i = 0; i < supRows.length; i++) {
+            const r = supRows[i];
+            if (!r || r.length < 14) continue;
+
+            const stt = (r[0] || '').trim();
+            if (!stt || isNaN(stt)) continue;
+
+            const ncc = (r[1] || '').trim();
+            const dateStr = (r[2] || '').trim();
+            const plate = (r[3] || '').trim();
+            const vehicle = (r[4] || '').trim();
+            const note = (r[5] || '').trim();
+            const area = (r[6] || '').trim();
+            const warehouse = (r[7] || '').trim();
+            const nvghStatus = (r[8] || '').trim();  // Cột I: "x" = NV chưa báo cáo
+            const matchKey = (r[13] || '').trim();
+
+            // ★ CHỈ LẤY CHUYẾN THUỘC 4 KHO CỦA MÌNH ★
+            if (!isMyWarehouse(warehouse)) continue;
+
+            const shortWH = shortWarehouse(warehouse);
+
+            // Parse ngày NCC
+            const dateParts = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+            let dateObj = null;
+            if (dateParts) {
+                dateObj = new Date(parseInt(dateParts[3]), parseInt(dateParts[2]) - 1, parseInt(dateParts[1]));
+            }
+
+            supplierData.push({
+                stt, ncc, dateStr, dateObj, plate, vehicle, note, area, warehouse, shortWH, nvghStatus, matchKey
+            });
+        }
+
+        // Cập nhật bộ lọc NV
+        updateFilters();
+
+        // Vẽ giao diện
+        renderAll();
+
+        // Cập nhật thời gian refresh
+        const now = new Date();
+        document.getElementById('lastRefresh').textContent =
+            `Cập nhật: ${now.toLocaleTimeString('vi-VN')}`;
+
+        showToast('✅', `Đã tải ${employeeData.length} bản ghi NV + ${supplierData.length} chuyến NCC`);
+
+    } catch (err) {
+        console.error('Lỗi tải dữ liệu:', err);
+        showToast('❌', 'Lỗi: ' + err.message);
+        document.getElementById('loadingDaily').innerHTML = `
+            <div class="empty-state">
+                <div class="icon">❌</div>
+                <p>Không thể tải dữ liệu. Hãy kiểm tra:<br>
+                1. Kết nối internet<br>
+                2. File Google Sheet đã mở quyền "Bất kỳ ai có link"<br><br>
+                <small style="color:var(--text-muted);">Chi tiết lỗi: ${escapeHtml(err.message)}</small></p>
+            </div>`;
+    }
+}
+
+// ====== CẬP NHẬT BỘ LỌC NV ======
+function updateFilters() {
+    const empSelect = document.getElementById('filterEmployee');
+    const oldEmp = empSelect.value;
+
+    empSelect.innerHTML = '<option value="">Tất cả nhân viên</option>';
+    [...allEmployeeNames].sort().forEach(n => {
+        empSelect.innerHTML += `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`;
+    });
+
+    empSelect.value = oldEmp;
+}
+
+// ====== RENDER TOÀN BỘ ======
+function renderAll() {
+    const month = document.getElementById('filterMonth').value;
+    const whFilter = document.getElementById('filterWarehouse').value; // Tên ngắn: "Hải Dương", ...
+    const empFilter = document.getElementById('filterEmployee').value;
+
+    // Lọc dữ liệu theo kỳ đối soát (26 tháng này → 25 tháng sau) + kho + NV
+    let filtered = employeeData.filter(e => {
+        if (!e.dateObj) return false;
+        if (month && !isInCycle(e.dateObj, month)) return false;
+        if (whFilter && e.shortWH !== whFilter) return false;
+        if (empFilter && norm(e.name + (e.code ? ' ' + e.code : '')) !== norm(empFilter)) return false;
+        return true;
+    });
+
+    // Sắp xếp theo ngày mới nhất
+    filtered.sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
+
+    // Tính toán thống kê
+    computeStats(filtered, month);
+
+    // Vẽ bảng theo dõi
+    renderDailyTable(filtered);
+
+    // Vẽ xếp hạng
+    renderRanking(month, whFilter);
+
+    // Vẽ cảnh báo gõ sai (chỉ trong kỳ)
+    renderTypoWarnings(month);
+
+    // Vẽ cảnh báo gian lận (chỉ trong kỳ)
+    renderFraudWarnings(filtered);
+
+    showLoading(false);
+}
+
+// ====== TÍNH THỐNG KÊ ======
+// "Đã báo cáo" = file NV (nhân viên đã gửi form ODO)
+// "Chưa báo cáo" = file NCC (chuyến xe NCC hôm nay chưa có ODO tương ứng)
+function computeStats(filtered, month) {
+    // Tổng NV unique đã từng báo cáo trong tháng
+    const uniqueEmployees = new Set(filtered.map(e => e.name + e.code));
+    const elTotal = document.getElementById('statTotalEmployees');
+    if (elTotal) elTotal.textContent = uniqueEmployees.size;
+
+    // Hôm nay
+    const today = new Date();
+    const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+    const whFilter = document.getElementById('filterWarehouse').value;
+
+    const reportedToday = filtered.filter(e => e.dateStr === todayStr);
+    const reportedKeys = new Set(reportedToday.map(e => e.matchKey).filter(Boolean));
+    const elCompleted = document.getElementById('statCompleted');
+    if (elCompleted) elCompleted.textContent = reportedToday.length;
+
+    const nccToday = supplierData.filter(s => {
+        if (s.dateStr !== todayStr) return false;
+        if (whFilter && s.shortWH !== whFilter) return false;
+        return true;
+    });
+    const nccUnreported = nccToday.filter(s => !reportedKeys.has(s.matchKey));
+    const elMissing = document.getElementById('statMissing');
+    if (elMissing) elMissing.textContent = nccUnreported.length;
+
+    if (month) {
+        const cycle = getCycleRange(month);
+        let workDays = 0;
+        const todayDate = new Date();
+        for (let dt = new Date(cycle.start); dt <= cycle.end; dt.setDate(dt.getDate() + 1)) {
+            if (dt > todayDate) break;
+            if (dt.getDay() !== 0) workDays++;
+        }
+
+        const nccMonth = supplierData.filter(s => {
+            if (!s.dateObj) return false;
+            if (!isInCycle(s.dateObj, month)) return false;
+            if (whFilter && s.shortWH !== whFilter) return false;
+            return true;
+        });
+        const empKeysMonth = new Set(filtered.map(e => e.matchKey).filter(Boolean));
+        const nccMonthMatched = nccMonth.filter(s => empKeysMonth.has(s.matchKey));
+        const rate = nccMonth.length > 0 ? Math.round((nccMonthMatched.length / nccMonth.length) * 100) : 0;
+
+        const elRate = document.getElementById('statRate');
+        if (elRate) elRate.textContent = Math.min(rate, 100) + '%';
+        const elBar = document.getElementById('rateBar');
+        if (elBar) elBar.style.width = Math.min(rate, 100) + '%';
+
+        let warningCount = 0;
+        uniqueEmployees.forEach(empKey => {
+            const empReports = filtered.filter(e => (e.name + e.code) === empKey).length;
+            const empRate = workDays > 0 ? (empReports / workDays) * 100 : 0;
+            if (empRate <= 50) warningCount++;
+        });
+        const elWarning = document.getElementById('statWarning');
+        if (elWarning) elWarning.textContent = warningCount;
+    }
+}
+
+// ====== RENDER BẢNG THEO DÕI ======
+function renderDailyTable(filtered) {
+    const container = document.getElementById('dailyTableContainer');
+    document.getElementById('totalRecords').textContent = `${filtered.length} bản ghi`;
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="icon">📭</div>
+                <p>Không có dữ liệu trong tháng này.</p>
+            </div>`;
+        return;
+    }
+
+    const supplierKeys = new Set(supplierData.map(s => s.matchKey).filter(Boolean));
+
+    let html = `<table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Ngày</th>
+                <th>Họ và tên</th>
+                <th>Mã NV</th>
+                <th>Biển số xe</th>
+                <th>NCC</th>
+                <th>Kho</th>
+                <th>Giờ đi</th>
+                <th>Giờ về</th>
+                <th>Tăng ca</th>
+                <th>ODO Đi</th>
+                <th>ODO Về</th>
+                <th>Km</th>
+                <th>Đối soát</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    filtered.forEach((e, i) => {
+        const km = (parseInt(e.kmEnd) - parseInt(e.kmStart));
+        const kmDisplay = isNaN(km) ? '—' : km.toLocaleString();
+
+        // Tính tăng ca: ca cố định 7h-19h, ngoài 19h là tăng ca
+        let otDisplay = '—';
+        let otColor = 'var(--text-muted)';
+        if (e.hourEnd) {
+            // Parse giờ về (hỗ trợ nhiều format: "19:30", "19h30", "19:30:00", "7:30:00 PM", v.v.)
+            const timeStr = e.hourEnd.replace(/h/gi, ':');
+            const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
+            if (timeParts) {
+                let hours = parseInt(timeParts[1]);
+                const mins = parseInt(timeParts[2]);
+                // Hỗ trợ AM/PM
+                if (/PM/i.test(timeStr) && hours < 12) hours += 12;
+                if (/AM/i.test(timeStr) && hours === 12) hours = 0;
+                const totalMinutes = hours * 60 + mins;
+                const shiftEnd = 19 * 60; // 19:00
+                if (totalMinutes > shiftEnd) {
+                    const otMinutes = totalMinutes - shiftEnd;
+                    const otHours = Math.floor(otMinutes / 60);
+                    const otMins = otMinutes % 60;
+                    otDisplay = otHours > 0 ? `${otHours}h${otMins > 0 ? String(otMins).padStart(2,'0') : ''}` : `${otMins}p`;
+                    otColor = otMinutes > 180 ? 'var(--danger)' : otMinutes > 120 ? '#f0ad4e' : 'var(--success)';
+                } else {
+                    otDisplay = '—';
+                }
+            }
+        }
+
+        let reconBadge = '';
+        if (!e.matchKey) {
+            reconBadge = '<span class="badge badge-warning">—</span>';
+        } else if (supplierKeys.has(e.matchKey)) {
+            reconBadge = '<span class="badge badge-danger">⚠️ Lệch thông tin</span>';
+        } else {
+            reconBadge = '<span class="badge badge-success">✓ Đã đối soát</span>';
+        }
+
+        html += `<tr>
+            <td>${i + 1}</td>
+            <td style="white-space:nowrap; font-weight:600;">${e.dateStr}</td>
+            <td style="font-weight:600;">${escapeHtml(e.name)}</td>
+            <td><span class="badge badge-info">${e.code || '—'}</span></td>
+            <td style="font-family:monospace; font-weight:600;">${escapeHtml(e.plate)}</td>
+            <td style="font-size:12px;">${escapeHtml(e.supplier)}</td>
+            <td><span class="badge badge-info">${escapeHtml(e.shortWH)}</span></td>
+            <td style="font-family:monospace;white-space:nowrap;">${escapeHtml(e.hourStart || '—')}</td>
+            <td style="font-family:monospace;white-space:nowrap;">${escapeHtml(e.hourEnd || '—')}</td>
+            <td style="font-weight:700;color:${otColor};text-align:center;">${otDisplay}</td>
+            <td style="font-family:monospace;">${e.kmStart}</td>
+            <td style="font-family:monospace;">${e.kmEnd}</td>
+            <td style="font-weight:600; color:${!isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${kmDisplay}</td>
+            <td>${reconBadge}</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+// ====== RENDER XẾP HẠNG ======
+function renderRanking(month, whFilter) {
+    const grid = document.getElementById('rankingGrid');
+
+    let filtered = employeeData.filter(e => {
+        if (!e.dateObj) return false;
+        if (month && !isInCycle(e.dateObj, month)) return false;
+        if (whFilter && e.shortWH !== whFilter) return false;
+        return true;
+    });
+
+    // Tính số ngày trong kỳ (26 tháng này → 25 tháng sau, tính đến hôm nay)
+    let daysElapsed = 1;
+    const allDatesInCycle = [];
+    if (month) {
+        const cycle = getCycleRange(month);
+        const todayDate = new Date();
+        daysElapsed = 0;
+        for (let dt = new Date(cycle.start); dt <= cycle.end; dt.setDate(dt.getDate() + 1)) {
+            if (dt > todayDate) break;
+            daysElapsed++;
+            const dd = String(dt.getDate()).padStart(2, '0');
+            const mm = String(dt.getMonth() + 1).padStart(2, '0');
+            allDatesInCycle.push(`${dd}/${mm}/${dt.getFullYear()}`);
+        }
+    }
+
+    // Gom NV theo kho
+    const whMap = {}; // { 'Hải Dương': [ {name, code, uniqueDays, rate}, ... ] }
+    filtered.forEach(e => {
+        const wh = e.shortWH || 'Khác';
+        const key = e.name + '|' + e.code;
+        if (!whMap[wh]) whMap[wh] = {};
+        if (!whMap[wh][key]) {
+            // Lấy biển số từ Master List (chuẩn) nếu có, không thì dùng biển từ báo cáo
+            const master = masterList.find(m => m.code === e.code);
+            const plate = master ? formatPlate(master.plate) : (e.plate || '');
+            whMap[wh][key] = { name: e.name, code: e.code, plate: plate, days: new Set() };
+        }
+        whMap[wh][key].days.add(e.dateStr);
+    });
+
+    // ★ Bổ sung NV từ master list chưa báo cáo (đảm bảo 4 kho luôn hiện)
+    if (masterList.length > 0) {
+        masterList.forEach(m => {
+            const wh = shortWarehouse(m.warehouse);
+            if (!wh || wh === m.warehouse) return; // Không thuộc 4 kho
+            if (whFilter && wh !== whFilter) return;
+            if (!whMap[wh]) whMap[wh] = {};
+            const key = m.name + '|' + m.code;
+            if (!whMap[wh][key]) {
+                whMap[wh][key] = { name: m.name, code: m.code, plate: formatPlate(m.plate), days: new Set() };
+            }
+        });
+    }
+
+    // Nếu không có dữ liệu
+    if (Object.keys(whMap).length === 0) {
+        grid.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Không có dữ liệu trong tháng này.</p></div>';
+        return;
+    }
+
+    // Lấy tháng hiện tại để format ngày ngắn gọn
+    const [yearSel, monthSel] = (month || '').split('-').map(Number);
+
+    // Render từng kho (ưu tiên 4 kho chính, sau đó thêm các kho khác nếu có)
+    const preferredOrder = ['Hải Dương', 'Hải Phòng', 'Hưng Yên', 'Thái Bình'];
+    const allWarehouses = Object.keys(whMap);
+    const warehouseOrder = [...preferredOrder.filter(w => allWarehouses.includes(w)), ...allWarehouses.filter(w => !preferredOrder.includes(w))];
+    let html = '';
+
+    warehouseOrder.forEach(wh => {
+        const empObj = whMap[wh];
+        if (!empObj) return;
+
+        const empList = Object.values(empObj).map(e => {
+            const uniqueDays = e.days.size;
+            const rate = daysElapsed > 0 ? Math.round((uniqueDays / daysElapsed) * 100) : 0;
+
+            // Tính ngày KHÔNG báo cáo = tất cả ngày trong kỳ - ngày đã báo
+            const missingDates = allDatesInCycle.filter(d => !e.days.has(d));
+            // Format ngắn: "3/5, 6/5, 8/5" (ngày/tháng)
+            const missingShort = missingDates.map(d => {
+                const p = d.match(/(\d{1,2})\/(\d{1,2})/);
+                return p ? `${parseInt(p[1])}/${parseInt(p[2])}` : d;
+            });
+
+            return { ...e, uniqueDays, rate, missingDates: missingShort };
+        });
+
+        // Sắp xếp theo % giảm dần
+        empList.sort((a, b) => b.rate - a.rate || b.uniqueDays - a.uniqueDays);
+
+        html += `
+        <div class="ranking-card" style="grid-column: 1 / -1;">
+            <h3>🏢 Kho ${escapeHtml(wh)} <span style="font-weight:400;color:var(--text-muted);font-size:13px;">(${empList.length} NV · ${daysElapsed} ngày)</span></h3>
+            <table style="width:100%;">
+                <thead><tr>
+                    <th style="width:40px;">#</th>
+                    <th>Họ và tên</th>
+                    <th style="width:80px;">Mã NV</th>
+                    <th style="width:120px;">Biển số xe</th>
+                    <th style="width:80px;">Số ngày ODO</th>
+                    <th style="width:160px;">% Hoàn thành</th>
+                    <th>Ngày không báo cáo</th>
+                </tr></thead>
+                <tbody>
+                    ${empList.map((e, i) => {
+                        const pct = Math.min(e.rate, 100);
+                        const color = pct >= 80 ? 'var(--success)' : pct >= 50 ? '#f0ad4e' : 'var(--danger)';
+                        const missingHtml = e.missingDates.length > 0
+                            ? `<span style="color:var(--danger);font-size:12px;">${e.missingDates.join(', ')}</span>`
+                            : '<span style="color:var(--success);font-size:12px;">✅ Đủ</span>';
+                        return `<tr>
+                            <td>${i + 1}</td>
+                            <td style="font-weight:600;">${escapeHtml(e.name)}</td>
+                            <td>${e.code || '—'}</td>
+                            <td style="font-family:monospace;font-weight:600;">${escapeHtml(e.plate || '—')}</td>
+                            <td style="text-align:center;">${e.uniqueDays}/${daysElapsed}</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div class="progress-bar-container" style="flex:1;margin:0;">
+                                        <div class="progress-bar-fill" style="width:${pct}%;background:${color};"></div>
+                                    </div>
+                                    <span style="font-weight:700;color:${color};min-width:42px;text-align:right;">${pct}%</span>
+                                </div>
+                            </td>
+                            <td>${missingHtml}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`;
+    });
+
+    grid.innerHTML = html;
+    grid.style.gridTemplateColumns = '1fr'; // 1 cột dọc
+}
+
+// ====== RENDER CẢNH BÁO GIAN LẬN ======
+function renderFraudWarnings(filtered) {
+    const container = document.getElementById('fraudTableContainer');
+
+    // Phát hiện gian lận: Km > 200 hoặc Tăng ca > 3 tiếng (180 phút)
+    const fraudEntries = [];
+    filtered.forEach(e => {
+        const km = parseInt(e.kmEnd) - parseInt(e.kmStart);
+        const reasons = [];
+
+        // Kiểm tra Km > 200
+        if (!isNaN(km) && km > 200) {
+            reasons.push({ type: 'km', value: km });
+        }
+
+        // Kiểm tra Tăng ca > 3 tiếng
+        if (e.hourEnd) {
+            const timeStr = e.hourEnd.replace(/h/gi, ':');
+            const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
+            if (timeParts) {
+                let hours = parseInt(timeParts[1]);
+                const mins = parseInt(timeParts[2]);
+                if (/PM/i.test(timeStr) && hours < 12) hours += 12;
+                if (/AM/i.test(timeStr) && hours === 12) hours = 0;
+                const totalMinutes = hours * 60 + mins;
+                const shiftEnd = 19 * 60;
+                if (totalMinutes > shiftEnd) {
+                    const otMinutes = totalMinutes - shiftEnd;
+                    if (otMinutes > 180) {
+                        const otH = Math.floor(otMinutes / 60);
+                        const otM = otMinutes % 60;
+                        reasons.push({ type: 'ot', value: otMinutes, display: `${otH}h${otM > 0 ? String(otM).padStart(2,'0') : ''}` });
+                    }
+                }
+            }
+        }
+
+        if (reasons.length > 0) {
+            fraudEntries.push({ entry: e, reasons, km: isNaN(km) ? null : km });
+        }
+    });
+
+    // Cập nhật badge
+    document.getElementById('fraudBadge').textContent = fraudEntries.length;
+    document.getElementById('fraudCount').textContent = fraudEntries.length + ' trường hợp';
+
+    if (fraudEntries.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>Không phát hiện gian lận nào trong kỳ này. Tất cả dữ liệu Km và giờ tăng ca đều trong ngưỡng cho phép.</p></div>';
+        return;
+    }
+
+    const sheetBaseUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit?gid=${CONFIG.SHEET_EMPLOYEE_GID}#gid=${CONFIG.SHEET_EMPLOYEE_GID}`;
+
+    let html = `<table>
+        <thead><tr>
+            <th>#</th>
+            <th>Ngày</th>
+            <th>Họ và tên</th>
+            <th>Mã NV</th>
+            <th>Biển số</th>
+            <th>Kho</th>
+            <th>Giờ đi</th>
+            <th>Giờ về</th>
+            <th>Tăng ca</th>
+            <th>ODO Đi</th>
+            <th>ODO Về</th>
+            <th>Km</th>
+            <th>Lý do cảnh báo</th>
+            <th>Sửa</th>
+        </tr></thead>
+        <tbody>`;
+
+    fraudEntries.forEach((f, i) => {
+        const e = f.entry;
+        const kmDisplay = f.km !== null ? f.km.toLocaleString() : '—';
+
+        // Tính tăng ca hiển thị
+        let otDisplay = '—';
+        if (e.hourEnd) {
+            const timeStr = e.hourEnd.replace(/h/gi, ':');
+            const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
+            if (timeParts) {
+                let hours = parseInt(timeParts[1]);
+                const mins = parseInt(timeParts[2]);
+                if (/PM/i.test(timeStr) && hours < 12) hours += 12;
+                if (/AM/i.test(timeStr) && hours === 12) hours = 0;
+                const totalMinutes = hours * 60 + mins;
+                const shiftEnd = 19 * 60;
+                if (totalMinutes > shiftEnd) {
+                    const otMin = totalMinutes - shiftEnd;
+                    const otH = Math.floor(otMin / 60);
+                    const otM = otMin % 60;
+                    otDisplay = otH > 0 ? `${otH}h${otM > 0 ? String(otM).padStart(2,'0') : ''}` : `${otM}p`;
+                }
+            }
+        }
+
+        // Render lý do cảnh báo
+        const reasonBadges = f.reasons.map(r => {
+            if (r.type === 'km') return `<span class="badge badge-danger">🔴 Km: ${r.value}</span>`;
+            if (r.type === 'ot') return `<span class="badge badge-danger">🔴 TC: ${r.display}</span>`;
+            return '';
+        }).join(' ');
+
+        const editLink = e.sheetRow
+            ? `<a href="${sheetBaseUrl}&range=A${e.sheetRow}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`
+            : '';
+
+        html += `<tr>
+            <td>${i + 1}</td>
+            <td style="white-space:nowrap;font-weight:600;">${e.dateStr}</td>
+            <td style="font-weight:600;">${escapeHtml(e.name)}</td>
+            <td><span class="badge badge-info">${e.code || '—'}</span></td>
+            <td style="font-family:monospace;font-weight:600;">${escapeHtml(e.plate)}</td>
+            <td><span class="badge badge-info">${escapeHtml(e.shortWH)}</span></td>
+            <td style="font-family:monospace;">${escapeHtml(e.hourStart || '—')}</td>
+            <td style="font-family:monospace;">${escapeHtml(e.hourEnd || '—')}</td>
+            <td style="font-weight:700;color:var(--danger);">${otDisplay}</td>
+            <td style="font-family:monospace;">${e.kmStart}</td>
+            <td style="font-family:monospace;">${e.kmEnd}</td>
+            <td style="font-weight:700;color:${f.km > 200 ? 'var(--danger)' : 'var(--success)'};">${kmDisplay}</td>
+            <td>${reasonBadges}</td>
+            <td>${editLink}</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+// ====== RENDER CẢNH BÁO GÕ SAI ======
+function renderTypoWarnings(month) {
+    const container = document.getElementById('typoTableContainer');
+    // Chỉ lấy dữ liệu trong kỳ đối soát hiện tại
+    const cycleData = month
+        ? employeeData.filter(e => e.dateObj && isInCycle(e.dateObj, month))
+        : employeeData;
+    const { typos, plateTypos, masterMismatches } = detectTypos(cycleData);
+
+    const totalIssues = typos.length + plateTypos.length + masterMismatches.length;
+    document.getElementById('typoBadge').textContent = totalIssues;
+    document.getElementById('typoCount').textContent = totalIssues + ' lỗi';
+
+    if (totalIssues === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>Không phát hiện lỗi gõ sai nào. Tất cả tên, mã NV và biển số đều nhất quán.</p></div>';
+        return;
+    }
+
+    const sheetBaseUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit?gid=${CONFIG.SHEET_EMPLOYEE_GID}#gid=${CONFIG.SHEET_EMPLOYEE_GID}`;
+
+    let html = '';
+
+    // Bảng 1: Sai tên / mã NV (so sánh tần suất nội bộ)
+    if (typos.length > 0) {
+        html += `<h4 style="margin:0 0 8px;color:var(--danger);">🔤 Sai tên / mã nhân viên (${typos.length} lỗi)</h4>`;
+        html += `<table style="margin-bottom:24px;"><thead><tr>
+            <th style="width:40px;">#</th>
+            <th>Đã gõ (SAI)</th>
+            <th>Phải là (ĐÚNG)</th>
+            <th style="width:60px;">Lần gõ sai</th>
+            <th style="width:60px;">Lần đúng</th>
+            <th>Kho</th>
+            <th>Các ngày gõ sai</th>
+            <th style="width:60px;">Sửa</th>
+        </tr></thead><tbody>`;
+
+        typos.forEach((t, i) => {
+            const wrongName = t.wrong.name + (t.wrong.code ? ' ' + t.wrong.code : '');
+            const correctName = t.correct.name + (t.correct.code ? ' ' + t.correct.code : '');
+            let wrongHighlighted = escapeHtml(wrongName);
+
+            const dates = t.wrong.entries.map(e => e.dateStr).filter(Boolean)
+                .map(d => d.replace(/\/\d{4}$/, ''));
+            const rows = t.wrong.entries.map(e => e.sheetRow).filter(Boolean);
+            const wh = t.wrong.entries[0]?.shortWH || '';
+
+            const editLinks = rows.map(r =>
+                `<a href="${sheetBaseUrl}&range=C${r}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;" title="Mở dòng ${r}">Dòng ${r}</a>`
+            ).join(', ');
+
+            html += `<tr>
+                <td>${i + 1}</td>
+                <td style="color:var(--danger);font-weight:700;">${wrongHighlighted}</td>
+                <td style="color:var(--success);font-weight:700;">${escapeHtml(correctName)}</td>
+                <td style="text-align:center;font-weight:700;color:var(--danger);">${t.wrong.count}</td>
+                <td style="text-align:center;color:var(--success);">${t.correct.count}</td>
+                <td>${escapeHtml(wh)}</td>
+                <td style="font-size:12px;">${dates.join(', ')}</td>
+                <td>${editLinks}</td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+    }
+
+    // Bảng 2: Sai biển số (so với danh sách NCC)
+    if (plateTypos.length > 0) {
+        html += `<h4 style="margin:0 0 8px;color:#f0ad4e;">🚛 Biển số không có trong NCC (${plateTypos.length} lỗi)</h4>`;
+        html += `<p style="color:var(--text-muted);font-size:12px;margin-bottom:8px;">Danh sách NCC là chuẩn. Biển số NV gõ không khớp bất kỳ biển nào trong NCC → nghi gõ sai.</p>`;
+        html += `<table style="margin-bottom:24px;"><thead><tr>
+            <th style="width:40px;">#</th>
+            <th>Biển số NV gõ (SAI)</th>
+            <th>Gợi ý NCC (ĐÚNG)</th>
+            <th>NV đã gõ sai</th>
+            <th style="width:60px;">Số lần</th>
+            <th>Các ngày</th>
+            <th style="width:80px;">Sửa</th>
+        </tr></thead><tbody>`;
+
+        plateTypos.forEach((t, i) => {
+            const empNames = [...new Set(t.entries.map(e => e.name + (e.code ? ' ' + e.code : '')))];
+            const dates = [...new Set(t.entries.map(e => e.dateStr))].filter(Boolean)
+                .map(d => d.replace(/\/\d{4}$/, ''));
+            const rows = t.entries.map(e => e.sheetRow).filter(Boolean);
+
+            const editLinks = rows.slice(0, 5).map(r =>
+                `<a href="${sheetBaseUrl}&range=J${r}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${r}</a>`
+            ).join(', ') + (rows.length > 5 ? ` +${rows.length - 5}` : '');
+
+            html += `<tr>
+                <td>${i + 1}</td>
+                <td style="color:var(--danger);font-weight:700;">${escapeHtml(t.wrongPlate)}</td>
+                <td style="color:var(--success);font-weight:700;">${escapeHtml(t.correctPlate)}</td>
+                <td style="font-size:12px;">${empNames.map(n => escapeHtml(n)).join(', ')}</td>
+                <td style="text-align:center;font-weight:700;color:var(--danger);">${t.count}</td>
+                <td style="font-size:12px;">${dates.join(', ')}</td>
+                <td>${editLinks}</td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+    }
+
+    // Bảng 3: Lệch so với danh sách NV chuẩn (Master)
+    if (masterMismatches.length > 0) {
+        html += `<h4 style="margin:0 0 8px;color:#e67e22;">📋 Lệch so với danh sách NV chuẩn (${masterMismatches.length} lỗi)</h4>`;
+        html += `<p style="color:var(--text-muted);font-size:12px;margin-bottom:8px;">So sánh tên + mã NV trong báo cáo ODO với file danh sách NV chuẩn. Nếu khác → NV gõ sai.</p>`;
+        html += `<table style="margin-bottom:24px;"><thead><tr>
+            <th style="width:40px;">#</th>
+            <th>Báo cáo gõ</th>
+            <th>Danh sách chuẩn</th>
+            <th>Loại lỗi</th>
+            <th style="width:60px;">Số lần</th>
+            <th style="width:80px;">Sửa</th>
+        </tr></thead><tbody>`;
+
+        masterMismatches.forEach((mm, i) => {
+            const reportedStr = mm.reported.name + ' ' + mm.reported.code;
+            const masterStr = mm.master.name + ' ' + mm.master.code;
+            const typeLabel = mm.type === 'name' ? '❌ Sai tên' : '❌ Sai mã NV';
+
+            const rows = mm.reported.entries.map(e => e.sheetRow).filter(Boolean);
+            const editLinks = rows.slice(0, 5).map(r =>
+                `<a href="${sheetBaseUrl}&range=C${r}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${r}</a>`
+            ).join(', ') + (rows.length > 5 ? ` +${rows.length - 5}` : '');
+
+            html += `<tr>
+                <td>${i + 1}</td>
+                <td style="color:var(--danger);font-weight:700;">${escapeHtml(reportedStr)}</td>
+                <td style="color:var(--success);font-weight:700;">${escapeHtml(masterStr)}</td>
+                <td><span class="badge badge-warning">${typeLabel}</span></td>
+                <td style="text-align:center;font-weight:700;">${mm.reported.count}</td>
+                <td>${editLinks}</td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+    }
+
+    container.innerHTML = html;
+}
+
+// ====== GỬI BÁO CÁO TELEGRAM (HÌNH ẢNH) ======
+async function sendTelegramReport() {
+    const btn = event.target.closest('.btn');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Đang chụp hình...';
+
+    try {
+        const month = document.getElementById('filterMonth').value;
+        const cycle = getCycleRange(month);
+        const cycleStr = `${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}`;
+        const timeStr = new Date().toLocaleString('vi-VN');
+        const teleUrl = `https://api.telegram.org/bot${CONFIG.TELEGRAM_TOKEN}/sendPhoto`;
+
+        // ═══════════════════════════════════════
+        // ẢNH 1: DANH SÁCH NV (Ranking)
+        // ═══════════════════════════════════════
+        const rankingTab = document.querySelector('.tab[onclick*="ranking"]');
+        if (rankingTab) switchTab('ranking', rankingTab);
+        await new Promise(r => setTimeout(r, 300));
+
+        const grid = document.getElementById('rankingGrid');
+        btn.innerHTML = '⏳ Chụp danh sách NV...';
+        const canvas1 = await html2canvas(grid, {
+            backgroundColor: '#0f1117',
+            scale: 2,
+            useCORS: true,
+            logging: false
+        });
+        const blob1 = await new Promise(resolve => canvas1.toBlob(resolve, 'image/png'));
+
+        btn.innerHTML = '⏳ Gửi ảnh 1/2...';
+        const form1 = new FormData();
+        form1.append('chat_id', CONFIG.TELEGRAM_CHAT_ID);
+        form1.append('photo', blob1, 'bao_cao_odo.png');
+        form1.append('caption', `📊 Báo cáo ODO - Kỳ ${cycleStr}\n🕐 ${timeStr}\n🏭 Dashboard GHN ODO`);
+
+        const res1 = await fetch(teleUrl, { method: 'POST', body: form1 });
+        const result1 = await res1.json();
+        if (!result1.ok) throw new Error('Ảnh 1: ' + (result1.description || 'Lỗi'));
+
+        // ═══════════════════════════════════════
+        // ẢNH 2: CẢNH BÁO GIAN LẬN (nếu có)
+        // ═══════════════════════════════════════
+        const fraudCount = parseInt(document.getElementById('fraudBadge').textContent) || 0;
+        if (fraudCount > 0) {
+            const fraudTab = document.querySelector('.tab[onclick*="fraud"]');
+            if (fraudTab) switchTab('fraud', fraudTab);
+            await new Promise(r => setTimeout(r, 300));
+
+            const fraudContainer = document.getElementById('fraudTableContainer');
+            btn.innerHTML = '⏳ Chụp cảnh báo gian lận...';
+            const canvas2 = await html2canvas(fraudContainer, {
+                backgroundColor: '#0f1117',
+                scale: 2,
+                useCORS: true,
+                logging: false
+            });
+            const blob2 = await new Promise(resolve => canvas2.toBlob(resolve, 'image/png'));
+
+            btn.innerHTML = '⏳ Gửi ảnh 2/2...';
+            const form2 = new FormData();
+            form2.append('chat_id', CONFIG.TELEGRAM_CHAT_ID);
+            form2.append('photo', blob2, 'canh_bao_gian_lan.png');
+            form2.append('caption', `🚨 CẢNH BÁO GIAN LẬN - Kỳ ${cycleStr}\n⚠️ ${fraudCount} trường hợp cần kiểm tra\n🔴 Km > 200 hoặc Tăng ca > 3 tiếng\n🕒 ${timeStr}`);
+
+            const res2 = await fetch(teleUrl, { method: 'POST', body: form2 });
+            const result2 = await res2.json();
+            if (!result2.ok) throw new Error('Ảnh 2: ' + (result2.description || 'Lỗi'));
+        }
+
+        // Quay lại tab ranking
+        if (rankingTab) switchTab('ranking', rankingTab);
+
+        showToast('✅', `Đã gửi ${fraudCount > 0 ? '2 ảnh' : '1 ảnh'} báo cáo vào Telegram!`);
+    } catch (err) {
+        console.error('Telegram error:', err);
+        showToast('❌', 'Lỗi gửi Telegram: ' + err.message);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '📤 Gửi báo cáo Telegram';
+}
+
+// ====== GỬI CẢNH BÁO GIAN LẬN TELEGRAM (HÌNH ẢNH) ======
+async function sendFraudTelegram() {
+    const btn = event.target.closest('.btn');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Đang chụp hình...';
+
+    try {
+        // Đảm bảo đang ở tab fraud
+        const fraudTab = document.querySelector('.tab[onclick*="fraud"]');
+        if (fraudTab) switchTab('fraud', fraudTab);
+        await new Promise(r => setTimeout(r, 300));
+
+        const container = document.getElementById('fraudTableContainer');
+
+        // Chụp hình bảng gian lận
+        const canvas = await html2canvas(container, {
+            backgroundColor: '#0f1117',
+            scale: 2,
+            useCORS: true,
+            logging: false
+        });
+
+        // Chuyển canvas → blob
+        btn.innerHTML = '⏳ Đang gửi...';
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+        // Tạo caption
+        const month = document.getElementById('filterMonth').value;
+        const cycle = getCycleRange(month);
+        const fraudCount = document.getElementById('fraudBadge').textContent;
+        const caption = `🚨 CẢNH BÁO GIAN LẬN - Kỳ ${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}\n⚠️ ${fraudCount} trường hợp cần kiểm tra\n🔴 Km > 200 hoặc Tăng ca > 3 tiếng\n🕒 ${new Date().toLocaleString('vi-VN')}`;
+
+        const formData = new FormData();
+        formData.append('chat_id', CONFIG.TELEGRAM_CHAT_ID);
+        formData.append('photo', blob, 'canh_bao_gian_lan.png');
+        formData.append('caption', caption);
+
+        const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_TOKEN}/sendPhoto`;
+        const response = await fetch(url, { method: 'POST', body: formData });
+        const result = await response.json();
+
+        if (result.ok) {
+            showToast('✅', 'Đã gửi cảnh báo gian lận vào Telegram!');
+        } else {
+            throw new Error(result.description || 'Lỗi không xác định');
+        }
+    } catch (err) {
+        console.error('Telegram fraud error:', err);
+        showToast('❌', 'Lỗi gửi Telegram: ' + err.message);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '📤 Gửi lên Telegram';
+}
+
+// ====== CHUYỂN TAB ======
+function switchTab(tab, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+
+    document.getElementById('tabDaily').style.display = tab === 'daily' ? '' : 'none';
+    document.getElementById('tabRanking').style.display = tab === 'ranking' ? '' : 'none';
+    document.getElementById('tabFraud').style.display = tab === 'fraud' ? '' : 'none';
+    document.getElementById('tabTypo').style.display = tab === 'typo' ? '' : 'none';
+}
+
+// ====== TỰ ĐỘNG REFRESH MỖI 30 PHÚT ======
+function startAutoRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    if (countdownTimer) clearInterval(countdownTimer);
+
+    nextRefreshTime = Date.now() + CONFIG.REFRESH_INTERVAL;
+
+    refreshTimer = setInterval(() => {
+        loadAllData();
+        nextRefreshTime = Date.now() + CONFIG.REFRESH_INTERVAL;
+    }, CONFIG.REFRESH_INTERVAL);
+
+    countdownTimer = setInterval(() => {
+        const remaining = Math.max(0, nextRefreshTime - Date.now());
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        document.getElementById('countdown').textContent =
+            `Tự refresh sau: ${mins}p ${secs}s`;
+    }, 1000);
+}
+
+// ====== TIỆN ÍCH ======
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showLoading(show) {
+    const el = document.getElementById('loadingDaily');
+    if (el) el.style.display = show ? 'flex' : 'none';
+    const el2 = document.getElementById('loadingRecon');
+    if (el2) el2.style.display = show ? 'flex' : 'none';
+}
+
+function showToast(icon, msg) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toastIcon').textContent = icon;
+    document.getElementById('toastMsg').textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 4000);
+}
+</script>
+</body>
+</html>

@@ -1972,6 +1972,36 @@ function startAutoRefresh() {
         document.getElementById('countdown').textContent =
             `Tự refresh sau: ${mins}p ${secs}s`;
     }, 1000);
+
+    // ====== TỰ ĐỘNG GỬI BÁO CÁO TELEGRAM LÚC 10H SÁNG ======
+    startAutoTelegramReport();
+}
+
+let autoReportTimer = null;
+function startAutoTelegramReport() {
+    if (autoReportTimer) clearInterval(autoReportTimer);
+
+    // Kiểm tra mỗi 30 giây
+    autoReportTimer = setInterval(() => {
+        const now = new Date();
+        const hour = now.getHours();
+        const minute = now.getMinutes();
+        const todayKey = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+
+        // Gửi lúc 10:00 (cho phép trong khoảng 10:00 - 10:01)
+        if (hour === 10 && minute === 0) {
+            const lastSent = localStorage.getItem('lastAutoReport');
+            if (lastSent === todayKey) return; // Đã gửi hôm nay rồi
+
+            localStorage.setItem('lastAutoReport', todayKey);
+            console.log('🕐 10:00 AM - Tự động gửi báo cáo Telegram...');
+            showToast('🕐', 'Đang tự động gửi báo cáo 10h sáng...');
+
+            // Giả lập click nút gửi
+            const btn = document.querySelector('.btn[onclick*="sendTelegramReport"]');
+            if (btn) btn.click();
+        }
+    }, 30000); // Kiểm tra mỗi 30 giây
 }
 
 // ====== TIỆN ÍCH ======

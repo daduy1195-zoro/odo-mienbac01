@@ -83,19 +83,12 @@
         }
         .header-left { display: flex; align-items: center; gap: 16px; }
         .logo {
-            width: 52px; height: 52px;
-            background: linear-gradient(180deg, #4a9bd9 0%, #1a6fb5 50%, #0d5a9e 100%);
-            border-radius: 10px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-weight: 900; font-size: 14px; color: white;
-            box-shadow: 0 4px 15px rgba(26, 111, 181, 0.4);
-            position: relative;
-            letter-spacing: 1px;
+            width: 56px; height: 56px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
         }
         .logo svg {
-            width: 22px; height: 16px;
-            fill: white;
-            margin-bottom: 1px;
+            width: 56px; height: 56px;
         }
         .header h1 { font-size: 22px; font-weight: 700; }
         .header p { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
@@ -378,10 +371,16 @@
     <header class="header" id="header">
         <div class="header-left">
             <div class="logo">
-                <svg viewBox="0 0 24 18" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 6h-3V2c0-.6-.4-1-1-1H2c-.6 0-1 .4-1 1v11c0 .6.4 1 1 1h1.1c.4 1.2 1.5 2 2.9 2s2.5-.8 2.9-2h4.2c.4 1.2 1.5 2 2.9 2s2.5-.8 2.9-2H21c.6 0 1-.4 1-1V9c0-1.7-1.3-3-3-3zM6 14.5c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5zm10 0c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5zm4-3h-1v-3h-2V7h3c.6 0 1 .4 1 1v3.5z"/>
+                <svg viewBox="0 0 120 50" xmlns="http://www.w3.org/2000/svg">
+                    <!-- G with teal arrow -->
+                    <path d="M0 8C0 3.6 3.6 0 8 0h16c2.2 0 4 1.8 4 4v0c0 2.2-1.8 4-4 4H8v30h16V28H18c-2.2 0-4-1.8-4-4v0c0-2.2 1.8-4 4-4h10c2.2 0 4 1.8 4 4v14c0 4.4-3.6 8-8 8H8c-4.4 0-8-3.6-8-8V8z" fill="#e0f2f1"/>
+                    <path d="M16 14l7-7v5h-3v9h-4V14z" fill="#14b8a6"/>
+                    <!-- H -->
+                    <path d="M38 0h4c1.1 0 2 .9 2 2v44c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2V0h0c0 0 0 0 2 0zm18 0h4c1.1 0 2 .9 2 2v44c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2V0h0c0 0 0 0 2 0zM42 19h12c1.1 0 2 .9 2 2v4c0 1.1-.9 2-2 2H42c-1.1 0-2-.9-2-2v-4c0-1.1.9-2 2-2z" fill="#e0f2f1"/>
+                    <!-- N -->
+                    <path d="M70 0h4c1.1 0 2 .9 2 2v44c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2V2c0-1.1.9-2 2-2zm28 0h4c1.1 0 2 .9 2 2v44c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2V2c0-1.1.9-2 2-2z" fill="#e0f2f1"/>
+                    <path d="M74 4l26 36h-6L70 10V4h4z" fill="#e0f2f1"/>
                 </svg>
-                GHN
             </div>
             <div>
                 <h1>Dashboard Báo cáo ODO</h1>

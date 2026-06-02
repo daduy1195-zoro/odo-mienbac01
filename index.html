@@ -469,6 +469,9 @@
     <div class="section" id="tabRanking" style="display:none;">
         <div class="section-header">
             <div class="section-title">👤 Danh sách nhân viên theo kho</div>
+            <button class="btn btn-primary" onclick="sendRankingTelegram()" style="padding:6px 14px;font-size:12px;">
+                📤 Gửi lên Telegram
+            </button>
         </div>
         <div class="section-body">
             <div class="ranking-grid" id="rankingGrid">
@@ -1948,6 +1951,61 @@ async function sendFraudTelegram() {
         }
     } catch (err) {
         console.error('Telegram fraud error:', err);
+        showToast('❌', 'Lỗi gửi Telegram: ' + err.message);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '📤 Gửi lên Telegram';
+}
+
+// ====== GỬI DANH SÁCH NV TELEGRAM (HÌNH ẢNH) ======
+async function sendRankingTelegram() {
+    const btn = event.target.closest('.btn');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Đang chụp hình...';
+
+    try {
+        // Đảm bảo đang ở tab ranking
+        const rankingTab = document.querySelector('.tab[onclick*="ranking"]');
+        if (rankingTab) switchTab('ranking', rankingTab);
+        await new Promise(r => setTimeout(r, 300));
+
+        const grid = document.getElementById('rankingGrid');
+
+        // Chụp hình bảng danh sách NV
+        const canvas = await html2canvas(grid, {
+            backgroundColor: '#0f1117',
+            scale: 2,
+            useCORS: true,
+            logging: false
+        });
+
+        // Chuyển canvas → blob
+        btn.innerHTML = '⏳ Đang gửi...';
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+        // Tạo caption
+        const month = document.getElementById('filterMonth').value;
+        const cycle = getCycleRange(month);
+        const cycleStr = `${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}`;
+        const caption = `👤 DANH SÁCH NHÂN VIÊN - Kỳ ${cycleStr}\n🕐 ${new Date().toLocaleString('vi-VN')}\n🏭 Dashboard GHN ODO`;
+
+        const formData = new FormData();
+        formData.append('chat_id', CONFIG.TELEGRAM_CHAT_ID);
+        formData.append('photo', blob, 'danh_sach_nv.png');
+        formData.append('caption', caption);
+
+        const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_TOKEN}/sendPhoto`;
+        const response = await fetch(url, { method: 'POST', body: formData });
+        const result = await response.json();
+
+        if (result.ok) {
+            showToast('✅', 'Đã gửi danh sách NV vào Telegram!');
+        } else {
+            throw new Error(result.description || 'Lỗi không xác định');
+        }
+    } catch (err) {
+        console.error('Telegram ranking error:', err);
         showToast('❌', 'Lỗi gửi Telegram: ' + err.message);
     }
 

@@ -11,31 +11,31 @@
         /*  CSS - PHẦN GIAO DIỆN (Không cần chỉnh sửa) */
         /* ============================================ */
         :root {
-            --bg-primary: #0f1117;
-            --bg-secondary: #1a1d27;
-            --bg-card: #21242f;
-            --bg-card-hover: #282c3a;
-            --border: #2d3143;
-            --text-primary: #e8eaed;
-            --text-secondary: #9ca3af;
-            --text-muted: #6b7280;
-            --accent: #6366f1;
-            --accent-glow: rgba(99, 102, 241, 0.3);
+            --bg-primary: #080d0f;
+            --bg-secondary: #0d1517;
+            --bg-card: #111b1e;
+            --bg-card-hover: #162226;
+            --border: #1c3035;
+            --text-primary: #e0f2f1;
+            --text-secondary: #80b0a8;
+            --text-muted: #4d7a72;
+            --accent: #14b8a6;
+            --accent-glow: rgba(20, 184, 166, 0.3);
             --success: #22c55e;
             --success-bg: rgba(34, 197, 94, 0.1);
             --warning: #f59e0b;
             --warning-bg: rgba(245, 158, 11, 0.1);
             --danger: #ef4444;
             --danger-bg: rgba(239, 68, 68, 0.1);
-            --info: #3b82f6;
-            --info-bg: rgba(59, 130, 246, 0.1);
-            --gradient-1: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --info: #2dd4bf;
+            --info-bg: rgba(45, 212, 191, 0.1);
+            --gradient-1: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
             --gradient-2: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
             --gradient-3: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             --gradient-4: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             --radius: 12px;
             --radius-sm: 8px;
-            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+            --shadow: 0 4px 24px rgba(0,0,0,0.4);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,9 +56,9 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
-                        radial-gradient(circle at 40% 40%, rgba(34, 197, 94, 0.03) 0%, transparent 50%);
+            background: radial-gradient(circle at 20% 80%, rgba(13, 148, 136, 0.07) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(20, 184, 166, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 40%, rgba(45, 212, 191, 0.04) 0%, transparent 50%);
             z-index: 0;
             animation: bgFloat 20s ease-in-out infinite;
         }
@@ -1843,7 +1843,7 @@ async function sendTelegramReport() {
         const grid = document.getElementById('rankingGrid');
         btn.innerHTML = '⏳ Chụp danh sách NV...';
         const canvas1 = await html2canvas(grid, {
-            backgroundColor: '#0f1117',
+            backgroundColor: '#080d0f',
             scale: 2,
             useCORS: true,
             logging: false
@@ -1872,7 +1872,7 @@ async function sendTelegramReport() {
             const fraudContainer = document.getElementById('fraudTableContainer');
             btn.innerHTML = '⏳ Chụp cảnh báo gian lận...';
             const canvas2 = await html2canvas(fraudContainer, {
-                backgroundColor: '#0f1117',
+                backgroundColor: '#080d0f',
                 scale: 2,
                 useCORS: true,
                 logging: false
@@ -1919,7 +1919,7 @@ async function sendFraudTelegram() {
 
         // Chụp hình bảng gian lận
         const canvas = await html2canvas(container, {
-            backgroundColor: '#0f1117',
+            backgroundColor: '#080d0f',
             scale: 2,
             useCORS: true,
             logging: false
@@ -1974,7 +1974,7 @@ async function sendRankingTelegram() {
 
         // Chụp hình bảng danh sách NV
         const canvas = await html2canvas(grid, {
-            backgroundColor: '#0f1117',
+            backgroundColor: '#080d0f',
             scale: 2,
             useCORS: true,
             logging: false

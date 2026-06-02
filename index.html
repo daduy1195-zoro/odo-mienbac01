@@ -406,8 +406,9 @@
     <!-- ========== BỘ LỌC ========== -->
     <div class="filter-bar">
         <div class="filter-group">
-            <span class="filter-label">Kỳ đối soát (26→25)</span>
-            <input type="month" id="filterMonth">
+            <span class="filter-label">Kỳ đối soát</span>
+            <div id="cycleLabel" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-weight:600;font-size:14px;color:var(--text-primary);white-space:nowrap;"></div>
+            <input type="hidden" id="filterMonth">
         </div>
         <div class="filter-group">
             <span class="filter-label">Kho</span>
@@ -854,12 +855,24 @@ let nextRefreshTime = null;
 
 // ====== KHỞI CHẠY ======
 document.addEventListener('DOMContentLoaded', () => {
-    // Đặt tháng hiện tại làm mặc định
+    // Tự động tính kỳ đối soát hiện tại (ngày < 26 → tháng trước, ngày >= 26 → tháng này)
     const now = new Date();
-    document.getElementById('filterMonth').value = now.toISOString().slice(0, 7);
+    let cycleYear = now.getFullYear();
+    let cycleMonth = now.getMonth(); // 0-indexed
+    if (now.getDate() < 26) {
+        cycleMonth -= 1;
+        if (cycleMonth < 0) { cycleMonth = 11; cycleYear -= 1; }
+    }
+    const monthStr = `${cycleYear}-${String(cycleMonth + 1).padStart(2, '0')}`;
+    document.getElementById('filterMonth').value = monthStr;
+
+    // Hiển thị nhãn kỳ
+    const cycle = getCycleRange(monthStr);
+    const startStr = `${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')}`;
+    const endStr = `${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}`;
+    document.getElementById('cycleLabel').textContent = `📅 ${startStr} → ${endStr}`;
 
     // Gắn sự kiện lọc
-    document.getElementById('filterMonth').addEventListener('change', renderAll);
     document.getElementById('filterWarehouse').addEventListener('change', renderAll);
     document.getElementById('filterEmployee').addEventListener('change', renderAll);
 

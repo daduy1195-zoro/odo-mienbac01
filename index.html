@@ -509,7 +509,7 @@
         </div>
         <div class="section-body">
             <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">
-                Danh sách các bản ghi có <strong style="color:var(--danger);">Km > 200</strong> hoặc <strong style="color:var(--danger);">Tăng ca > 3 tiếng</strong>.
+                Danh sách các bản ghi có <strong style="color:var(--danger);">Km > 200</strong>, <strong style="color:var(--danger);">Km âm (gõ sai)</strong> hoặc <strong style="color:var(--danger);">Tăng ca > 3 tiếng</strong>.
                 Cần kiểm tra xác minh tính chính xác của dữ liệu.
             </p>
             <div class="table-scroll" id="fraudTableContainer">
@@ -1399,7 +1399,7 @@ function renderDailyTable(filtered) {
             <td style="font-weight:700;color:${otColor};text-align:center;">${otDisplay}</td>
             <td style="font-family:monospace;">${e.kmStart}</td>
             <td style="font-family:monospace;">${e.kmEnd}</td>
-            <td style="font-weight:600; color:${!isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${kmDisplay}</td>
+            <td style="font-weight:600; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + kmDisplay + ' (gõ sai!)' : kmDisplay}</td>
             <td>${reconBadge}</td>
         </tr>`;
     });
@@ -1562,6 +1562,11 @@ function renderFraudWarnings(filtered) {
             reasons.push({ type: 'km', value: km });
         }
 
+        // Kiểm tra Km âm (gõ sai ODO)
+        if (!isNaN(km) && km < 0) {
+            reasons.push({ type: 'km_neg', value: km });
+        }
+
         // Kiểm tra Tăng ca > 3 tiếng
         if (e.hourEnd) {
             const timeStr = e.hourEnd.replace(/h/gi, ':');
@@ -1647,6 +1652,7 @@ function renderFraudWarnings(filtered) {
         // Render lý do cảnh báo
         const reasonBadges = f.reasons.map(r => {
             if (r.type === 'km') return `<span class="badge badge-danger">🔴 Km: ${r.value}</span>`;
+            if (r.type === 'km_neg') return `<span class="badge badge-danger">⚠️ Km âm: ${r.value} (gõ sai!)</span>`;
             if (r.type === 'ot') return `<span class="badge badge-danger">🔴 TC: ${r.display}</span>`;
             return '';
         }).join(' ');

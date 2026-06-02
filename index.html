@@ -1822,6 +1822,54 @@ function renderTypoWarnings(month) {
         html += '</tbody></table>';
     }
 
+    // Bảng 4: ODO gõ sai (Km âm)
+    const odoErrors = cycleData.filter(e => {
+        const km = parseInt(e.kmEnd) - parseInt(e.kmStart);
+        return !isNaN(km) && km < 0;
+    });
+
+    if (odoErrors.length > 0) {
+        // Cập nhật tổng số lỗi
+        const newTotal = totalIssues + odoErrors.length;
+        document.getElementById('typoBadge').textContent = newTotal;
+        document.getElementById('typoCount').textContent = newTotal + ' lỗi';
+
+        html += `<h4 style="margin:0 0 8px;color:var(--danger);">⚠️ ODO gõ sai — Km âm (${odoErrors.length} lỗi)</h4>`;
+        html += `<p style="color:var(--text-muted);font-size:12px;margin-bottom:8px;">ODO Về nhỏ hơn ODO Đi → Km âm. Nhân viên gõ sai số ODO, cần sửa lại trên Google Sheet.</p>`;
+        html += `<table style="margin-bottom:24px;"><thead><tr>
+            <th style="width:40px;">#</th>
+            <th>Ngày</th>
+            <th>Họ và tên</th>
+            <th>Mã NV</th>
+            <th>Biển số</th>
+            <th>Kho</th>
+            <th>ODO Đi</th>
+            <th>ODO Về</th>
+            <th>Km</th>
+            <th style="width:80px;">Sửa</th>
+        </tr></thead><tbody>`;
+
+        odoErrors.forEach((e, i) => {
+            const km = parseInt(e.kmEnd) - parseInt(e.kmStart);
+            const editLink = `<a href="${sheetBaseUrl}&range=H${e.sheetRow}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`;
+
+            html += `<tr>
+                <td>${i + 1}</td>
+                <td style="white-space:nowrap;font-weight:600;">${e.dateStr}</td>
+                <td style="font-weight:600;">${escapeHtml(e.name)}</td>
+                <td><span class="badge badge-info">${e.code || '—'}</span></td>
+                <td style="font-family:monospace;">${escapeHtml(e.plate)}</td>
+                <td>${escapeHtml(e.shortWH)}</td>
+                <td style="font-family:monospace;">${e.kmStart}</td>
+                <td style="font-family:monospace;">${e.kmEnd}</td>
+                <td style="font-weight:700;color:var(--danger);">⚠️ ${km.toLocaleString()}</td>
+                <td>${editLink}</td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+    }
+
     container.innerHTML = html;
 }
 

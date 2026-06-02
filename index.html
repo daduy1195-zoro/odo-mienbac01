@@ -1661,6 +1661,22 @@ function renderFraudWarnings(filtered) {
             ? `<a href="${sheetBaseUrl}&range=A${e.sheetRow}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`
             : '';
 
+        // Tính otMinutes để tô màu
+        let fraudOtMins = 0;
+        if (e.hourEnd) {
+            const ts2 = e.hourEnd.replace(/h/gi, ':');
+            const tp2 = ts2.match(/(\d{1,2}):(\d{2})/);
+            if (tp2) {
+                let h2 = parseInt(tp2[1]);
+                const m2 = parseInt(tp2[2]);
+                if (/PM/i.test(ts2) && h2 < 12) h2 += 12;
+                if (/AM/i.test(ts2) && h2 === 12) h2 = 0;
+                const tot2 = h2 * 60 + m2;
+                if (tot2 > 19 * 60) fraudOtMins = tot2 - 19 * 60;
+            }
+        }
+        const otColor = fraudOtMins > 180 ? 'var(--danger)' : fraudOtMins > 120 ? '#f0ad4e' : 'var(--success)';
+
         html += `<tr>
             <td>${i + 1}</td>
             <td style="white-space:nowrap;font-weight:600;">${e.dateStr}</td>
@@ -1670,10 +1686,10 @@ function renderFraudWarnings(filtered) {
             <td><span class="badge badge-info">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:monospace;">${escapeHtml(e.hourStart || '—')}</td>
             <td style="font-family:monospace;">${escapeHtml(e.hourEnd || '—')}</td>
-            <td style="font-weight:700;color:var(--danger);">${otDisplay}</td>
+            <td style="font-weight:700;color:${otColor};">${otDisplay}</td>
             <td style="font-family:monospace;">${e.kmStart}</td>
             <td style="font-family:monospace;">${e.kmEnd}</td>
-            <td style="font-weight:700;color:${f.km > 200 ? 'var(--danger)' : 'var(--success)'};">${kmDisplay}</td>
+            <td style="font-weight:700;color:${f.km < 0 || f.km > 200 ? 'var(--danger)' : 'var(--success)'};">${kmDisplay}</td>
             <td>${reasonBadges}</td>
             <td>${editLink}</td>
         </tr>`;

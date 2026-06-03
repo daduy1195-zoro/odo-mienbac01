@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GHN - Dashboard Báo cáo ODO Xe Tải</title>
     <meta name="description" content="Hệ thống theo dõi báo cáo ODO xe tải GHN - Khu vực Miền Bắc">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="robots" content="noindex, nofollow">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         /* ============================================ */
@@ -362,7 +366,7 @@
         .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
         .empty-state p { font-size: 14px; }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 
@@ -426,7 +430,7 @@
             </select>
         </div>
         <div class="filter-group" style="align-self: flex-end;">
-            <button class="btn btn-primary" onclick="sendTelegramReport()">
+            <button class="btn btn-primary" onclick="sendTelegramReport(event)">
                 📤 Gửi báo cáo Telegram
             </button>
         </div>
@@ -468,7 +472,7 @@
     <div class="section" id="tabRanking" style="display:none;">
         <div class="section-header">
             <div class="section-title">👤 Danh sách nhân viên theo kho</div>
-            <button class="btn btn-primary" onclick="sendRankingTelegram()" style="padding:6px 14px;font-size:12px;">
+            <button class="btn btn-primary" onclick="sendRankingTelegram(event)" style="padding:6px 14px;font-size:12px;">
                 📤 Gửi lên Telegram
             </button>
         </div>
@@ -502,7 +506,7 @@
             <div class="section-title">🚨 Cảnh báo gian lận</div>
             <div style="display:flex;gap:8px;align-items:center;">
                 <span class="badge badge-danger" id="fraudCount">0 trường hợp</span>
-                <button class="btn btn-primary" onclick="sendFraudTelegram()" style="padding:6px 14px;font-size:12px;">
+                <button class="btn btn-primary" onclick="sendFraudTelegram(event)" style="padding:6px 14px;font-size:12px;">
                     📤 Gửi lên Telegram
                 </button>
             </div>
@@ -549,13 +553,14 @@ const CONFIG = {
     SHEET_MASTER_ID: '1RMe38TNV-EoIAradnynYmk8mt7l9pNWqJELM9O84Wxc',
     SHEET_MASTER_GID: '1254809645',
 
-    // Telegram Bot
-    TELEGRAM_TOKEN: '8261927820:AAGQ5__xC6fdh6eegzmxWnA_EyFRneu6deQ',
-    TELEGRAM_CHAT_ID: '-1002346875748',
+    // Telegram Proxy (token ẩn trên server Google Apps Script)
+    // ⚠️ SAU KHI DEPLOY Apps Script, dán URL web app vào đây
+    TELEGRAM_PROXY_URL: 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE',
 
     // Tự động refresh mỗi 30 phút (đơn vị: miligiây)
     REFRESH_INTERVAL: 30 * 60 * 1000,
 };
+Object.freeze(CONFIG);
 
 // ====== 4 KHO ANH QUẢN LÝ ======
 // Bảng đối chiếu tên kho: tên dài (NV điền) ↔ tên ngắn (file NCC)
@@ -1185,14 +1190,14 @@ async function loadAllData() {
 
     } catch (err) {
         console.error('Lỗi tải dữ liệu:', err);
-        showToast('❌', 'Lỗi: ' + err.message);
+        showToast('❌', 'Không thể tải dữ liệu. Vui lòng thử lại.');
         document.getElementById('loadingDaily').innerHTML = `
             <div class="empty-state">
                 <div class="icon">❌</div>
                 <p>Không thể tải dữ liệu. Hãy kiểm tra:<br>
                 1. Kết nối internet<br>
                 2. File Google Sheet đã mở quyền "Bất kỳ ai có link"<br><br>
-                <small style="color:var(--text-muted);">Chi tiết lỗi: ${escapeHtml(err.message)}</small></p>
+                <small style="color:var(--text-muted);">Vui lòng thử lại sau hoặc liên hệ quản trị viên.</small></p>
             </div>`;
     }
 }
@@ -1388,18 +1393,18 @@ function renderDailyTable(filtered) {
 
         html += `<tr>
             <td>${i + 1}</td>
-            <td style="white-space:nowrap; font-weight:600;">${e.dateStr}</td>
+            <td style="white-space:nowrap; font-weight:600;">${escapeHtml(e.dateStr)}</td>
             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
-            <td><span class="badge badge-info">${e.code || '—'}</span></td>
+            <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
             <td style="font-family:monospace; font-weight:600;">${escapeHtml(e.plate)}</td>
             <td style="font-size:12px;">${escapeHtml(e.supplier)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:monospace;white-space:nowrap;">${escapeHtml(e.hourStart || '—')}</td>
             <td style="font-family:monospace;white-space:nowrap;">${escapeHtml(e.hourEnd || '—')}</td>
-            <td style="font-weight:700;color:${otColor};text-align:center;">${otDisplay}</td>
-            <td style="font-family:monospace;">${e.kmStart}</td>
-            <td style="font-family:monospace;">${e.kmEnd}</td>
-            <td style="font-weight:600; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + kmDisplay + ' (gõ sai!)' : kmDisplay}</td>
+            <td style="font-weight:700;color:${otColor};text-align:center;">${escapeHtml(otDisplay)}</td>
+            <td style="font-family:monospace;">${escapeHtml(String(e.kmStart))}</td>
+            <td style="font-family:monospace;">${escapeHtml(String(e.kmEnd))}</td>
+            <td style="font-weight:600; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + escapeHtml(String(kmDisplay)) + ' (gõ sai!)' : escapeHtml(String(kmDisplay))}</td>
             <td>${reconBadge}</td>
         </tr>`;
     });
@@ -1679,17 +1684,17 @@ function renderFraudWarnings(filtered) {
 
         html += `<tr>
             <td>${i + 1}</td>
-            <td style="white-space:nowrap;font-weight:600;">${e.dateStr}</td>
+            <td style="white-space:nowrap;font-weight:600;">${escapeHtml(e.dateStr)}</td>
             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
-            <td><span class="badge badge-info">${e.code || '—'}</span></td>
+            <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
             <td style="font-family:monospace;font-weight:600;">${escapeHtml(e.plate)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:monospace;">${escapeHtml(e.hourStart || '—')}</td>
             <td style="font-family:monospace;">${escapeHtml(e.hourEnd || '—')}</td>
-            <td style="font-weight:700;color:${otColor};">${otDisplay}</td>
-            <td style="font-family:monospace;">${e.kmStart}</td>
-            <td style="font-family:monospace;">${e.kmEnd}</td>
-            <td style="font-weight:700;color:${f.km < 0 || f.km > 200 ? 'var(--danger)' : 'var(--success)'};">${kmDisplay}</td>
+            <td style="font-weight:700;color:${otColor};">${escapeHtml(otDisplay)}</td>
+            <td style="font-family:monospace;">${escapeHtml(String(e.kmStart))}</td>
+            <td style="font-family:monospace;">${escapeHtml(String(e.kmEnd))}</td>
+            <td style="font-weight:700;color:${f.km < 0 || f.km > 200 ? 'var(--danger)' : 'var(--success)'};">${escapeHtml(String(kmDisplay))}</td>
             <td>${reasonBadges}</td>
             <td>${editLink}</td>
         </tr>`;
@@ -1889,18 +1894,53 @@ function renderTypoWarnings(month) {
     container.innerHTML = html;
 }
 
+// ====== RATE LIMITING ======
+let lastTelegramSend = 0;
+const TELEGRAM_COOLDOWN = 60000; // 60 giây
+function checkTelegramCooldown() {
+    const now = Date.now();
+    const elapsed = now - lastTelegramSend;
+    if (elapsed < TELEGRAM_COOLDOWN) {
+        const remaining = Math.ceil((TELEGRAM_COOLDOWN - elapsed) / 1000);
+        showToast('⏳', `Vui lòng đợi ${remaining}s trước khi gửi tiếp`);
+        return false;
+    }
+    lastTelegramSend = now;
+    return true;
+}
+
+// ====== HELPER: GỬI ẢNH QUA PROXY ======
+async function sendPhotoViaProxy(canvas, caption) {
+    const dataUrl = canvas.toDataURL('image/png');
+    const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+
+    const response = await fetch(CONFIG.TELEGRAM_PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'sendPhoto',
+            image: base64,
+            caption: caption,
+        }),
+    });
+
+    const result = await response.json();
+    if (!result.ok) throw new Error(result.message || 'Proxy error');
+    return result;
+}
+
 // ====== GỬI BÁO CÁO TELEGRAM (HÌNH ẢNH) ======
-async function sendTelegramReport() {
-    const btn = event.target.closest('.btn');
+async function sendTelegramReport(evt) {
+    const btn = evt.target.closest('.btn');
     btn.disabled = true;
     btn.innerHTML = '⏳ Đang chụp hình...';
+    if (!checkTelegramCooldown()) { btn.disabled = false; btn.innerHTML = '📤 Gửi báo cáo Telegram'; return; }
 
     try {
         const month = document.getElementById('filterMonth').value;
         const cycle = getCycleRange(month);
         const cycleStr = `${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}`;
         const timeStr = new Date().toLocaleString('vi-VN');
-        const teleUrl = `https://api.telegram.org/bot${CONFIG.TELEGRAM_TOKEN}/sendPhoto`;
 
         // ═══════════════════════════════════════
         // ẢNH 1: DANH SÁCH NV (Ranking)
@@ -1917,17 +1957,10 @@ async function sendTelegramReport() {
             useCORS: true,
             logging: false
         });
-        const blob1 = await new Promise(resolve => canvas1.toBlob(resolve, 'image/png'));
 
         btn.innerHTML = '⏳ Gửi ảnh 1/2...';
-        const form1 = new FormData();
-        form1.append('chat_id', CONFIG.TELEGRAM_CHAT_ID);
-        form1.append('photo', blob1, 'bao_cao_odo.png');
-        form1.append('caption', `📊 Báo cáo ODO - Kỳ ${cycleStr}\n🕐 ${timeStr}\n🏭 Dashboard GHN ODO`);
-
-        const res1 = await fetch(teleUrl, { method: 'POST', body: form1 });
-        const result1 = await res1.json();
-        if (!result1.ok) throw new Error('Ảnh 1: ' + (result1.description || 'Lỗi'));
+        const caption1 = `📊 Báo cáo ODO - Kỳ ${cycleStr}\n🕐 ${timeStr}\n🏭 Dashboard GHN ODO`;
+        await sendPhotoViaProxy(canvas1, caption1);
 
         // ═══════════════════════════════════════
         // ẢNH 2: CẢNH BÁO GIAN LẬN (nếu có)
@@ -1946,17 +1979,10 @@ async function sendTelegramReport() {
                 useCORS: true,
                 logging: false
             });
-            const blob2 = await new Promise(resolve => canvas2.toBlob(resolve, 'image/png'));
 
             btn.innerHTML = '⏳ Gửi ảnh 2/2...';
-            const form2 = new FormData();
-            form2.append('chat_id', CONFIG.TELEGRAM_CHAT_ID);
-            form2.append('photo', blob2, 'canh_bao_gian_lan.png');
-            form2.append('caption', `🚨 CẢNH BÁO GIAN LẬN - Kỳ ${cycleStr}\n⚠️ ${fraudCount} trường hợp cần kiểm tra\n🔴 Km > 200 hoặc Tăng ca > 3 tiếng\n🕒 ${timeStr}`);
-
-            const res2 = await fetch(teleUrl, { method: 'POST', body: form2 });
-            const result2 = await res2.json();
-            if (!result2.ok) throw new Error('Ảnh 2: ' + (result2.description || 'Lỗi'));
+            const caption2 = `🚨 CẢNH BÁO GIAN LẬN - Kỳ ${cycleStr}\n⚠️ ${fraudCount} trường hợp cần kiểm tra\n🔴 Km > 200 hoặc Tăng ca > 3 tiếng\n🕒 ${timeStr}`;
+            await sendPhotoViaProxy(canvas2, caption2);
         }
 
         // Quay lại tab ranking
@@ -1965,7 +1991,7 @@ async function sendTelegramReport() {
         showToast('✅', `Đã gửi ${fraudCount > 0 ? '2 ảnh' : '1 ảnh'} báo cáo vào Telegram!`);
     } catch (err) {
         console.error('Telegram error:', err);
-        showToast('❌', 'Lỗi gửi Telegram: ' + err.message);
+        showToast('❌', 'Lỗi gửi Telegram. Vui lòng thử lại.');
     }
 
     btn.disabled = false;
@@ -1973,10 +1999,11 @@ async function sendTelegramReport() {
 }
 
 // ====== GỬI CẢNH BÁO GIAN LẬN TELEGRAM (HÌNH ẢNH) ======
-async function sendFraudTelegram() {
-    const btn = event.target.closest('.btn');
+async function sendFraudTelegram(evt) {
+    const btn = evt.target.closest('.btn');
     btn.disabled = true;
     btn.innerHTML = '⏳ Đang chụp hình...';
+    if (!checkTelegramCooldown()) { btn.disabled = false; btn.innerHTML = '📤 Gửi lên Telegram'; return; }
 
     try {
         // Đảm bảo đang ở tab fraud
@@ -1994,33 +2021,18 @@ async function sendFraudTelegram() {
             logging: false
         });
 
-        // Chuyển canvas → blob
-        btn.innerHTML = '⏳ Đang gửi...';
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-
         // Tạo caption
+        btn.innerHTML = '⏳ Đang gửi...';
         const month = document.getElementById('filterMonth').value;
         const cycle = getCycleRange(month);
         const fraudCount = document.getElementById('fraudBadge').textContent;
         const caption = `🚨 CẢNH BÁO GIAN LẬN - Kỳ ${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}\n⚠️ ${fraudCount} trường hợp cần kiểm tra\n🔴 Km > 200 hoặc Tăng ca > 3 tiếng\n🕒 ${new Date().toLocaleString('vi-VN')}`;
 
-        const formData = new FormData();
-        formData.append('chat_id', CONFIG.TELEGRAM_CHAT_ID);
-        formData.append('photo', blob, 'canh_bao_gian_lan.png');
-        formData.append('caption', caption);
-
-        const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_TOKEN}/sendPhoto`;
-        const response = await fetch(url, { method: 'POST', body: formData });
-        const result = await response.json();
-
-        if (result.ok) {
-            showToast('✅', 'Đã gửi cảnh báo gian lận vào Telegram!');
-        } else {
-            throw new Error(result.description || 'Lỗi không xác định');
-        }
+        const result = await sendPhotoViaProxy(canvas, caption);
+        showToast('✅', 'Đã gửi cảnh báo gian lận vào Telegram!');
     } catch (err) {
         console.error('Telegram fraud error:', err);
-        showToast('❌', 'Lỗi gửi Telegram: ' + err.message);
+        showToast('❌', 'Lỗi gửi Telegram. Vui lòng thử lại.');
     }
 
     btn.disabled = false;
@@ -2028,10 +2040,11 @@ async function sendFraudTelegram() {
 }
 
 // ====== GỬI DANH SÁCH NV TELEGRAM (HÌNH ẢNH) ======
-async function sendRankingTelegram() {
-    const btn = event.target.closest('.btn');
+async function sendRankingTelegram(evt) {
+    const btn = evt.target.closest('.btn');
     btn.disabled = true;
     btn.innerHTML = '⏳ Đang chụp hình...';
+    if (!checkTelegramCooldown()) { btn.disabled = false; btn.innerHTML = '📤 Gửi lên Telegram'; return; }
 
     try {
         // Đảm bảo đang ở tab ranking
@@ -2049,33 +2062,18 @@ async function sendRankingTelegram() {
             logging: false
         });
 
-        // Chuyển canvas → blob
-        btn.innerHTML = '⏳ Đang gửi...';
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-
         // Tạo caption
+        btn.innerHTML = '⏳ Đang gửi...';
         const month = document.getElementById('filterMonth').value;
         const cycle = getCycleRange(month);
         const cycleStr = `${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}`;
         const caption = `👤 DANH SÁCH NHÂN VIÊN - Kỳ ${cycleStr}\n🕐 ${new Date().toLocaleString('vi-VN')}\n🏭 Dashboard GHN ODO`;
 
-        const formData = new FormData();
-        formData.append('chat_id', CONFIG.TELEGRAM_CHAT_ID);
-        formData.append('photo', blob, 'danh_sach_nv.png');
-        formData.append('caption', caption);
-
-        const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_TOKEN}/sendPhoto`;
-        const response = await fetch(url, { method: 'POST', body: formData });
-        const result = await response.json();
-
-        if (result.ok) {
-            showToast('✅', 'Đã gửi danh sách NV vào Telegram!');
-        } else {
-            throw new Error(result.description || 'Lỗi không xác định');
-        }
+        const result = await sendPhotoViaProxy(canvas, caption);
+        showToast('✅', 'Đã gửi danh sách NV vào Telegram!');
     } catch (err) {
         console.error('Telegram ranking error:', err);
-        showToast('❌', 'Lỗi gửi Telegram: ' + err.message);
+        showToast('❌', 'Lỗi gửi Telegram. Vui lòng thử lại.');
     }
 
     btn.disabled = false;

@@ -40,9 +40,10 @@ function doPost(e) {
 
     if (action === 'sendPhoto') {
       // Gửi ảnh: nhận base64 image + caption
-      const imageData = data.image; // base64 string (không có prefix data:image/png;base64,)
+      const imageData = data.image; // base64 string
       const caption = data.caption || '';
-      const imageBlob = Utilities.newBlob(Utilities.base64Decode(imageData), 'image/png', 'report.png');
+      const mimeType = data.mimeType || 'image/jpeg';
+      const imageBlob = Utilities.newBlob(Utilities.base64Decode(imageData), mimeType, 'report.jpg');
 
       const url = 'https://api.telegram.org/bot' + CONFIG.TELEGRAM_TOKEN + '/sendPhoto';
       const formData = {

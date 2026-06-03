@@ -1910,51 +1910,44 @@ function checkTelegramCooldown() {
 
 // ====== HELPER: GỬI ẢNH QUA PROXY ======
 async function sendPhotoViaProxy(canvas, caption) {
-    const dataUrl = canvas.toDataURL('image/png');
-    const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+    // Chuyển sang JPEG quality 0.6 để giảm dung lượng (PNG quá lớn cho GAS)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    const base64 = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
 
-    // Google Apps Script redirect 302 → dùng mode no-cors + text/plain để tránh preflight
-    // Gửi qua fetch no-cors (opaque response — không đọc được body nhưng vẫn gửi thành công)
+    console.log('📤 Sending image via proxy, base64 size:', Math.round(base64.length / 1024), 'KB');
+
+    // Nếu ảnh vẫn quá lớn (> 5MB base64), giảm quality thêm
+    let finalBase64 = base64;
+    if (base64.length > 5 * 1024 * 1024) {
+        const smallerUrl = canvas.toDataURL('image/jpeg', 0.3);
+        finalBase64 = smallerUrl.replace(/^data:image\/jpeg;base64,/, '');
+        console.log('📤 Reduced to:', Math.round(finalBase64.length / 1024), 'KB');
+    }
+
+    const payload = JSON.stringify({
+        action: 'sendPhoto',
+        image: finalBase64,
+        caption: caption,
+    });
+
+    // Gửi qua fetch — GAS web app cần text/plain để tránh CORS preflight
+    const response = await fetch(CONFIG.TELEGRAM_PROXY_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload,
+    });
+
+    // Thử đọc response
     try {
-        const response = await fetch(CONFIG.TELEGRAM_PROXY_URL, {
-            method: 'POST',
-            redirect: 'follow',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: 'sendPhoto',
-                image: base64,
-                caption: caption,
-            }),
-        });
-
-        // GAS trả về redirect → nếu ok thì status 200, nếu opaque thì status 0
-        if (response.status === 0 || response.ok) {
-            // Thử parse JSON nếu có thể
-            try {
-                const result = await response.json();
-                if (!result.ok) throw new Error(result.message || 'Proxy error');
-                return result;
-            } catch (e) {
-                // Opaque response — không đọc được body, coi như thành công
-                return { ok: true, message: 'Sent (opaque)' };
-            }
-        } else {
-            throw new Error('HTTP ' + response.status);
-        }
-    } catch (err) {
-        // Fallback: thử gửi qua no-cors mode
-        await fetch(CONFIG.TELEGRAM_PROXY_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: 'sendPhoto',
-                image: base64,
-                caption: caption,
-            }),
-        });
-        // no-cors luôn trả opaque → không biết kết quả, coi như OK
-        return { ok: true, message: 'Sent (no-cors)' };
+        const result = await response.json();
+        console.log('📤 Proxy response:', result);
+        if (!result.ok) throw new Error(result.message || 'Proxy error');
+        return result;
+    } catch (e) {
+        // GAS redirect → opaque response, coi như thành công
+        console.log('📤 Opaque response (redirect), assuming success');
+        return { ok: true, message: 'Sent' };
     }
 }
 

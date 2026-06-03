@@ -1908,46 +1908,52 @@ function checkTelegramCooldown() {
     return true;
 }
 
-// ====== HELPER: GỬI ẢNH QUA PROXY ======
-async function sendPhotoViaProxy(canvas, caption) {
-    // Chuyển sang JPEG quality 0.6 để giảm dung lượng (PNG quá lớn cho GAS)
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-    const base64 = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
-
-    console.log('📤 Sending image via proxy, base64 size:', Math.round(base64.length / 1024), 'KB');
-
-    // Nếu ảnh vẫn quá lớn (> 5MB base64), giảm quality thêm
-    let finalBase64 = base64;
-    if (base64.length > 5 * 1024 * 1024) {
-        const smallerUrl = canvas.toDataURL('image/jpeg', 0.3);
-        finalBase64 = smallerUrl.replace(/^data:image\/jpeg;base64,/, '');
-        console.log('📤 Reduced to:', Math.round(finalBase64.length / 1024), 'KB');
-    }
-
-    const payload = JSON.stringify({
-        action: 'sendPhoto',
-        image: finalBase64,
-        caption: caption,
-    });
-
-    // Gửi qua fetch — GAS web app cần text/plain để tránh CORS preflight
+// ====== HELPER: GỬI TEXT QUA PROXY (đáng tin cậy) ======
+async function sendTextViaProxy(text) {
     const response = await fetch(CONFIG.TELEGRAM_PROXY_URL, {
         method: 'POST',
         redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: payload,
+        body: JSON.stringify({ action: 'sendMessage', text: text }),
     });
-
-    // Thử đọc response
     try {
+        return await response.json();
+    } catch (e) {
+        return { ok: true, message: 'Sent' };
+    }
+}
+
+// ====== HELPER: GỬI ẢNH QUA PROXY (fallback text nếu thất bại) ======
+async function sendPhotoViaProxy(canvas, caption) {
+    // Chuyển sang JPEG quality 0.5 để giảm dung lượng
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+    const base64 = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
+    const sizeKB = Math.round(base64.length / 1024);
+    console.log('📤 Image size:', sizeKB, 'KB');
+
+    try {
+        const payload = JSON.stringify({
+            action: 'sendPhoto',
+            image: base64,
+            caption: caption,
+        });
+
+        const response = await fetch(CONFIG.TELEGRAM_PROXY_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: payload,
+        });
+
         const result = await response.json();
         console.log('📤 Proxy response:', result);
-        if (!result.ok) throw new Error(result.message || 'Proxy error');
-        return result;
-    } catch (e) {
-        // GAS redirect → opaque response, coi như thành công
-        console.log('📤 Opaque response (redirect), assuming success');
-        return { ok: true, message: 'Sent' };
+        if (result.ok) return result;
+        throw new Error(result.message || 'Image send failed');
+    } catch (err) {
+        // Ảnh thất bại → gửi text thay thế
+        console.warn('📤 Image failed, sending text fallback:', err.message);
+        const textResult = await sendTextViaProxy(caption + '\n\n📊 (Ảnh không gửi được qua proxy, gửi text thay thế)');
+        return { ok: textResult.ok, message: 'Sent as text', fallback: true };
     }
 }
 

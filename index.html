@@ -610,6 +610,49 @@ function shortWarehouse(warehouseName) {
     return warehouseName;
 }
 
+// Tách tên kho ra khỏi tên NV (NV ghi nhầm kho vào ô tên)
+// VD: "Kho Giao Hàng Nặng Hưng Nguyễn Văn Hiểu" → "Nguyễn Văn Hiểu"
+function stripWarehouseFromName(rawName) {
+    if (!rawName) return rawName;
+    const ascii = removeDiacritics(rawName);
+
+    // Các pattern tên kho có thể xuất hiện đầu tên NV (ASCII, không dấu)
+    const whPrefixes = [
+        'kho giao hang nang hai duong',
+        'kho giao hang nang hai phong',
+        'kho giao hang nang hung yen',
+        'kho giao hang nang hung',
+        'kho giao hang nang mien bac',
+        'kho giao hang nang mien bang',
+        'kho giao hang nang thai binh',
+        'kho gxt hai duong',
+        'kho gxt hai phong',
+        'kho gxt hung yen',
+        'kho gxt hung',
+        'kho gxt mien bac',
+        'kho gxt mien bang',
+        'kho gxt thai binh',
+        'kho giao hang nang',
+        'kho gxt',
+    ];
+
+    // Sắp xếp dài → ngắn để match pattern dài nhất trước
+    whPrefixes.sort((a, b) => b.length - a.length);
+
+    for (const prefix of whPrefixes) {
+        if (ascii.startsWith(prefix)) {
+            // Lấy phần còn lại sau prefix
+            const remaining = rawName.substring(prefix.length).trim();
+            // Kiểm tra phần còn lại có phải tên người (ít nhất 2 từ)
+            if (remaining && remaining.split(/\s+/).length >= 2) {
+                return remaining;
+            }
+        }
+    }
+
+    return rawName;
+}
+
 // ====== CHUẨN HÓA DẤU TIẾNG VIỆT ======
 // Đưa các dấu gõ sai kiểu cũ (OÀ, UỶ) về chuẩn mới (ÒA, ỦY)
 function normalizeTone(str) {
@@ -1015,7 +1058,9 @@ async function loadAllData() {
             // Tách tên và mã NV
             const parts = fullName.match(/^(.+?)\s+(\d{5,})$/);
             // Chuẩn hóa tên viết HOA + NFC + Dấu tiếng việt để lọc trùng
-            const nameRaw = parts ? parts[1].trim() : fullName;
+            let nameRaw = parts ? parts[1].trim() : fullName;
+            // ★ Tách tên kho khỏi tên NV nếu NV ghi nhầm kho vào tên ★
+            nameRaw = stripWarehouseFromName(nameRaw);
             const name = normalizeTone(nameRaw.normalize('NFC').toUpperCase());
             const code = parts ? parts[2].trim() : '';
             const area = (r[3] || '').trim();

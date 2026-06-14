@@ -1500,17 +1500,17 @@ function renderRanking(month, whFilter) {
     }
 
     // Gom NV theo kho
-    const warehouseData = {}; 
+    const whMap = {}; 
     filtered.forEach(e => {
         const wh = e.shortWH || 'Khác';
         const key = e.name + '|' + e.code;
-        if (!warehouseData[wh]) warehouseData[wh] = {};
-        if (!warehouseData[wh][key]) {
+        if (!whMap[wh]) whMap[wh] = {};
+        if (!whMap[wh][key]) {
             const master = masterList.find(m => m.code === e.code);
             const plate = master ? formatPlate(master.plate) : (e.plate || '');
-            warehouseData[wh][key] = { name: e.name, code: e.code, plate: plate, days: new Set() };
+            whMap[wh][key] = { name: e.name, code: e.code, plate: plate, days: new Set() };
         }
-        warehouseData[wh][key].days.add(e.dateStr);
+        whMap[wh][key].days.add(e.dateStr);
     });
 
     // ★ Bổ sung NV từ master list chưa báo cáo (đảm bảo 4 kho luôn hiện)
@@ -1565,8 +1565,13 @@ function renderRanking(month, whFilter) {
         empList.sort((a, b) => b.rate - a.rate || b.uniqueDays - a.uniqueDays);
 
         html += `
-        <div class="ranking-card" style="grid-column: 1 / -1;">
-            <h3>🏢 Kho ${escapeHtml(wh)} <span style="font-weight:400;color:var(--text-muted);font-size:13px;">(${empList.length} NV · ${daysElapsed} ngày)</span></h3>
+        <div class="ranking-card" id="ranking-wh-${wh.replace(/\s+/g, '-')}" style="grid-column: 1 / -1;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>🏢 Kho ${escapeHtml(wh)} <span style="font-weight:400;color:var(--text-muted);font-size:13px;">(${empList.length} NV · ${daysElapsed} ngày)</span></h3>
+                <button class="btn btn-primary" onclick="sendWarehouseRankingTelegram('${wh}', event)" style="padding:4px 10px; font-size:11px;">
+                    📤 Gửi lên Telegram
+                </button>
+            </div>
             <table style="width:100%;">
                 <thead><tr>
                     <th style="width:40px;">#</th>

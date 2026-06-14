@@ -370,3 +370,23 @@ function calcOT_(hourEnd) {
 function fmt_(date, pattern) {
   return Utilities.formatDate(date, 'Asia/Ho_Chi_Minh', pattern);
 }
+
+// ====== CÀI Ð?T L?CH T? Ð?NG ======
+function setupTrigger1745() {
+  const triggers = ScriptApp.getProjectTriggers();
+  for (let i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'sendDailyReport') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  
+  ScriptApp.newTrigger('sendDailyReport')
+           .timeBased()
+           .everyDays(1)
+           .atHour(17)
+           .nearMinute(45)
+           .create();
+  
+  Logger.log('? Ðã cài d?t l?ch g?i báo cáo t? d?ng vào kho?ng 17:45 hàng ngày.');
+}
+

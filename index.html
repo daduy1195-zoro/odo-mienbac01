@@ -1398,6 +1398,7 @@ function renderDailyTable(filtered) {
                 <th>ODO Về</th>
                 <th>Km</th>
                 <th>Đối soát</th>
+                <th style="width:60px;">Sửa</th>
             </tr>
         </thead>
         <tbody>`;
@@ -1442,6 +1443,8 @@ function renderDailyTable(filtered) {
             reconBadge = '<span class="badge badge-success">✓ Đã đối soát</span>';
         }
 
+        const sheetUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${CONFIG.SHEET_EMPLOYEE_GID}&range=A${e.sheetRow}`;
+
         html += `<tr>
             <td>${i + 1}</td>
             <td style="white-space:nowrap; font-weight:600;">${escapeHtml(e.dateStr)}</td>
@@ -1457,6 +1460,7 @@ function renderDailyTable(filtered) {
             <td style="font-family:monospace;">${escapeHtml(String(e.kmEnd))}</td>
             <td style="font-weight:600; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + escapeHtml(String(kmDisplay)) + ' (gõ sai!)' : escapeHtml(String(kmDisplay))}</td>
             <td>${reconBadge}</td>
+            <td><a href="${sheetUrl}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;white-space:nowrap;">Dòng ${e.sheetRow}</a></td>
         </tr>`;
     });
 

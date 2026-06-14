@@ -1055,14 +1055,21 @@ async function loadAllData() {
             // ★ CHỈ LẤY NV THUỘC 4 KHO CỦA MÌNH ★
             if (!isMyWarehouse(warehouse)) continue;
 
-            // Tách tên và mã NV
-            const parts = fullName.match(/^(.+?)\s+(\d{5,})$/);
-            // Chuẩn hóa tên viết HOA + NFC + Dấu tiếng việt để lọc trùng
-            let nameRaw = parts ? parts[1].trim() : fullName;
+            // Tách tên và mã NV (tìm 5-8 chữ số ở cuối chuỗi)
+            let nameRaw = fullName;
+            let code = '';
+            const codeMatch = fullName.match(/(\d{5,8})[^\w\d]*$/);
+            if (codeMatch) {
+                code = codeMatch[1];
+                // Cắt phần tên (tất cả những gì trước đoạn code)
+                nameRaw = fullName.substring(0, codeMatch.index).trim();
+                // Bỏ các ký tự đặc biệt dư thừa nối giữa tên và mã (VD: '-', '_', '(')
+                nameRaw = nameRaw.replace(/[\s\-_\(\[\]\,]+$/, '');
+            }
+
             // ★ Tách tên kho khỏi tên NV nếu NV ghi nhầm kho vào tên ★
             nameRaw = stripWarehouseFromName(nameRaw);
             const name = normalizeTone(nameRaw.normalize('NFC').toUpperCase());
-            const code = parts ? parts[2].trim() : '';
             const area = (r[3] || '').trim();
             const dateStr = (r[4] || '').trim();
             const plate = (r[9] || '').trim();

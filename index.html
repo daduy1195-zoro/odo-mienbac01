@@ -472,9 +472,6 @@
     <div class="section" id="tabRanking" style="display:none;">
         <div class="section-header">
             <div class="section-title">👤 Danh sách nhân viên theo kho</div>
-            <button class="btn btn-primary" onclick="sendRankingTelegram(event)" style="padding:6px 14px;font-size:12px;">
-                📤 Gửi lên Telegram
-            </button>
         </div>
         <div class="section-body">
             <div class="ranking-grid" id="rankingGrid">
@@ -570,6 +567,13 @@ const MY_WAREHOUSES = {
                   'Kho Giao Hàng Nặng Miền Bắc',   'Kho GXT Miền Bắc',
                   'Kho Giao Hàng Nặng Miền Bắng',  'Kho GXT Miền Bắng'],
     'Thái Bình': ['Kho Giao Hàng Nặng Thái Bình',  'Kho GXT Thái Bình'],
+};
+
+const TELEGRAM_GROUPS = {
+    'Hải Dương': { chatId: '-1003955414942', tag: '@Messi_haiduong' },
+    'Hải Phòng': { chatId: '-1003838432995', tag: '@Tuan210593' },
+    'Hưng Yên':  { chatId: '-1003915590818', tag: '@NguyenHue_3101082' },
+    'Thái Bình': { chatId: '-1003927320437', tag: '@oanh1505' },
 };
 
 // Hàm bỏ dấu tiếng Việt → ASCII (để so sánh không bị lỗi Unicode)
@@ -1496,18 +1500,17 @@ function renderRanking(month, whFilter) {
     }
 
     // Gom NV theo kho
-    const whMap = {}; // { 'Hải Dương': [ {name, code, uniqueDays, rate}, ... ] }
+    const warehouseData = {}; 
     filtered.forEach(e => {
         const wh = e.shortWH || 'Khác';
         const key = e.name + '|' + e.code;
-        if (!whMap[wh]) whMap[wh] = {};
-        if (!whMap[wh][key]) {
-            // Lấy biển số từ Master List (chuẩn) nếu có, không thì dùng biển từ báo cáo
+        if (!warehouseData[wh]) warehouseData[wh] = {};
+        if (!warehouseData[wh][key]) {
             const master = masterList.find(m => m.code === e.code);
             const plate = master ? formatPlate(master.plate) : (e.plate || '');
-            whMap[wh][key] = { name: e.name, code: e.code, plate: plate, days: new Set() };
+            warehouseData[wh][key] = { name: e.name, code: e.code, plate: plate, days: new Set() };
         }
-        whMap[wh][key].days.add(e.dateStr);
+        warehouseData[wh][key].days.add(e.dateStr);
     });
 
     // ★ Bổ sung NV từ master list chưa báo cáo (đảm bảo 4 kho luôn hiện)
@@ -1999,7 +2002,7 @@ function requireAdmin() {
 }
 
 // ====== HELPER: GỬI ẢNH QUA PROXY (fallback text nếu thất bại) ======
-async function sendPhotoViaProxy(canvas, caption) {
+async function sendPhotoViaProxy(canvas, caption, chatId) {
     // Chuyển sang JPEG quality 0.5 để giảm dung lượng
     const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
     const base64 = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
@@ -2011,6 +2014,7 @@ async function sendPhotoViaProxy(canvas, caption) {
             action: 'sendPhoto',
             image: base64,
             caption: caption,
+            chat_id: chatId
         });
 
         const response = await fetch(CONFIG.TELEGRAM_PROXY_URL, {
@@ -2035,7 +2039,7 @@ async function sendPhotoViaProxy(canvas, caption) {
 // ====== GỬI BÁO CÁO TELEGRAM (HÌNH ẢNH) ======
 async function sendTelegramReport(evt) {
     if (!requireAdmin()) return;
-    const btn = evt.target.closest('.btn');
+    const btn = evt ? evt.target.closest('.btn') : document.querySelector('.btn[onclick*="sendTelegramReport"]');
     btn.disabled = true;
     btn.innerHTML = '⏳ Đang chụp hình...';
     if (!checkTelegramCooldown()) { btn.disabled = false; btn.innerHTML = '📤 Gửi báo cáo Telegram'; return; }
@@ -2046,53 +2050,75 @@ async function sendTelegramReport(evt) {
         const cycleStr = `${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}`;
         const timeStr = new Date().toLocaleString('vi-VN');
 
-        // ═══════════════════════════════════════
-        // ẢNH 1: DANH SÁCH NV (Ranking)
-        // ═══════════════════════════════════════
-        const rankingTab = document.querySelector('.tab[onclick*="ranking"]');
-        if (rankingTab) switchTab('ranking', rankingTab);
-        await new Promise(r => setTimeout(r, 300));
+        const whList = ['Hải Dương', 'Hải Phòng', 'Hưng Yên', 'Thái Bình'];
+        const filterSelect = document.getElementById('filterWarehouse');
+        const originalWh = filterSelect.value;
+        
+        let photosSent = 0;
 
-        const grid = document.getElementById('rankingGrid');
-        btn.innerHTML = '⏳ Chụp danh sách NV...';
-        const canvas1 = await html2canvas(grid, {
-            backgroundColor: '#080d0f',
-            scale: 2,
-            useCORS: true,
-            logging: false
-        });
+        for (const wh of whList) {
+            const groupConf = TELEGRAM_GROUPS[wh];
+            if (!groupConf) continue;
+            
+            // Lọc dữ liệu cho kho này và render lại
+            filterSelect.value = wh;
+            renderAll();
+            await new Promise(r => setTimeout(r, 400));
+            
+            // ═══════════════════════════════════════
+            // ẢNH 1: DANH SÁCH NV (Ranking) CỦA KHO NÀY
+            // ═══════════════════════════════════════
+            const rankingTab = document.querySelector('.tab[onclick*="ranking"]');
+            if (rankingTab) switchTab('ranking', rankingTab);
+            await new Promise(r => setTimeout(r, 400));
 
-        btn.innerHTML = '⏳ Gửi ảnh 1/2...';
-        const caption1 = `📊 Báo cáo ODO - Kỳ ${cycleStr}\n🕐 ${timeStr}\n🏭 Dashboard GHN ODO`;
-        await sendPhotoViaProxy(canvas1, caption1);
-
-        // ═══════════════════════════════════════
-        // ẢNH 2: CẢNH BÁO GIAN LẬN (nếu có)
-        // ═══════════════════════════════════════
-        const fraudCount = parseInt(document.getElementById('fraudBadge').textContent) || 0;
-        if (fraudCount > 0) {
-            const fraudTab = document.querySelector('.tab[onclick*="fraud"]');
-            if (fraudTab) switchTab('fraud', fraudTab);
-            await new Promise(r => setTimeout(r, 300));
-
-            const fraudContainer = document.getElementById('fraudTableContainer');
-            btn.innerHTML = '⏳ Chụp cảnh báo gian lận...';
-            const canvas2 = await html2canvas(fraudContainer, {
+            const grid = document.getElementById('rankingGrid');
+            btn.innerHTML = `⏳ Chụp NV ${wh}...`;
+            const canvas1 = await html2canvas(grid, {
                 backgroundColor: '#080d0f',
                 scale: 2,
                 useCORS: true,
                 logging: false
             });
 
-            btn.innerHTML = '⏳ Gửi ảnh 2/2...';
-            const caption2 = `🚨 CẢNH BÁO GIAN LẬN - Kỳ ${cycleStr}\n⚠️ ${fraudCount} trường hợp cần kiểm tra\n🔴 Km > 200 hoặc Tăng ca > 3 tiếng\n🕒 ${timeStr}`;
-            await sendPhotoViaProxy(canvas2, caption2);
-        }
+            btn.innerHTML = `⏳ Gửi NV ${wh}...`;
+            const caption1 = `📊 Báo cáo ODO - Kho ${wh}\n📅 Kỳ ${cycleStr}\n🕐 ${timeStr}\n🏭 Dashboard GHN ODO\n👤 Quản lý: ${groupConf.tag}`;
+            await sendPhotoViaProxy(canvas1, caption1, groupConf.chatId);
+            photosSent++;
 
-        // Quay lại tab ranking
+            // ═══════════════════════════════════════
+            // ẢNH 2: CẢNH BÁO GIAN LẬN CỦA KHO NÀY (nếu có)
+            // ═══════════════════════════════════════
+            const fraudCount = parseInt(document.getElementById('fraudBadge').textContent) || 0;
+            if (fraudCount > 0) {
+                const fraudTab = document.querySelector('.tab[onclick*="fraud"]');
+                if (fraudTab) switchTab('fraud', fraudTab);
+                await new Promise(r => setTimeout(r, 400));
+
+                const fraudContainer = document.getElementById('fraudTableContainer');
+                btn.innerHTML = `⏳ Chụp gian lận ${wh}...`;
+                const canvas2 = await html2canvas(fraudContainer, {
+                    backgroundColor: '#080d0f',
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                });
+
+                btn.innerHTML = `⏳ Gửi gian lận ${wh}...`;
+                const caption2 = `🚨 CẢNH BÁO GIAN LẬN - KHO ${wh.toUpperCase()}\n⚠️ ${fraudCount} trường hợp cần kiểm tra\n🔴 Km > 200 hoặc Tăng ca > 3 tiếng\n🕒 ${timeStr}\n👤 Quản lý: ${groupConf.tag}`;
+                await sendPhotoViaProxy(canvas2, caption2, groupConf.chatId);
+                photosSent++;
+            }
+        }
+        
+        // Khôi phục filter cũ
+        filterSelect.value = originalWh;
+        renderAll();
+        
+        const rankingTab = document.querySelector('.tab[onclick*="ranking"]');
         if (rankingTab) switchTab('ranking', rankingTab);
 
-        showToast('✅', `Đã gửi ${fraudCount > 0 ? '2 ảnh' : '1 ảnh'} báo cáo vào Telegram!`);
+        showToast('✅', `Đã gửi tổng cộng ${photosSent} ảnh báo cáo vào 4 nhóm Telegram!`);
     } catch (err) {
         console.error('Telegram error:', err);
         showToast('❌', 'Lỗi gửi Telegram. Vui lòng thử lại.');
@@ -2111,30 +2137,56 @@ async function sendFraudTelegram(evt) {
     if (!checkTelegramCooldown()) { btn.disabled = false; btn.innerHTML = '📤 Gửi lên Telegram'; return; }
 
     try {
-        // Đảm bảo đang ở tab fraud
-        const fraudTab = document.querySelector('.tab[onclick*="fraud"]');
-        if (fraudTab) switchTab('fraud', fraudTab);
-        await new Promise(r => setTimeout(r, 300));
-
-        const container = document.getElementById('fraudTableContainer');
-
-        // Chụp hình bảng gian lận
-        const canvas = await html2canvas(container, {
-            backgroundColor: '#080d0f',
-            scale: 2,
-            useCORS: true,
-            logging: false
-        });
-
-        // Tạo caption
-        btn.innerHTML = '⏳ Đang gửi...';
         const month = document.getElementById('filterMonth').value;
         const cycle = getCycleRange(month);
-        const fraudCount = document.getElementById('fraudBadge').textContent;
-        const caption = `🚨 CẢNH BÁO GIAN LẬN - Kỳ ${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}\n⚠️ ${fraudCount} trường hợp cần kiểm tra\n🔴 Km > 200 hoặc Tăng ca > 3 tiếng\n🕒 ${new Date().toLocaleString('vi-VN')}`;
+        const cycleStr = `${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}`;
+        const timeStr = new Date().toLocaleString('vi-VN');
 
-        const result = await sendPhotoViaProxy(canvas, caption);
-        showToast('✅', 'Đã gửi cảnh báo gian lận vào Telegram!');
+        const whList = ['Hải Dương', 'Hải Phòng', 'Hưng Yên', 'Thái Bình'];
+        const filterSelect = document.getElementById('filterWarehouse');
+        const originalWh = filterSelect.value;
+        
+        let photosSent = 0;
+
+        const fraudTab = document.querySelector('.tab[onclick*="fraud"]');
+        if (fraudTab) switchTab('fraud', fraudTab);
+        
+        for (const wh of whList) {
+            const groupConf = TELEGRAM_GROUPS[wh];
+            if (!groupConf) continue;
+            
+            // Lọc gian lận cho kho này
+            filterSelect.value = wh;
+            renderAll();
+            await new Promise(r => setTimeout(r, 400));
+            
+            const fraudCount = parseInt(document.getElementById('fraudBadge').textContent) || 0;
+            if (fraudCount === 0) continue; // Bỏ qua nếu kho này không có gian lận
+
+            const fraudContainer = document.getElementById('fraudTableContainer');
+            btn.innerHTML = `⏳ Chụp gian lận ${wh}...`;
+            const canvas = await html2canvas(fraudContainer, {
+                backgroundColor: '#080d0f',
+                scale: 2,
+                useCORS: true,
+                logging: false
+            });
+
+            btn.innerHTML = `⏳ Gửi gian lận ${wh}...`;
+            const caption = `🚨 CẢNH BÁO GIAN LẬN - KHO ${wh.toUpperCase()}\n⚠️ ${fraudCount} trường hợp cần kiểm tra\n🔴 Km > 200 hoặc Tăng ca > 3 tiếng\n🕒 ${timeStr}\n👤 Quản lý: ${groupConf.tag}`;
+            await sendPhotoViaProxy(canvas, caption, groupConf.chatId);
+            photosSent++;
+        }
+        
+        // Khôi phục filter cũ
+        filterSelect.value = originalWh;
+        renderAll();
+
+        if (photosSent > 0) {
+            showToast('✅', `Đã gửi ${photosSent} ảnh cảnh báo gian lận vào các nhóm Telegram!`);
+        } else {
+            showToast('✅', 'Không có gian lận nào để gửi.');
+        }
     } catch (err) {
         console.error('Telegram fraud error:', err);
         showToast('❌', 'Lỗi gửi Telegram. Vui lòng thử lại.');
@@ -2144,46 +2196,53 @@ async function sendFraudTelegram(evt) {
     btn.innerHTML = '📤 Gửi lên Telegram';
 }
 
-// ====== GỬI DANH SÁCH NV TELEGRAM (HÌNH ẢNH) ======
-async function sendRankingTelegram(evt) {
+// ====== GỬI RIÊNG 1 KHO Ở TAB DANH SÁCH NV (RANKING) ======
+async function sendWarehouseRankingTelegram(whName, evt) {
     if (!requireAdmin()) return;
     const btn = evt.target.closest('.btn');
+    const originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '⏳ Đang chụp hình...';
-    if (!checkTelegramCooldown()) { btn.disabled = false; btn.innerHTML = '📤 Gửi lên Telegram'; return; }
+    btn.innerHTML = '⏳ Đang chụp...';
+    if (!checkTelegramCooldown()) { btn.disabled = false; btn.innerHTML = originalText; return; }
 
     try {
-        // Đảm bảo đang ở tab ranking
-        const rankingTab = document.querySelector('.tab[onclick*="ranking"]');
-        if (rankingTab) switchTab('ranking', rankingTab);
-        await new Promise(r => setTimeout(r, 300));
+        const groupConf = TELEGRAM_GROUPS[whName];
+        if (!groupConf) throw new Error('Không tìm thấy cấu hình kho ' + whName);
 
-        const grid = document.getElementById('rankingGrid');
+        const month = document.getElementById('filterMonth').value;
+        const cycle = getCycleRange(month);
+        const cycleStr = `${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}`;
+        
+        // Tìm element block kho này
+        const blockId = `ranking-wh-${whName.replace(/\s+/g, '-')}`;
+        const whBlock = document.getElementById(blockId);
+        if (!whBlock) throw new Error('Không tìm thấy giao diện kho ' + whName);
 
-        // Chụp hình bảng danh sách NV
-        const canvas = await html2canvas(grid, {
+        // Ẩn nút gửi trước khi chụp
+        btn.style.display = 'none';
+
+        const canvas = await html2canvas(whBlock, {
             backgroundColor: '#080d0f',
             scale: 2,
             useCORS: true,
             logging: false
         });
 
-        // Tạo caption
-        btn.innerHTML = '⏳ Đang gửi...';
-        const month = document.getElementById('filterMonth').value;
-        const cycle = getCycleRange(month);
-        const cycleStr = `${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}`;
-        const caption = `👤 DANH SÁCH NHÂN VIÊN - Kỳ ${cycleStr}\n🕐 ${new Date().toLocaleString('vi-VN')}\n🏭 Dashboard GHN ODO`;
+        // Hiện lại nút
+        btn.style.display = '';
 
-        const result = await sendPhotoViaProxy(canvas, caption);
-        showToast('✅', 'Đã gửi danh sách NV vào Telegram!');
+        btn.innerHTML = '⏳ Đang gửi...';
+        const caption = `👤 DANH SÁCH NHÂN VIÊN - KHO ${whName.toUpperCase()}\n📅 Kỳ ${cycleStr}\n🕐 ${new Date().toLocaleString('vi-VN')}\n👤 Quản lý: ${groupConf.tag}`;
+
+        await sendPhotoViaProxy(canvas, caption, groupConf.chatId);
+        showToast('✅', `Đã gửi danh sách NV Kho ${whName} vào Telegram!`);
     } catch (err) {
         console.error('Telegram ranking error:', err);
         showToast('❌', 'Lỗi gửi Telegram. Vui lòng thử lại.');
     }
 
     btn.disabled = false;
-    btn.innerHTML = '📤 Gửi lên Telegram';
+    btn.innerHTML = originalText;
 }
 
 // ====== CHUYỂN TAB ======

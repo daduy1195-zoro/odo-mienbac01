@@ -20,6 +20,14 @@ const CONFIG = {
   MASTER_GID: '1254809645',
   TELEGRAM_TOKEN: '8261927820:AAEuN92GJ5kALTBwIKXi7hu7NKJnXFX0EdU',
   TELEGRAM_CHAT_ID: '-1002346875748',
+  TELEGRAM_CHAT_ID: '-1002346875748',
+};
+
+const TELEGRAM_GROUPS = {
+  'Hải Dương': { chatId: '-1003955414942', tag: '@Messi_haiduong' },
+  'Hải Phòng': { chatId: '-1003838432995', tag: '@Tuan210593' },
+  'Hưng Yên':  { chatId: '-1003915590818', tag: '@NguyenHue_3101082' },
+  'Thái Bình': { chatId: '-1003927320437', tag: '@oanh1505' },
 };
 
 const WH_KEYWORDS = {
@@ -47,7 +55,7 @@ function doPost(e) {
 
       const url = 'https://api.telegram.org/bot' + CONFIG.TELEGRAM_TOKEN + '/sendPhoto';
       const formData = {
-        'chat_id': CONFIG.TELEGRAM_CHAT_ID,
+        'chat_id': data.chat_id || CONFIG.TELEGRAM_CHAT_ID,
         'photo': imageBlob,
         'caption': caption,
       };
@@ -69,7 +77,8 @@ function doPost(e) {
     } else if (action === 'sendMessage') {
       // Gửi text message
       const text = data.text || '';
-      sendTelegram_(text);
+      const chatId = data.chat_id || CONFIG.TELEGRAM_CHAT_ID;
+      sendTelegram_(text, chatId);
 
       return ContentService.createTextOutput(JSON.stringify({
         ok: true,
@@ -166,14 +175,12 @@ function sendDailyReport() {
       }
     });
 
-    let msg1 = '📊 *BÁO CÁO ODO HÀNG NGÀY*\n';
-    msg1 += '📅 Kỳ: ' + fmt_(cycle.start, 'dd/MM') + ' → ' + fmt_(cycle.end, 'dd/MM/yyyy') + '\n';
-    msg1 += '🕐 ' + fmt_(today, 'HH:mm dd/MM/yyyy') + '\n';
-    msg1 += '━━━━━━━━━━━━━━━━━━━━\n';
-
     ['Hải Dương', 'Hải Phòng', 'Hưng Yên', 'Thái Bình'].forEach(wh => {
       const empObj = whMap[wh];
       if (!empObj) return;
+
+      const groupConf = TELEGRAM_GROUPS[wh];
+      if (!groupConf) return;
 
       const list = Object.values(empObj).map(e => {
         const ud = Object.keys(e.days).length;
@@ -183,7 +190,12 @@ function sendDailyReport() {
       });
       list.sort((a, b) => b.rate - a.rate);
 
+      let msg1 = '📊 *BÁO CÁO ODO HÀNG NGÀY*\n';
+      msg1 += '📅 Kỳ: ' + fmt_(cycle.start, 'dd/MM') + ' → ' + fmt_(cycle.end, 'dd/MM/yyyy') + '\n';
+      msg1 += '🕐 ' + fmt_(today, 'HH:mm dd/MM/yyyy') + '\n';
+      msg1 += '━━━━━━━━━━━━━━━━━━━━\n';
       msg1 += '\n🏢 *Kho ' + wh + '* (' + list.length + ' NV · ' + daysElapsed + ' ngày)\n';
+      
       list.forEach((e, i) => {
         const icon = e.rate >= 80 ? '🟢' : e.rate >= 50 ? '🟡' : '🔴';
         msg1 += (i + 1) + '. ' + e.name + ' (' + e.code + ') ' + icon + ' ' + e.ud + '/' + daysElapsed + ' = ' + Math.min(e.rate, 100) + '%\n';
@@ -192,9 +204,10 @@ function sendDailyReport() {
           msg1 += '   ❌ Thiếu: ' + short.join(', ') + '\n';
         }
       });
+      
+      msg1 += '\n👤 Quản lý: ' + groupConf.tag;
+      sendTelegram_(msg1, groupConf.chatId);
     });
-
-    sendTelegram_(msg1);
 
     // Cảnh báo gian lận
     const fraud = [];
@@ -214,26 +227,34 @@ function sendDailyReport() {
     });
 
     if (fraud.length > 0) {
-      let msg2 = '🚨 *CẢNH BÁO GIAN LẬN*\n';
-      msg2 += '⚠️ ' + fraud.length + ' trường hợp cần kiểm tra\n';
-      msg2 += '🔴 Km > 200, Km âm, hoặc TC > 3 tiếng\n';
-      msg2 += '━━━━━━━━━━━━━━━━━━━━\n\n';
+      ['Hải Dương', 'Hải Phòng', 'Hưng Yên', 'Thái Bình'].forEach(wh => {
+        const whFraud = fraud.filter(f => f.shortWH === wh);
+        if (whFraud.length === 0) return;
+        const groupConf = TELEGRAM_GROUPS[wh];
+        if (!groupConf) return;
 
-      fraud.forEach((e, i) => {
-        const otStr = e.ot > 0 ? Math.floor(e.ot / 60) + 'h' + (e.ot % 60 > 0 ? String(e.ot % 60).padStart(2, '0') : '') : '—';
-        msg2 += (i + 1) + '. *' + e.name + '* (' + e.code + ')\n';
-        msg2 += '   📅 ' + e.dateStr + ' | 🏢 ' + e.shortWH + '\n';
-        msg2 += '   🚗 ' + e.plate + ' | Km: *' + e.km + '* | TC: *' + otStr + '*\n';
-        msg2 += '   ⚠️ ' + e.reasons.join(' | ') + '\n\n';
+        let msg2 = '🚨 *CẢNH BÁO GIAN LẬN - KHO ' + wh.toUpperCase() + '*\n';
+        msg2 += '⚠️ ' + whFraud.length + ' trường hợp cần kiểm tra\n';
+        msg2 += '🔴 Km > 200, Km âm, hoặc TC > 3 tiếng\n';
+        msg2 += '━━━━━━━━━━━━━━━━━━━━\n\n';
+
+        whFraud.forEach((e, i) => {
+          const otStr = e.ot > 0 ? Math.floor(e.ot / 60) + 'h' + (e.ot % 60 > 0 ? String(e.ot % 60).padStart(2, '0') : '') : '—';
+          msg2 += (i + 1) + '. *' + e.name + '* (' + e.code + ')\n';
+          msg2 += '   📅 ' + e.dateStr + '\n';
+          msg2 += '   🚗 ' + e.plate + ' | Km: *' + e.km + '* | TC: *' + otStr + '*\n';
+          msg2 += '   ⚠️ ' + e.reasons.join(' | ') + '\n\n';
+        });
+
+        msg2 += '👤 Quản lý: ' + groupConf.tag;
+        sendTelegram_(msg2, groupConf.chatId);
       });
-
-      sendTelegram_(msg2);
     }
 
     Logger.log('✅ Đã gửi báo cáo thành công!');
   } catch (err) {
     Logger.log('❌ Lỗi: ' + err.message);
-    sendTelegram_('❌ Lỗi báo cáo tự động:\n' + err.message);
+    sendTelegram_('❌ Lỗi báo cáo tự động:\n' + err.message, CONFIG.TELEGRAM_CHAT_ID);
   }
 }
 
@@ -254,7 +275,7 @@ function getSheetData_(id, gid) {
 }
 
 // ====== GỬI TELEGRAM ======
-function sendTelegram_(text) {
+function sendTelegram_(text, chatId = CONFIG.TELEGRAM_CHAT_ID) {
   const url = 'https://api.telegram.org/bot' + CONFIG.TELEGRAM_TOKEN + '/sendMessage';
   const chunks = [];
   let rem = text;
@@ -269,7 +290,7 @@ function sendTelegram_(text) {
     UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
-      payload: JSON.stringify({ chat_id: CONFIG.TELEGRAM_CHAT_ID, text: chunk, parse_mode: 'Markdown' }),
+      payload: JSON.stringify({ chat_id: chatId, text: chunk, parse_mode: 'Markdown' }),
       muteHttpExceptions: true,
     });
     Utilities.sleep(500);

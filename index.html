@@ -1982,6 +1982,22 @@ async function sendTextViaProxy(text) {
     }
 }
 
+// ====== XÁC THỰC QUẢN TRỊ VIÊN ======
+const ADMIN_PASS = 'admin123'; // Mật khẩu bảo vệ nút gửi
+function requireAdmin() {
+    let key = localStorage.getItem('odo_admin_key');
+    if (key === ADMIN_PASS) return true;
+    
+    key = prompt('Vui lòng nhập mật khẩu quản trị để gửi báo cáo lên Telegram:');
+    if (key === ADMIN_PASS) {
+        localStorage.setItem('odo_admin_key', key);
+        return true;
+    } else if (key !== null) {
+        alert('❌ Sai mật khẩu! Bạn không có quyền gửi báo cáo.');
+    }
+    return false;
+}
+
 // ====== HELPER: GỬI ẢNH QUA PROXY (fallback text nếu thất bại) ======
 async function sendPhotoViaProxy(canvas, caption) {
     // Chuyển sang JPEG quality 0.5 để giảm dung lượng
@@ -2018,6 +2034,7 @@ async function sendPhotoViaProxy(canvas, caption) {
 
 // ====== GỬI BÁO CÁO TELEGRAM (HÌNH ẢNH) ======
 async function sendTelegramReport(evt) {
+    if (!requireAdmin()) return;
     const btn = evt.target.closest('.btn');
     btn.disabled = true;
     btn.innerHTML = '⏳ Đang chụp hình...';
@@ -2087,6 +2104,7 @@ async function sendTelegramReport(evt) {
 
 // ====== GỬI CẢNH BÁO GIAN LẬN TELEGRAM (HÌNH ẢNH) ======
 async function sendFraudTelegram(evt) {
+    if (!requireAdmin()) return;
     const btn = evt.target.closest('.btn');
     btn.disabled = true;
     btn.innerHTML = '⏳ Đang chụp hình...';
@@ -2128,6 +2146,7 @@ async function sendFraudTelegram(evt) {
 
 // ====== GỬI DANH SÁCH NV TELEGRAM (HÌNH ẢNH) ======
 async function sendRankingTelegram(evt) {
+    if (!requireAdmin()) return;
     const btn = evt.target.closest('.btn');
     btn.disabled = true;
     btn.innerHTML = '⏳ Đang chụp hình...';

@@ -1376,16 +1376,25 @@ function renderOverview() {
     const plateDataMap = {};
     
     masterList.forEach(m => {
-        if (whFilter && m.shortWH !== whFilter) return;
+        const shortWH = shortWarehouse(m.warehouse);
+        if (whFilter && shortWH !== whFilter) return;
         if (!m.plate) return;
         const pNorm = norm(m.plate);
         uniquePlates.add(pNorm);
-        if (!plateDataMap[pNorm]) plateDataMap[pNorm] = m;
+        if (!plateDataMap[pNorm]) {
+            plateDataMap[pNorm] = m;
+            plateDataMap[pNorm].shortWH = shortWH;
+        }
     });
 
-    const activePlates = [];
-    const inactivePlates = [];
+    const activePlatesByWh = {};
+    const inactivePlatesByWh = {};
+    let activeCount = 0;
+    let inactiveCount = 0;
+
     const now = new Date();
+    // Lưu ý: Tính "3 ngày" hiện tại đang dựa vào ngày hiện tại (todayDate).
+    // Nếu dữ liệu được tải lên là của tuần trước, tất cả xe sẽ bị coi là quá 3 ngày.
     const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const ONE_DAY = 1000 * 3600 * 24;
 
@@ -1412,26 +1421,46 @@ function renderOverview() {
             rawPlate = rawPlate.substring(0, 3) + '-' + rawPlate.substring(3);
         }
 
+        const whName = plateDataMap[pNorm].shortWH || 'Khác';
+
         if (isInactive) {
-            inactivePlates.push(rawPlate);
+            if (!inactivePlatesByWh[whName]) inactivePlatesByWh[whName] = [];
+            inactivePlatesByWh[whName].push(rawPlate);
+            inactiveCount++;
         } else {
-            activePlates.push(rawPlate);
+            if (!activePlatesByWh[whName]) activePlatesByWh[whName] = [];
+            activePlatesByWh[whName].push(rawPlate);
+            activeCount++;
         }
     });
 
-    activePlates.sort();
-    inactivePlates.sort();
+    document.getElementById('activeCount').innerText = activeCount;
+    document.getElementById('inactiveCount').innerText = inactiveCount;
 
-    document.getElementById('activeCount').innerText = activePlates.length;
-    document.getElementById('inactiveCount').innerText = inactivePlates.length;
+    const renderGroups = (groups, colorObj) => {
+        const sortedWhs = Object.keys(groups).sort();
+        if (sortedWhs.length === 0) return '';
+        let html = '';
+        sortedWhs.forEach(wh => {
+            const plates = groups[wh].sort();
+            html += `<div style="width: 100%; margin-bottom: 12px;">`;
+            html += `<div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: var(--text-primary); text-transform: uppercase;">📍 ${wh}</div>`;
+            html += `<div style="display: flex; flex-wrap: wrap; gap: 8px;">`;
+            html += plates.map(p => 
+                `<span style="background: ${colorObj.bg}; color: ${colorObj.text}; padding: 6px 12px; border-radius: 8px; font-weight: 500; font-size: 14px; border: 1px solid ${colorObj.border}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${p}</span>`
+            ).join('');
+            html += `</div></div>`;
+        });
+        return html;
+    };
 
-    document.getElementById('activeList').innerHTML = activePlates.map(p => 
-        `<span style="background: rgba(34, 197, 94, 0.2); color: #4ade80; padding: 6px 12px; border-radius: 8px; font-weight: 500; font-size: 14px; border: 1px solid rgba(34,197,94,0.3); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${p}</span>`
-    ).join('');
+    document.getElementById('activeList').innerHTML = renderGroups(activePlatesByWh, {
+        bg: 'rgba(34, 197, 94, 0.2)', text: '#4ade80', border: 'rgba(34,197,94,0.3)'
+    });
 
-    document.getElementById('inactiveList').innerHTML = inactivePlates.map(p => 
-        `<span style="background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 6px 12px; border-radius: 8px; font-weight: 500; font-size: 14px; border: 1px solid rgba(239,68,68,0.3); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${p}</span>`
-    ).join('');
+    document.getElementById('inactiveList').innerHTML = renderGroups(inactivePlatesByWh, {
+        bg: 'rgba(239, 68, 68, 0.2)', text: '#f87171', border: 'rgba(239,68,68,0.3)'
+    });
 }
 
 // ====== RENDER TOÀN BỘ ======

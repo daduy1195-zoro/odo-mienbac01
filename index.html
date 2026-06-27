@@ -426,13 +426,19 @@
         </div>
         <div class="filter-group">
             <span class="filter-label">Nhân viên</span>
-            <input type="text" id="filterEmployee" list="listEmployee" placeholder="Tất cả nhân viên" autocomplete="off" class="search-filter" style="width: 250px;">
-            <datalist id="listEmployee"></datalist>
+            <div style="position: relative; display: inline-flex; align-items: center;">
+                <input type="text" id="filterEmployee" list="listEmployee" placeholder="Tất cả nhân viên" autocomplete="off" class="search-filter" style="width: 250px; padding-right: 28px;" oninput="document.getElementById('clearEmp').style.display = this.value ? 'block' : 'none'">
+                <span id="clearEmp" onclick="document.getElementById('filterEmployee').value=''; document.getElementById('filterEmployee').dispatchEvent(new Event('input'));" style="position: absolute; right: 28px; cursor: pointer; color: #94a3b8; display: none; font-size: 16px; font-weight: bold; line-height: 1; padding: 4px; border-radius: 50%;">✕</span>
+                <datalist id="listEmployee"></datalist>
+            </div>
         </div>
         <div class="filter-group">
             <span class="filter-label">Biển số xe</span>
-            <input type="text" id="filterPlate" list="listPlate" placeholder="Tất cả biển số" autocomplete="off" class="search-filter" style="width: 200px;">
-            <datalist id="listPlate"></datalist>
+            <div style="position: relative; display: inline-flex; align-items: center;">
+                <input type="text" id="filterPlate" list="listPlate" placeholder="Tất cả biển số" autocomplete="off" class="search-filter" style="width: 200px; padding-right: 28px;" oninput="document.getElementById('clearPlate').style.display = this.value ? 'block' : 'none'">
+                <span id="clearPlate" onclick="document.getElementById('filterPlate').value=''; document.getElementById('filterPlate').dispatchEvent(new Event('input'));" style="position: absolute; right: 28px; cursor: pointer; color: #94a3b8; display: none; font-size: 16px; font-weight: bold; line-height: 1; padding: 4px; border-radius: 50%;">✕</span>
+                <datalist id="listPlate"></datalist>
+            </div>
         </div>
         <div class="filter-group" style="align-self: flex-end;">
             <button class="btn btn-primary" onclick="sendTelegramReport(event)">

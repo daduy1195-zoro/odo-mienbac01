@@ -1133,11 +1133,12 @@ async function loadAllData() {
         // ═══════════════════════════════════════
         const platePattern = /^\d{2}[A-Z]-?\d{3,5}\.?\d{0,2}$/i;
         employeeData.forEach(entry => {
-            if (!platePattern.test(entry.name.replace(/\s/g, ''))) return;
+            const rawNameCode = (entry.name + (entry.code ? entry.code : '')).replace(/\s/g, '');
+            if (!platePattern.test(rawNameCode)) return;
 
-            const fakePlate = entry.name.replace(/\s/g, '');
+            const fakePlate = rawNameCode;
             const realEntries = employeeData.filter(e =>
-                !platePattern.test(e.name.replace(/\s/g, '')) &&
+                !platePattern.test((e.name + (e.code ? e.code : '')).replace(/\s/g, '')) &&
                 e.plate && e.plate.replace(/[\s\-.]/g, '') === fakePlate.replace(/[\s\-.]/g, '')
             ).sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
 
@@ -1303,7 +1304,7 @@ function updateFilters() {
         if (whFilter && e.shortWH !== whFilter) return;
 
         // Bỏ qua nếu tên là biển số xe
-        const nameClean = e.name ? e.name.replace(/\s/g, '') : '';
+        const nameClean = (e.name + (e.code ? e.code : '')).replace(/\s/g, '');
         if (e.name && !platePattern.test(nameClean)) {
             validNames.add(e.name + (e.code ? ' ' + e.code : ''));
         }

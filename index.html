@@ -451,9 +451,39 @@
     <div style="margin-bottom: 24px; display: flex; justify-content: center;">
         <div class="tabs">
             <button class="tab active" onclick="switchTab('daily', this)">📋 Bảng theo dõi</button>
+            <button class="tab" onclick="switchTab('overview', this)">🚚 Trạng thái xe</button>
             <button class="tab" onclick="switchTab('ranking', this)">👤 Danh sách NV</button>
             <button class="tab" onclick="switchTab('fraud', this)">🚨 Cảnh báo gian lận <span class="badge badge-danger" id="fraudBadge" style="margin-left:4px;font-size:11px;">0</span></button>
             <button class="tab" onclick="switchTab('typo', this)">⚠️ Cảnh báo gõ sai <span class="badge badge-danger" id="typoBadge" style="margin-left:4px;font-size:11px;">0</span></button>
+        </div>
+    </div>
+
+    <!-- ========== TAB: TRẠNG THÁI XE ========== -->
+    <div class="section" id="tabOverview" style="display: none;">
+        <div class="section-header">
+            <div class="section-title">📊 Tổng quát trạng thái xe</div>
+        </div>
+        <div class="section-body">
+            <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                <!-- Đang chạy -->
+                <div style="flex: 1; min-width: 300px; background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; padding: 20px;">
+                    <h3 style="color: #4ade80; margin-top: 0; display: flex; align-items: center; justify-content: space-between; font-size: 16px; border-bottom: 1px solid rgba(34, 197, 94, 0.2); padding-bottom: 12px; margin-bottom: 16px;">
+                        <span>🟢 Xe đang chạy</span>
+                        <span id="activeCount" style="background: #22c55e; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 600;">0</span>
+                    </h3>
+                    <div id="activeList" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    </div>
+                </div>
+                <!-- Nghỉ chạy -->
+                <div style="flex: 1; min-width: 300px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 20px;">
+                    <h3 style="color: #f87171; margin-top: 0; display: flex; align-items: center; justify-content: space-between; font-size: 16px; border-bottom: 1px solid rgba(239, 68, 68, 0.2); padding-bottom: 12px; margin-bottom: 16px;">
+                        <span>🔴 Xe nghỉ chạy</span>
+                        <span id="inactiveCount" style="background: #ef4444; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 600;">0</span>
+                    </h3>
+                    <div id="inactiveList" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1338,6 +1368,72 @@ function updateFilters() {
     }
 }
 
+// ====== RENDER TRẠNG THÁI XE ======
+function renderOverview() {
+    const whFilter = document.getElementById('filterWarehouse').value;
+    
+    const uniquePlates = new Set();
+    const plateDataMap = {};
+    
+    masterList.forEach(m => {
+        if (whFilter && m.shortWH !== whFilter) return;
+        if (!m.plate) return;
+        const pNorm = norm(m.plate);
+        uniquePlates.add(pNorm);
+        if (!plateDataMap[pNorm]) plateDataMap[pNorm] = m;
+    });
+
+    const activePlates = [];
+    const inactivePlates = [];
+    const now = new Date();
+    const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const ONE_DAY = 1000 * 3600 * 24;
+
+    uniquePlates.forEach(pNorm => {
+        let maxDate = 0;
+        employeeData.forEach(e => {
+            if (norm(e.plate) === pNorm && e.dateObj) {
+                if (e.dateObj.getTime() > maxDate) maxDate = e.dateObj.getTime();
+            }
+        });
+
+        let hasUnreportedGxt = false;
+        supplierData.forEach(s => {
+            if (norm(s.plate) === pNorm && s.nvghStatus.toLowerCase() === 'x') {
+                hasUnreportedGxt = true;
+            }
+        });
+
+        const daysSinceOdo = maxDate === 0 ? Infinity : Math.floor((todayDate - maxDate) / ONE_DAY);
+        const isInactive = (daysSinceOdo >= 3) && !hasUnreportedGxt;
+
+        let rawPlate = plateDataMap[pNorm].plate;
+        if (rawPlate && rawPlate.length >= 5) {
+            rawPlate = rawPlate.substring(0, 3) + '-' + rawPlate.substring(3);
+        }
+
+        if (isInactive) {
+            inactivePlates.push(rawPlate);
+        } else {
+            activePlates.push(rawPlate);
+        }
+    });
+
+    activePlates.sort();
+    inactivePlates.sort();
+
+    document.getElementById('activeCount').innerText = activePlates.length;
+    document.getElementById('inactiveCount').innerText = inactivePlates.length;
+
+    document.getElementById('activeList').innerHTML = activePlates.map(p => 
+        `<span style="background: rgba(34, 197, 94, 0.2); color: #4ade80; padding: 6px 12px; border-radius: 8px; font-weight: 500; font-size: 14px; border: 1px solid rgba(34,197,94,0.3); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${p}</span>`
+    ).join('');
+
+    document.getElementById('inactiveList').innerHTML = inactivePlates.map(p => 
+        `<span style="background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 6px 12px; border-radius: 8px; font-weight: 500; font-size: 14px; border: 1px solid rgba(239,68,68,0.3); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${p}</span>`
+    ).join('');
+}
+
 // ====== RENDER TOÀN BỘ ======
 function renderAll() {
     const month = document.getElementById('filterMonth').value;
@@ -1367,6 +1463,9 @@ function renderAll() {
 
     // Vẽ xếp hạng
     renderRanking(month, whFilter);
+
+    // Vẽ trạng thái xe
+    renderOverview();
 
     // Vẽ cảnh báo gõ sai (chỉ trong kỳ)
     renderTypoWarnings(month);
@@ -2327,9 +2426,14 @@ function switchTab(tab, el) {
     el.classList.add('active');
 
     document.getElementById('tabDaily').style.display = tab === 'daily' ? '' : 'none';
+    document.getElementById('tabOverview').style.display = tab === 'overview' ? '' : 'none';
     document.getElementById('tabRanking').style.display = tab === 'ranking' ? '' : 'none';
     document.getElementById('tabFraud').style.display = tab === 'fraud' ? '' : 'none';
     document.getElementById('tabTypo').style.display = tab === 'typo' ? '' : 'none';
+
+    if (tab === 'overview') {
+        renderOverview();
+    }
 }
 
 // ====== TỰ ĐỘNG REFRESH MỖI 30 PHÚT ======

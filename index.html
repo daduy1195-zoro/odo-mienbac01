@@ -1171,10 +1171,10 @@ async function loadAllData() {
                     (nameDist <= 3 && codeDist <= 2 && (nameDist + codeDist) > 0) ||
                     (nameDist === 0 && codeDist > 0 && codeDist <= 3) ||
                     (codeDist === 0 && nameDist > 0 && nameDist <= 3) ||
-                    // Cùng tên, 1 bên thiếu mã hoặc mã sai số chữ số
+                    // Cùng tên, 1 bên thiếu mã
                     (nameDist <= 2 && (!item.code || !can.code)) ||
-                    // Cùng tên, 1 bên mã 7 số chuẩn, bên kia mã sai (khác độ dài)
-                    (nameDist <= 2 && can.code.length === 7 && item.code.length !== 7)
+                    // Cùng tên (sai khác rất ít), và can đã có mã chuẩn 7 số -> tự hiểu là người đó
+                    (nameDist <= 2 && can.code && can.code.length === 7)
                 );
                 if (isSimilar) { matched = can; break; }
             }

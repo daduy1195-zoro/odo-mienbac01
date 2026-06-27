@@ -943,13 +943,14 @@ document.addEventListener('DOMContentLoaded', () => {
     monthSelect.value = currentMonthStr;
 
     // Gắn sự kiện lọc
-    monthSelect.addEventListener('change', renderAll);
-    document.getElementById('filterWarehouse').addEventListener('change', () => {
+    const applyFilters = () => {
         updateFilters();
         renderAll();
-    });
-    document.getElementById('filterEmployee').addEventListener('change', renderAll);
-    document.getElementById('filterPlate').addEventListener('change', renderAll);
+    };
+    monthSelect.addEventListener('change', applyFilters);
+    document.getElementById('filterWarehouse').addEventListener('change', applyFilters);
+    document.getElementById('filterEmployee').addEventListener('change', applyFilters);
+    document.getElementById('filterPlate').addEventListener('change', applyFilters);
 
     // Tải dữ liệu lần đầu
     loadAllData();
@@ -1289,6 +1290,7 @@ async function loadAllData() {
 // ====== CẬP NHẬT BỘ LỌC NV & BIỂN SỐ ======
 function updateFilters() {
     const whFilter = document.getElementById('filterWarehouse').value;
+    const month = document.getElementById('filterMonth').value;
     
     const empSelect = document.getElementById('filterEmployee');
     const oldEmp = empSelect.value;
@@ -1302,14 +1304,22 @@ function updateFilters() {
 
     employeeData.forEach(e => {
         if (whFilter && e.shortWH !== whFilter) return;
+        if (month && e.dateObj && !isInCycle(e.dateObj, month)) return;
 
-        // Bỏ qua nếu tên là biển số xe
+        // Xử lý tên nhân viên (bỏ qua nếu là biển số xe)
         const nameClean = (e.name + (e.code ? e.code : '')).replace(/\s/g, '');
-        if (e.name && !platePattern.test(nameClean)) {
-            validNames.add(e.name + (e.code ? ' ' + e.code : ''));
+        const isNotPlate = e.name && !platePattern.test(nameClean);
+        const empStr = isNotPlate ? (e.name + (e.code ? ' ' + e.code : '')) : '';
+        const ePlate = e.plate || '';
+
+        // Để lọc filterEmployee, xét theo filterPlate hiện tại (nếu có)
+        if (!oldPlate || norm(ePlate) === norm(oldPlate)) {
+            if (empStr) validNames.add(empStr);
         }
-        if (e.plate) {
-            validPlates.add(e.plate);
+
+        // Để lọc filterPlate, xét theo filterEmployee hiện tại (nếu có)
+        if (!oldEmp || norm(empStr) === norm(oldEmp)) {
+            if (ePlate) validPlates.add(ePlate);
         }
     });
 
@@ -1317,14 +1327,14 @@ function updateFilters() {
     [...validNames].sort().forEach(n => {
         empSelect.innerHTML += `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`;
     });
-    empSelect.value = oldEmp;
+    empSelect.value = validNames.has(oldEmp) ? oldEmp : '';
 
     if (plateSelect) {
         plateSelect.innerHTML = '<option value="">Tất cả biển số</option>';
         [...validPlates].sort().forEach(p => {
             plateSelect.innerHTML += `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`;
         });
-        plateSelect.value = oldPlate;
+        plateSelect.value = validPlates.has(oldPlate) ? oldPlate : '';
     }
 }
 

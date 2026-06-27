@@ -132,7 +132,7 @@
         }
         .filter-group { display: flex; flex-direction: column; gap: 4px; }
         .filter-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        select, input[type="month"] {
+        input, select, input[type="month"] {
             background: var(--bg-card);
             border: 1px solid var(--border);
             color: var(--text-primary);
@@ -426,15 +426,13 @@
         </div>
         <div class="filter-group">
             <span class="filter-label">Nhân viên</span>
-            <select id="filterEmployee">
-                <option value="">Tất cả nhân viên</option>
-            </select>
+            <input type="text" id="filterEmployee" list="listEmployee" placeholder="Tất cả nhân viên" autocomplete="off" class="search-filter" style="width: 250px;">
+            <datalist id="listEmployee"></datalist>
         </div>
         <div class="filter-group">
             <span class="filter-label">Biển số xe</span>
-            <select id="filterPlate">
-                <option value="">Tất cả biển số</option>
-            </select>
+            <input type="text" id="filterPlate" list="listPlate" placeholder="Tất cả biển số" autocomplete="off" class="search-filter" style="width: 200px;">
+            <datalist id="listPlate"></datalist>
         </div>
         <div class="filter-group" style="align-self: flex-end;">
             <button class="btn btn-primary" onclick="sendTelegramReport(event)">
@@ -949,8 +947,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     monthSelect.addEventListener('change', applyFilters);
     document.getElementById('filterWarehouse').addEventListener('change', applyFilters);
-    document.getElementById('filterEmployee').addEventListener('change', applyFilters);
-    document.getElementById('filterPlate').addEventListener('change', applyFilters);
+    document.getElementById('filterEmployee').addEventListener('input', applyFilters);
+    document.getElementById('filterPlate').addEventListener('input', applyFilters);
 
     // Tải dữ liệu lần đầu
     loadAllData();
@@ -1292,11 +1290,13 @@ function updateFilters() {
     const whFilter = document.getElementById('filterWarehouse').value;
     const month = document.getElementById('filterMonth').value;
     
-    const empSelect = document.getElementById('filterEmployee');
-    const oldEmp = empSelect.value;
+    const empInput = document.getElementById('filterEmployee');
+    const oldEmp = empInput.value;
+    const empDataList = document.getElementById('listEmployee');
     
-    const plateSelect = document.getElementById('filterPlate');
-    const oldPlate = plateSelect ? plateSelect.value : '';
+    const plateInput = document.getElementById('filterPlate');
+    const oldPlate = plateInput ? plateInput.value : '';
+    const plateDataList = document.getElementById('listPlate');
 
     const validNames = new Set();
     const validPlates = new Set();
@@ -1313,28 +1313,28 @@ function updateFilters() {
         const ePlate = e.plate || '';
 
         // Để lọc filterEmployee, xét theo filterPlate hiện tại (nếu có)
-        if (!oldPlate || norm(ePlate) === norm(oldPlate)) {
+        if (!oldPlate || norm(ePlate).includes(norm(oldPlate))) {
             if (empStr) validNames.add(empStr);
         }
 
         // Để lọc filterPlate, xét theo filterEmployee hiện tại (nếu có)
-        if (!oldEmp || norm(empStr) === norm(oldEmp)) {
+        if (!oldEmp || norm(empStr).includes(norm(oldEmp))) {
             if (ePlate) validPlates.add(ePlate);
         }
     });
 
-    empSelect.innerHTML = '<option value="">Tất cả nhân viên</option>';
-    [...validNames].sort().forEach(n => {
-        empSelect.innerHTML += `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`;
-    });
-    empSelect.value = validNames.has(oldEmp) ? oldEmp : '';
-
-    if (plateSelect) {
-        plateSelect.innerHTML = '<option value="">Tất cả biển số</option>';
-        [...validPlates].sort().forEach(p => {
-            plateSelect.innerHTML += `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`;
+    if (empDataList) {
+        empDataList.innerHTML = '';
+        [...validNames].sort().forEach(n => {
+            empDataList.innerHTML += `<option value="${escapeHtml(n)}"></option>`;
         });
-        plateSelect.value = validPlates.has(oldPlate) ? oldPlate : '';
+    }
+
+    if (plateDataList) {
+        plateDataList.innerHTML = '';
+        [...validPlates].sort().forEach(p => {
+            plateDataList.innerHTML += `<option value="${escapeHtml(p)}"></option>`;
+        });
     }
 }
 
@@ -1351,8 +1351,8 @@ function renderAll() {
         if (!e.dateObj) return false;
         if (month && !isInCycle(e.dateObj, month)) return false;
         if (whFilter && e.shortWH !== whFilter) return false;
-        if (empFilter && norm(e.name + (e.code ? ' ' + e.code : '')) !== norm(empFilter)) return false;
-        if (plateFilter && norm(e.plate) !== norm(plateFilter)) return false;
+        if (empFilter && !norm(e.name + (e.code ? ' ' + e.code : '')).includes(norm(empFilter))) return false;
+        if (plateFilter && !norm(e.plate).includes(norm(plateFilter))) return false;
         return true;
     });
 

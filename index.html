@@ -1393,28 +1393,44 @@ function renderOverview() {
     let inactiveCount = 0;
 
     const now = new Date();
-    // Lưu ý: Tính "3 ngày" hiện tại đang dựa vào ngày hiện tại (todayDate).
-    // Nếu dữ liệu được tải lên là của tuần trước, tất cả xe sẽ bị coi là quá 3 ngày.
     const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    
+    // 1. Tìm ngày có dữ liệu mới nhất trong toàn bộ hệ thống (tránh so sánh với ngày thực tế gây sai lệch)
+    let globalMaxDate = 0;
+    employeeData.forEach(e => {
+        if (e.dateObj && e.dateObj.getTime() > globalMaxDate && e.dateObj.getTime() <= todayDate) {
+            globalMaxDate = e.dateObj.getTime();
+        }
+    });
+    supplierData.forEach(s => {
+        if (s.dateObj && s.dateObj.getTime() > globalMaxDate && s.dateObj.getTime() <= todayDate) {
+            globalMaxDate = s.dateObj.getTime();
+        }
+    });
+    if (globalMaxDate === 0) globalMaxDate = todayDate;
+
     const ONE_DAY = 1000 * 3600 * 24;
 
     uniquePlates.forEach(pNorm => {
-        let maxDate = 0;
+        let lastActiveDate = 0;
+        
+        // Lấy ngày ODO gần nhất của xe này
         employeeData.forEach(e => {
-            if (norm(e.plate) === pNorm && e.dateObj) {
-                if (e.dateObj.getTime() > maxDate) maxDate = e.dateObj.getTime();
+            if (norm(e.plate) === pNorm && e.dateObj && e.dateObj.getTime() <= todayDate) {
+                if (e.dateObj.getTime() > lastActiveDate) lastActiveDate = e.dateObj.getTime();
             }
         });
 
-        let hasUnreportedGxt = false;
+        // Lấy ngày có chuyến NCC gần nhất của xe này (vì có trong file NCC là chắc chắn có chạy)
         supplierData.forEach(s => {
-            if (norm(s.plate) === pNorm && s.nvghStatus.toLowerCase() === 'x') {
-                hasUnreportedGxt = true;
+            if (norm(s.plate) === pNorm && s.dateObj && s.dateObj.getTime() <= todayDate) {
+                if (s.dateObj.getTime() > lastActiveDate) lastActiveDate = s.dateObj.getTime();
             }
         });
 
-        const daysSinceOdo = maxDate === 0 ? Infinity : Math.floor((todayDate - maxDate) / ONE_DAY);
-        const isInactive = (daysSinceOdo >= 3) && !hasUnreportedGxt;
+        // Tính số ngày tính từ lúc có dữ liệu mới nhất của cả hệ thống
+        const daysSinceActive = lastActiveDate === 0 ? Infinity : Math.floor((globalMaxDate - lastActiveDate) / ONE_DAY);
+        const isInactive = daysSinceActive >= 3;
 
         let rawPlate = plateDataMap[pNorm].plate;
         if (rawPlate && rawPlate.length >= 5) {

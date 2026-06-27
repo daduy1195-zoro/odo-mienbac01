@@ -913,22 +913,33 @@ function detectTypos(data) {
         Object.values(reportedByCode).forEach(rep => {
             const inMaster = masterList.some(m => m.code === rep.code);
             if (!inMaster) {
-                // Tìm master gần nhất theo tên
                 let bestMaster = null;
-                let bestDist = Infinity;
+                let bestScore = Infinity;
                 for (const m of masterList) {
-                    const dist = levenshtein(rep.name, m.name);
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        bestMaster = m;
+                    const nDist = levenshtein(rep.name, m.name);
+                    const cDist = levenshtein(rep.code, m.code);
+                    
+                    // Để coi là gõ sai mã NV:
+                    // 1. Tên gõ ĐÚNG 100%, mã sai bất kỳ (thường là gõ nhầm mã)
+                    // 2. Tên sai 1-2 chữ, VÀ mã cũng chỉ sai 1-2 số (gõ sai cả 2 một tí)
+                    const isTypo = (nDist === 0 && cDist > 0) || 
+                                   (nDist > 0 && nDist <= 2 && cDist > 0 && cDist <= 2);
+                                   
+                    if (isTypo) {
+                        const score = nDist + cDist;
+                        if (score < bestScore) {
+                            bestScore = score;
+                            bestMaster = m;
+                        }
                     }
                 }
-                if (bestMaster && bestDist <= 3) {
+                
+                if (bestMaster) {
                     masterMismatches.push({
                         reported: rep,
                         master: bestMaster,
                         type: 'code',
-                        distance: bestDist
+                        distance: bestScore
                     });
                 }
             }

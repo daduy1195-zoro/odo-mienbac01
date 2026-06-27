@@ -1114,7 +1114,6 @@ async function loadAllData() {
             };
 
             employeeData.push(entry);
-            allEmployeeNames.add(name + (code ? ' ' + code : ''));
         }
 
         // ═══════════════════════════════════════
@@ -1179,8 +1178,9 @@ async function loadAllData() {
                 );
                 if (isSimilar) { matched = can; break; }
             }
-            if (matched && item.count < matched.count) {
-                // item ít hơn → item sai, matched đúng
+            // Đã sắp xếp theo độ chuẩn xác (có mã 7 số ưu tiên) và tần suất giảm dần.
+            // Do đó "matched" luôn là phiên bản tốt hơn hoặc bằng "item".
+            if (matched) {
                 matched.aliases = matched.aliases || [];
                 matched.aliases.push(item);
             } else {
@@ -1200,6 +1200,12 @@ async function loadAllData() {
                     }
                 }
             }
+        });
+
+        // Cập nhật lại allEmployeeNames sau khi đã chuẩn hóa
+        allEmployeeNames.clear();
+        employeeData.forEach(e => {
+            if (e.name) allEmployeeNames.add(e.name + (e.code ? ' ' + e.code : ''));
         });
 
         // ═══════════════════════════════════════

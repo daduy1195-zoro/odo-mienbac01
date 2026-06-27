@@ -821,6 +821,12 @@ function detectTypos(data) {
             masterPlates.add(p);
             masterPlateList.push(p);
         }
+        if (m.backupPlates) {
+            m.backupPlates.forEach(bp => {
+                masterPlates.add(bp);
+                masterPlateList.push(bp);
+            });
+        }
     });
 
     const plateTypos = [];
@@ -1085,8 +1091,10 @@ async function loadAllData() {
             const ncc = (r[3] || '').trim();
             const province = (r[5] || '').trim();
             const warehouse = (r[6] || '').trim();
+            const backupStr = (r[9] || '').trim().toUpperCase();
+            const backupPlates = backupStr ? backupStr.split(/[\n,;]+/).map(p => p.replace(/[\s\-\.]/g, '')).filter(Boolean) : [];
             if (!code || !name) return;
-            masterList.push({ code, name, plate, ncc, province, warehouse });
+            masterList.push({ code, name, plate, ncc, province, warehouse, backupPlates });
         });
         console.log(`✅ Master list: ${masterList.length} NV`);
 

@@ -1172,6 +1172,8 @@ async function loadAllData() {
             const hourEnd = (r[13] || '').trim();
 
             const gid = r._gid || CONFIG.SHEET_EMPLOYEE_GIDS[0];
+            const normPlate = plate ? plate.toUpperCase().replace(/[\s\-\.]/g, '') : '';
+            const jsMatchKey = dateStr && normPlate ? `${dateStr}_${normPlate}` : '';
             let matchKey = '';
             if (gid === '1274066622') {
                 matchKey = (r[14] || '').trim(); // Column O
@@ -1195,7 +1197,7 @@ async function loadAllData() {
 
             const entry = {
                 name, code, area, dateStr, dateObj, plate, supplier, warehouse, shortWH,
-                kmStart, kmEnd, hourStart, hourEnd, matchKey, fullName, sheetRow, gid
+                kmStart, kmEnd, hourStart, hourEnd, matchKey, jsMatchKey, fullName, sheetRow, gid
             };
 
             employeeData.push(entry);
@@ -1316,6 +1318,8 @@ async function loadAllData() {
             const warehouse = (r[7] || '').trim();
             const nvghStatus = (r[8] || '').trim();  // Cột I: "x" = NV chưa báo cáo
             const matchKey = (r[13] || '').trim();
+              const normPlate = plate ? plate.toUpperCase().replace(/[\s\-\.]/g, '') : '';
+              const jsMatchKey = dateStr && normPlate ? `${dateStr}_${normPlate}` : '';
 
             // ★ CHỈ LẤY CHUYẾN THUỘC 4 KHO CỦA MÌNH ★
             if (!isMyWarehouse(warehouse)) continue;
@@ -1330,8 +1334,8 @@ async function loadAllData() {
             }
 
             supplierData.push({
-                stt, ncc, dateStr, dateObj, plate, vehicle, note, area, warehouse, shortWH, nvghStatus, matchKey
-            });
+                  stt, ncc, dateStr, dateObj, plate, vehicle, note, area, warehouse, shortWH, nvghStatus, matchKey, jsMatchKey
+              });
         }
 
         // Cập nhật bộ lọc NV
@@ -1583,6 +1587,7 @@ function computeStats(filtered, month) {
 
     const reportedToday = filtered.filter(e => e.dateStr === todayStr);
     const reportedKeys = new Set(reportedToday.map(e => e.matchKey).filter(Boolean));
+    const reportedJsKeys = new Set(reportedToday.map(e => e.jsMatchKey).filter(Boolean));
     const elCompleted = document.getElementById('statCompleted');
     if (elCompleted) elCompleted.textContent = reportedToday.length;
 
@@ -1591,7 +1596,7 @@ function computeStats(filtered, month) {
         if (whFilter && s.shortWH !== whFilter) return false;
         return true;
     });
-    const nccUnreported = nccToday.filter(s => !reportedKeys.has(s.matchKey));
+    const nccUnreported = nccToday.filter(s => !reportedKeys.has(s.matchKey) && !reportedJsKeys.has(s.jsMatchKey));
     const elMissing = document.getElementById('statMissing');
     if (elMissing) elMissing.textContent = nccUnreported.length;
 
@@ -1611,7 +1616,8 @@ function computeStats(filtered, month) {
             return true;
         });
         const empKeysMonth = new Set(filtered.map(e => e.matchKey).filter(Boolean));
-        const nccMonthMatched = nccMonth.filter(s => empKeysMonth.has(s.matchKey));
+        const empJsKeysMonth = new Set(filtered.map(e => e.jsMatchKey).filter(Boolean));
+        const nccMonthMatched = nccMonth.filter(s => empKeysMonth.has(s.matchKey) || empJsKeysMonth.has(s.jsMatchKey));
         const rate = nccMonth.length > 0 ? Math.round((nccMonthMatched.length / nccMonth.length) * 100) : 0;
 
         const elRate = document.getElementById('statRate');
@@ -1645,6 +1651,7 @@ function renderDailyTable(filtered) {
     }
 
     const supplierKeys = new Set(supplierData.map(s => s.matchKey).filter(Boolean));
+    const supplierJsKeys = new Set(supplierData.map(s => s.jsMatchKey).filter(Boolean));
 
     let html = `<table>
         <thead>
@@ -1700,10 +1707,11 @@ function renderDailyTable(filtered) {
         }
 
         let reconBadge = '';
-        if (!e.matchKey) {
-            reconBadge = '<span class="badge badge-warning">—</span>';
-        } else if (supplierKeys.has(e.matchKey)) {
+        const hasMatch = (e.matchKey && supplierKeys.has(e.matchKey)) || (e.jsMatchKey && supplierJsKeys.has(e.jsMatchKey));
+        if (hasMatch) {
             reconBadge = '<span class="badge badge-danger">⚠️ Lệch thông tin</span>';
+        } else if (!e.matchKey && !e.jsMatchKey) {
+            reconBadge = '<span class="badge badge-warning">—</span>';
         } else {
             reconBadge = '<span class="badge badge-success">✓ Đã đối soát</span>';
         }

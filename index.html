@@ -581,7 +581,7 @@
 const CONFIG = {
     // Link Google Sheet dữ liệu nhân viên điền ODO
     SHEET_EMPLOYEE_ID: '1vI_rzcjX6F12SOm06QvEo9W2s5kiDjYcRtvm2kWuCXo',
-    SHEET_EMPLOYEE_GID: '409459817',
+    SHEET_EMPLOYEE_GIDS: ['409459817', '1274066622'],
 
     // Link Google Sheet đối soát nhà cung cấp xe
     SHEET_SUPPLIER_ID: '14zXhTqxD7VsN_PE3OxNY7hLss8zxG4zUNT_cNN9QV90',
@@ -1085,12 +1085,24 @@ function fetchSheetJSONP(sheetId, gid) {
 async function loadAllData() {
     showLoading(true);
     try {
-        // Tải song song cả 3 sheet bằng JSONP
-        const [empRows, supRows, masterRows] = await Promise.all([
-            fetchSheetJSONP(CONFIG.SHEET_EMPLOYEE_ID, CONFIG.SHEET_EMPLOYEE_GID),
+        const empPromises = CONFIG.SHEET_EMPLOYEE_GIDS.map(gid =>
+            fetchSheetJSONP(CONFIG.SHEET_EMPLOYEE_ID, gid).then(rows => {
+                rows.forEach((r, idx) => {
+                    if (r) {
+                        r._gid = gid;
+                        r._sheetRow = idx + 2;
+                    }
+                });
+                return rows;
+            })
+        );
+
+        const [empRowsArrays, supRows, masterRows] = await Promise.all([
+            Promise.all(empPromises),
             fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID),
             fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID)
         ]);
+        const empRows = empRowsArrays.flat();
 
         // Debug log
         console.log(`✅ Loaded: NV=${empRows.length} rows, NCC=${supRows.length} rows, Master=${masterRows.length} rows`);
@@ -1170,11 +1182,12 @@ async function loadAllData() {
             const shortWH = shortWarehouse(warehouse);
 
             // Lưu dòng gốc trong Sheet (headers=1 → data row 0 = sheet row 2)
-            const sheetRow = i + 2;
+            const sheetRow = r._sheetRow || (i + 2);
+            const gid = r._gid || CONFIG.SHEET_EMPLOYEE_GIDS[0];
 
             const entry = {
                 name, code, area, dateStr, dateObj, plate, supplier, warehouse, shortWH,
-                kmStart, kmEnd, hourStart, hourEnd, matchKey, fullName, sheetRow
+                kmStart, kmEnd, hourStart, hourEnd, matchKey, fullName, sheetRow, gid
             };
 
             employeeData.push(entry);
@@ -1687,7 +1700,7 @@ function renderDailyTable(filtered) {
             reconBadge = '<span class="badge badge-success">✓ Đã đối soát</span>';
         }
 
-        const sheetUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${CONFIG.SHEET_EMPLOYEE_GID}&range=A${e.sheetRow}`;
+        const sheetUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=A${e.sheetRow}`;
 
         html += `<tr>
             <td>${i + 1}</td>
@@ -1911,7 +1924,7 @@ function renderFraudWarnings(filtered) {
         return;
     }
 
-    const sheetBaseUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit?gid=${CONFIG.SHEET_EMPLOYEE_GID}#gid=${CONFIG.SHEET_EMPLOYEE_GID}`;
+    
 
     let html = `<table>
         <thead><tr>
@@ -1966,7 +1979,7 @@ function renderFraudWarnings(filtered) {
         }).join(' ');
 
         const editLink = e.sheetRow
-            ? `<a href="${sheetBaseUrl}&range=A${e.sheetRow}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`
+            ? `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=A${e.sheetRow}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`
             : '';
 
         // Tính otMinutes để tô màu
@@ -2025,7 +2038,7 @@ function renderTypoWarnings(month) {
         return;
     }
 
-    const sheetBaseUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit?gid=${CONFIG.SHEET_EMPLOYEE_GID}#gid=${CONFIG.SHEET_EMPLOYEE_GID}`;
+    
 
     let html = '';
 
@@ -2050,11 +2063,9 @@ function renderTypoWarnings(month) {
 
             const dates = t.wrong.entries.map(e => e.dateStr).filter(Boolean)
                 .map(d => d.replace(/\/\d{4}$/, ''));
-            const rows = t.wrong.entries.map(e => e.sheetRow).filter(Boolean);
             const wh = t.wrong.entries[0]?.shortWH || '';
-
-            const editLinks = rows.map(r =>
-                `<a href="${sheetBaseUrl}&range=C${r}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;" title="Mở dòng ${r}">Dòng ${r}</a>`
+            const editLinks = t.wrong.entries.map(e =>
+                `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=C${e.sheetRow}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;" title="Mở dòng ${e.sheetRow}">Dòng ${e.sheetRow}</a>`
             ).join(', ');
 
             html += `<tr>
@@ -2091,12 +2102,10 @@ function renderTypoWarnings(month) {
             const empNames = [...new Set(t.entries.map(e => e.name + (e.code ? ' ' + e.code : '')))];
             const dates = [...new Set(t.entries.map(e => e.dateStr))].filter(Boolean)
                 .map(d => d.replace(/\/\d{4}$/, ''));
-            const rows = t.entries.map(e => e.sheetRow).filter(Boolean);
             const province = getProvinceFromPlate(t.wrongPlate);
-
-            const editLinks = rows.slice(0, 5).map(r =>
-                `<a href="${sheetBaseUrl}&range=J${r}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${r}</a>`
-            ).join(', ') + (rows.length > 5 ? ` +${rows.length - 5}` : '');
+            const editLinks = t.entries.slice(0, 5).map(e =>
+                `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=J${e.sheetRow}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`
+            ).join(', ') + (t.entries.length > 5 ? ` +${t.entries.length - 5}` : '');
 
             html += `<tr>
                 <td>${i + 1}</td>
@@ -2131,10 +2140,9 @@ function renderTypoWarnings(month) {
             const masterStr = mm.master.name + ' ' + mm.master.code;
             const typeLabel = mm.type === 'name' ? '❌ Sai tên' : '❌ Sai mã NV';
 
-            const rows = mm.reported.entries.map(e => e.sheetRow).filter(Boolean);
-            const editLinks = rows.slice(0, 5).map(r =>
-                `<a href="${sheetBaseUrl}&range=C${r}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${r}</a>`
-            ).join(', ') + (rows.length > 5 ? ` +${rows.length - 5}` : '');
+            const editLinks = mm.reported.entries.slice(0, 5).map(e =>
+                `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=C${e.sheetRow}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`
+            ).join(', ') + (t.entries.length > 5 ? ` +${t.entries.length - 5}` : '');
 
             html += `<tr>
                 <td>${i + 1}</td>
@@ -2178,7 +2186,7 @@ function renderTypoWarnings(month) {
 
         odoErrors.forEach((e, i) => {
             const km = parseInt(e.kmEnd) - parseInt(e.kmStart);
-            const editLink = `<a href="${sheetBaseUrl}&range=H${e.sheetRow}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`;
+            const editLink = `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=H${e.sheetRow}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`;
 
             html += `<tr>
                 <td>${i + 1}</td>

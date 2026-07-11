@@ -1170,7 +1170,16 @@ async function loadAllData() {
             const kmEnd = (r[12] || '').trim();
             const hourStart = (r[8] || '').trim();
             const hourEnd = (r[13] || '').trim();
-            const matchKey = (r[15] || '').trim(); // Column 16
+
+            const gid = r._gid || CONFIG.SHEET_EMPLOYEE_GIDS[0];
+            let matchKey = '';
+            if (gid === '1274066622') {
+                matchKey = (r[14] || '').trim(); // Column O
+            } else if (gid === '409459817') {
+                matchKey = (r[16] || '').trim(); // Column Q
+            } else {
+                matchKey = (r[15] || '').trim(); // Fallback
+            }
 
             // Parse ngày DD/MM/YYYY hoặc DD-MM-YYYY
             const dateParts = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
@@ -1183,7 +1192,6 @@ async function loadAllData() {
 
             // Lưu dòng gốc trong Sheet (headers=1 → data row 0 = sheet row 2)
             const sheetRow = r._sheetRow || (i + 2);
-            const gid = r._gid || CONFIG.SHEET_EMPLOYEE_GIDS[0];
 
             const entry = {
                 name, code, area, dateStr, dateObj, plate, supplier, warehouse, shortWH,

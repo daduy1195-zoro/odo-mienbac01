@@ -1029,7 +1029,7 @@ function fetchSheetJSONP(sheetId, gid) {
             clearTimeout(timer);
 
             if (!data || data.status !== 'ok') {
-                reject(new Error('Google Sheet trả về lỗi: ' + (data?.errors?.[0]?.message || 'Không rõ')));
+                reject(new Error('Google Sheet trả về lỗi: ' + (data?.errors?.[0]?.message || 'Không rõ') + ' (Sheet ID: ' + sheetId + ')'));
                 return;
             }
 

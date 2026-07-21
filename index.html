@@ -1467,7 +1467,9 @@ function renderOverview() {
         
         // Lấy ngày ODO gần nhất của xe này
         employeeData.forEach(e => {
-            if (norm(e.plate) === pNorm && e.dateObj && e.dateObj.getTime() <= todayDate) {
+            const master = masterList.find(m => m.code === e.code);
+            const resolvedPlate = master ? master.plate : e.plate;
+            if (norm(resolvedPlate) === pNorm && e.dateObj && e.dateObj.getTime() <= todayDate) {
                 if (e.dateObj.getTime() > lastActiveDate) lastActiveDate = e.dateObj.getTime();
             }
         });
@@ -1491,10 +1493,12 @@ function renderOverview() {
         let odoTrips = 0;
         let nccTrips = 0;
         employeeData.forEach(e => {
-            if (norm(e.plate) === pNorm && e.dateObj && isInCycle(e.dateObj, month)) odoTrips++;
+            const master = masterList.find(m => m.code === e.code);
+            const resolvedPlate = master ? master.plate : e.plate;
+            if (norm(resolvedPlate) === pNorm && e.dateObj && (!month || isInCycle(e.dateObj, month))) odoTrips++;
         });
         supplierData.forEach(s => {
-            if (norm(s.plate) === pNorm && s.dateObj && isInCycle(s.dateObj, month)) nccTrips++;
+            if (norm(s.plate) === pNorm && s.dateObj && (!month || isInCycle(s.dateObj, month))) nccTrips++;
         });
         const tripCount = Math.max(odoTrips, nccTrips);
         const displayLabel = `${rawPlate}: ${tripCount} chuyến`;

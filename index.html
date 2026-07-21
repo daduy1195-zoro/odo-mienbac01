@@ -2366,7 +2366,7 @@ async function sendTelegramReport(evt) {
         showToast('✅', `Đã gửi tổng cộng ${photosSent} ảnh báo cáo vào 4 nhóm Telegram!`);
     } catch (err) {
         console.error('Telegram error:', err);
-        showToast('❌', 'Lỗi gửi Telegram. Vui lòng thử lại.');
+        showToast('❌', 'Lỗi: ' + err.message);
     }
 
     btn.disabled = false;
@@ -2434,7 +2434,7 @@ async function sendFraudTelegram(evt) {
         }
     } catch (err) {
         console.error('Telegram fraud error:', err);
-        showToast('❌', 'Lỗi gửi Telegram. Vui lòng thử lại.');
+        showToast('❌', 'Lỗi: ' + err.message);
     }
 
     btn.disabled = false;
@@ -2483,7 +2483,7 @@ async function sendWarehouseRankingTelegram(whName, evt) {
         showToast('✅', `Đã gửi danh sách NV Kho ${whName} vào Telegram!`);
     } catch (err) {
         console.error('Telegram ranking error:', err);
-        showToast('❌', 'Lỗi gửi Telegram. Vui lòng thử lại.');
+        showToast('❌', 'Lỗi: ' + err.message);
     }
 
     btn.disabled = false;

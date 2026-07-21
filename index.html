@@ -1821,13 +1821,35 @@ function renderRanking(month, whFilter) {
 
             // Tính ngày KHÔNG báo cáo = tất cả ngày trong kỳ - ngày đã báo
             const missingDates = allDatesInCycle.filter(d => !e.days.has(d));
-            // Format ngắn: "3/5, 6/5, 8/5" (ngày/tháng)
-            const missingShort = missingDates.map(d => {
+            
+            const toShort = (d) => {
                 const p = d.match(/(\d{1,2})\/(\d{1,2})/);
                 return p ? `${parseInt(p[1])}/${parseInt(p[2])}` : d;
-            });
+            };
 
-            return { ...e, uniqueDays, rate, missingDates: missingShort };
+            const missingRanges = [];
+            if (missingDates.length > 0) {
+                let start = missingDates[0];
+                let end = missingDates[0];
+                let lastIdx = allDatesInCycle.indexOf(missingDates[0]);
+
+                for (let i = 1; i < missingDates.length; i++) {
+                    const current = missingDates[i];
+                    const currentIdx = allDatesInCycle.indexOf(current);
+
+                    if (currentIdx === lastIdx + 1) {
+                        end = current;
+                    } else {
+                        missingRanges.push(start === end ? toShort(start) : `${toShort(start)} → ${toShort(end)}`);
+                        start = current;
+                        end = current;
+                    }
+                    lastIdx = currentIdx;
+                }
+                missingRanges.push(start === end ? toShort(start) : `${toShort(start)} → ${toShort(end)}`);
+            }
+
+            return { ...e, uniqueDays, rate, missingDates: missingRanges };
         });
 
         // Sắp xếp theo % giảm dần

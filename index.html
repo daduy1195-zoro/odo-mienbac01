@@ -2354,30 +2354,6 @@ async function sendTelegramReport(evt) {
             const caption1 = `📊 Báo cáo ODO - Kho ${wh}\n📅 Kỳ ${cycleStr}\n🕐 ${timeStr}\n🏭 Dashboard GHN ODO\n👤 Quản lý: ${groupConf.tag}`;
             await sendPhotoViaProxy(canvas1, caption1, groupConf.chatId);
             photosSent++;
-
-            // ═══════════════════════════════════════
-            // ẢNH 2: CẢNH BÁO GIAN LẬN CỦA KHO NÀY (nếu có)
-            // ═══════════════════════════════════════
-            const fraudCount = parseInt(document.getElementById('fraudBadge').textContent) || 0;
-            if (fraudCount > 0) {
-                const fraudTab = document.querySelector('.tab[onclick*="fraud"]');
-                if (fraudTab) switchTab('fraud', fraudTab);
-                await new Promise(r => setTimeout(r, 400));
-
-                const fraudContainer = document.getElementById('fraudTableContainer');
-                btn.innerHTML = `⏳ Chụp gian lận ${wh}...`;
-                const canvas2 = await html2canvas(fraudContainer, {
-                    backgroundColor: '#080d0f',
-                    scale: 2,
-                    useCORS: true,
-                    logging: false
-                });
-
-                btn.innerHTML = `⏳ Gửi gian lận ${wh}...`;
-                const caption2 = `🚨 CẢNH BÁO GIAN LẬN - KHO ${wh.toUpperCase()}\n⚠️ ${fraudCount} trường hợp cần kiểm tra\n🔴 Km > 200 hoặc Tăng ca > 3 tiếng\n🕒 ${timeStr}\n👤 Quản lý: ${groupConf.tag}`;
-                await sendPhotoViaProxy(canvas2, caption2, groupConf.chatId);
-                photosSent++;
-            }
         }
         
         // Khôi phục filter cũ

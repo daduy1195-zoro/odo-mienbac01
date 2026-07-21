@@ -2239,18 +2239,18 @@ function checkTelegramCooldown() {
     return true;
 }
 
-// ====== HELPER: GỬI TEXT QUA PROXY (đáng tin cậy) ======
-async function sendTextViaProxy(text) {
-    const response = await fetch(CONFIG.TELEGRAM_PROXY_URL, {
-        method: 'POST',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'sendMessage', text: text }),
-    });
+// ====== HELPER: GỬI TEXT QUA API TRỰC TIẾP ======
+async function sendTextViaProxy(text, chatId) {
+    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_TOKEN}/sendMessage`;
+    const formData = new FormData();
+    formData.append('chat_id', chatId);
+    formData.append('text', text);
     try {
+        const response = await fetch(url, { method: 'POST', body: formData });
         return await response.json();
     } catch (e) {
-        return { ok: true, message: 'Sent' };
+        showToast('❌', 'Lỗi API: ' + e.message);
+        return { ok: false, message: e.message };
     }
 }
 
@@ -2270,37 +2270,27 @@ function requireAdmin() {
     return false;
 }
 
-// ====== HELPER: GỬI ẢNH QUA PROXY (fallback text nếu thất bại) ======
+// ====== HELPER: GỬI ẢNH QUA API TRỰC TIẾP ======
 async function sendPhotoViaProxy(canvas, caption, chatId) {
-    // Chuyển sang JPEG quality 0.5 để giảm dung lượng
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-    const base64 = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
-    const sizeKB = Math.round(base64.length / 1024);
-    console.log('📤 Image size:', sizeKB, 'KB');
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const sizeKB = Math.round(blob.size / 1024);
+    console.log('🖼 Image size:', sizeKB, 'KB');
 
     try {
-        const payload = JSON.stringify({
-            action: 'sendPhoto',
-            image: base64,
-            caption: caption,
-            chat_id: chatId
-        });
+        const formData = new FormData();
+        formData.append('chat_id', chatId);
+        formData.append('photo', blob, 'image.png');
+        formData.append('caption', caption);
 
-        const response = await fetch(CONFIG.TELEGRAM_PROXY_URL, {
-            method: 'POST',
-            redirect: 'follow',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: payload,
-        });
-
+        const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_TOKEN}/sendPhoto`;
+        const response = await fetch(url, { method: 'POST', body: formData });
         const result = await response.json();
-        console.log('📤 Proxy response:', result);
+        console.log('🤖 Telegram API response:', result);
         if (result.ok) return result;
-        throw new Error(result.message || 'Image send failed');
+        throw new Error(result.description || 'Image send failed');
     } catch (err) {
-        // Ảnh thất bại → gửi text thay thế
-        console.warn('📤 Image failed, sending text fallback:', err.message);
-        const textResult = await sendTextViaProxy(caption + '\n\n📊 (Ảnh không gửi được qua proxy, gửi text thay thế)');
+        console.warn('❌ Image failed, sending text fallback:', err.message);
+        const textResult = await sendTextViaProxy(caption + '\n\n❌ (Ảnh không gửi được qua API, gửi text thay thế)', chatId);
         return { ok: textResult.ok, message: 'Sent as text', fallback: true };
     }
 }

@@ -2526,7 +2526,7 @@ function startAutoRefresh() {
             `Tự refresh sau: ${mins}p ${secs}s`;
     }, 1000);
 
-    // ====== TỰ ĐỘNG GỬI BÁO CÁO TELEGRAM LÚC 10H SÁNG ======
+    // ====== TỰ ĐỘNG GỬI BÁO CÁO TELEGRAM LÚC 17H30 HÀNG NGÀY ======
     startAutoTelegramReport();
 }
 
@@ -2542,13 +2542,13 @@ function startAutoTelegramReport() {
         const todayKey = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
 
         // Gửi lúc 10:00 (cho phép trong khoảng 10:00 - 10:01)
-        if (hour === 10 && minute === 0) {
+        if (hour === 17 && minute === 30) {
             const lastSent = localStorage.getItem('lastAutoReport');
             if (lastSent === todayKey) return; // Đã gửi hôm nay rồi
 
             localStorage.setItem('lastAutoReport', todayKey);
-            console.log('🕐 10:00 AM - Tự động gửi báo cáo Telegram...');
-            showToast('🕐', 'Đang tự động gửi báo cáo 10h sáng...');
+            console.log('⏰ 17:30 - Tự động gửi báo cáo Telegram...');
+            showToast('🤖', 'Đang tự động gửi báo cáo 17h30...');
 
             // Giả lập click nút gửi
             const btn = document.querySelector('.btn[onclick*="sendTelegramReport"]');

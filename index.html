@@ -1421,6 +1421,7 @@ function updateFilters() {
 // ====== RENDER TRẠNG THÁI XE ======
 function renderOverview() {
     const whFilter = document.getElementById('filterWarehouse').value;
+    const month = document.getElementById('filterMonth').value;
     
     const uniquePlates = new Set();
     const plateDataMap = {};
@@ -1487,15 +1488,26 @@ function renderOverview() {
             rawPlate = rawPlate.substring(0, 3) + '-' + rawPlate.substring(3);
         }
 
+        let odoTrips = 0;
+        let nccTrips = 0;
+        employeeData.forEach(e => {
+            if (norm(e.plate) === pNorm && e.dateObj && isInCycle(e.dateObj, month)) odoTrips++;
+        });
+        supplierData.forEach(s => {
+            if (norm(s.plate) === pNorm && s.dateObj && isInCycle(s.dateObj, month)) nccTrips++;
+        });
+        const tripCount = Math.max(odoTrips, nccTrips);
+        const displayLabel = `${rawPlate}: ${tripCount} chuyến`;
+
         const whName = plateDataMap[pNorm].shortWH || 'Khác';
 
         if (isInactive) {
             if (!inactivePlatesByWh[whName]) inactivePlatesByWh[whName] = [];
-            inactivePlatesByWh[whName].push(rawPlate);
+            inactivePlatesByWh[whName].push(displayLabel);
             inactiveCount++;
         } else {
             if (!activePlatesByWh[whName]) activePlatesByWh[whName] = [];
-            activePlatesByWh[whName].push(rawPlate);
+            activePlatesByWh[whName].push(displayLabel);
             activeCount++;
         }
     });

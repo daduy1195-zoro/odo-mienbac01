@@ -412,9 +412,8 @@ function setupTrigger1745() {
            .timeBased()
            .everyDays(1)
            .atHour(17)
-           .nearMinute(45)
+           .nearMinute(30)
            .create();
   
-  Logger.log('? �� c�i d?t l?ch g?i b�o c�o t? d?ng v�o kho?ng 17:45 h�ng ng�y.');
+  Logger.log('Đã cài đặt lịch gửi báo cáo tự động vào khoảng 17:30 hàng ngày.');
 }
-

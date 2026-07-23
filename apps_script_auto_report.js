@@ -13,7 +13,7 @@
 
 const CONFIG = {
   EMPLOYEE_SHEET_ID: '1vI_rzcjX6F12SOm06QvEo9W2s5kiDjYcRtvm2kWuCXo',
-  EMPLOYEE_GID: '409459817',
+  EMPLOYEE_GIDS: ['1274066622', '409459817'],
   SUPPLIER_SHEET_ID: '14zXhTqxD7VsN_PE3OxNY7hLss8zxG4zUNT_cNN9QV90',
   SUPPLIER_GID: '0',
   MASTER_SHEET_ID: '1RMe38TNV-EoIAradnynYmk8mt7l9pNWqJELM9O84Wxc',
@@ -109,7 +109,9 @@ function doGet(e) {
 // ====== HÃ€M CHÃNH: BÃO CÃO Tá»° Äá»˜NG ======
 function sendDailyReport() {
   try {
-    const empData = getSheetData_(CONFIG.EMPLOYEE_SHEET_ID, CONFIG.EMPLOYEE_GID);
+    const empData1 = getSheetData_(CONFIG.EMPLOYEE_SHEET_ID, CONFIG.EMPLOYEE_GIDS[0]);
+      const empData2 = getSheetData_(CONFIG.EMPLOYEE_SHEET_ID, CONFIG.EMPLOYEE_GIDS[1]);
+      const empData = [...empData1, ...empData2];
     const masterData = getSheetData_(CONFIG.MASTER_SHEET_ID, CONFIG.MASTER_GID);
 
     const masterList = [];
@@ -184,8 +186,35 @@ function sendDailyReport() {
       const list = Object.values(empObj).map(e => {
         const ud = Object.keys(e.days).length;
         const rate = daysElapsed > 0 ? Math.round((ud / daysElapsed) * 100) : 0;
-        const missing = allDates.filter(d => !e.days[d]);
-        return { ...e, ud, rate, missing };
+        const missingDates = allDates.filter(d => !e.days[d]);
+
+        const toShort = (d) => {
+          const p = d.match(/(\d{1,2})\/(\d{1,2})/);
+          return p ? parseInt(p[1]) + '/' + parseInt(p[2]) : d;
+        };
+
+        const missingRanges = [];
+        if (missingDates.length > 0) {
+          let start = missingDates[0];
+          let end = missingDates[0];
+          let lastIdx = allDates.indexOf(missingDates[0]);
+
+          for (let j = 1; j < missingDates.length; j++) {
+            const current = missingDates[j];
+            const currentIdx = allDates.indexOf(current);
+            if (currentIdx === lastIdx + 1) {
+              end = current;
+            } else {
+              missingRanges.push(start === end ? toShort(start) : toShort(start) + ' â†’ ' + toShort(end));
+              start = current;
+              end = current;
+            }
+            lastIdx = currentIdx;
+          }
+          missingRanges.push(start === end ? toShort(start) : toShort(start) + ' â†’ ' + toShort(end));
+        }
+
+        return { ...e, ud, rate, missing: missingRanges };
       });
       list.sort((a, b) => b.rate - a.rate);
 
@@ -199,8 +228,7 @@ function sendDailyReport() {
         const icon = e.rate >= 80 ? 'ğŸŸ¢' : e.rate >= 50 ? 'ğŸŸ¡' : 'ğŸ”´';
         msg1 += (i + 1) + '. ' + e.name + ' (' + e.code + ') ' + icon + ' ' + e.ud + '/' + daysElapsed + ' = ' + Math.min(e.rate, 100) + '%\n';
         if (e.rate < 100 && e.missing.length > 0) {
-          const short = e.missing.map(d => { const p = d.match(/(\d{1,2})\/(\d{1,2})/); return p ? parseInt(p[1]) + '/' + parseInt(p[2]) : d; });
-          msg1 += '   âŒ Thiáº¿u: ' + short.join(', ') + '\n';
+          msg1 += '   âŒ Thiáº¿u: ' + e.missing.join(', ') + '\n';
         }
       });
       
@@ -371,7 +399,7 @@ function fmt_(date, pattern) {
   return Utilities.formatDate(date, 'Asia/Ho_Chi_Minh', pattern);
 }
 
-// ====== CÀI Ğ?T L?CH T? Ğ?NG ======
+// ====== Cï¿½I ï¿½?T L?CH T? ï¿½?NG ======
 function setupTrigger1745() {
   const triggers = ScriptApp.getProjectTriggers();
   for (let i = 0; i < triggers.length; i++) {
@@ -387,6 +415,6 @@ function setupTrigger1745() {
            .nearMinute(45)
            .create();
   
-  Logger.log('? Ğã cài d?t l?ch g?i báo cáo t? d?ng vào kho?ng 17:45 hàng ngày.');
+  Logger.log('? ï¿½ï¿½ cï¿½i d?t l?ch g?i bï¿½o cï¿½o t? d?ng vï¿½o kho?ng 17:45 hï¿½ng ngï¿½y.');
 }
 

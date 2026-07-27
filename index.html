@@ -2196,7 +2196,7 @@ function renderTypoWarnings(month) {
 
             const editLinks = mm.reported.entries.slice(0, 5).map(e =>
                 `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=C${e.sheetRow}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`
-            ).join(', ') + (t.entries.length > 5 ? ` +${t.entries.length - 5}` : '');
+            ).join(', ') + (mm.reported.entries.length > 5 ? ` +${mm.reported.entries.length - 5}` : '');
 
             html += `<tr>
                 <td>${i + 1}</td>

@@ -40,10 +40,40 @@ const WH_KEYWORDS = {
 // TELEGRAM PROXY — Nhận request từ client, forward tới Telegram
 // Client gửi ảnh dưới dạng base64, proxy chuyển thành blob rồi gửi
 // ============================================================
+  // ============================================================
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
     const action = data.action;
+
+    if (action === 'sync_trips') {
+      const trips = data.trips || [];
+      if (!trips.length) return ContentService.createTextOutput(JSON.stringify({ ok: true, msg: 'No trips' })).setMimeType(ContentService.MimeType.JSON);
+
+      const ss = SpreadsheetApp.openById(CONFIG.EMPLOYEE_SHEET_ID);
+      let sheet = ss.getSheetByName('Trips');
+      if (!sheet) {
+        sheet = ss.insertSheet('Trips');
+        sheet.appendRow(['Mã chuyến đi', 'Mã NV', 'Tài xế', 'Biển số xe', 'Ngày kết thúc']);
+      }
+
+      // Read existing data to prevent duplicates
+      const existingData = sheet.getDataRange().getValues();
+      const existingCodes = new Set();
+      for (let i = 1; i < existingData.length; i++) {
+        existingCodes.add(String(existingData[i][0])); // Mã chuyến đi
+      }
+
+      let added = 0;
+      for (const t of trips) {
+        if (!existingCodes.has(String(t.tripCode))) {
+          sheet.appendRow([t.tripCode, t.empCode, t.empName, t.plate, t.dateStr]);
+          added++;
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, added })).setMimeType(ContentService.MimeType.JSON);
+    }
 
     if (action === 'sendPhoto') {
       // Gửi ảnh: nhận base64 image + caption

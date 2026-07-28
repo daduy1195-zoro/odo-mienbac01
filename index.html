@@ -770,7 +770,7 @@ function detectTypos(data) {
     // Bước 1: Đếm tần suất mỗi tổ hợp (tên, mã NV)
     const freqMap = {}; // key = "TÊN|MÃ" → { count, entries[] }
     data.forEach(e => {
-        const key = e.name + '|' + e.code;
+        const key = removeAccents(e.name).toUpperCase() + '|' + e.code;
         if (!freqMap[key]) freqMap[key] = { name: e.name, code: e.code, count: 0, entries: [] };
         freqMap[key].count++;
         freqMap[key].entries.push(e);
@@ -1089,6 +1089,57 @@ function fetchSheetJSONP(sheetId, gid) {
     });
 }
 
+function fetchSheetByNameJSONP(sheetId, sheetName) {
+    return new Promise((resolve, reject) => {
+        const callbackName = '_sheetCB_' + (++_jsonpCounter) + '_' + Date.now();
+        const timeoutMs = 30000;
+        window[callbackName] = function(data) {
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            clearTimeout(timer);
+            if (!data || data.status !== 'ok') {
+                // Sheet might not exist yet - resolve empty
+                resolve([]);
+                return;
+            }
+            const rows = [];
+            const table = data.table;
+            if (table.rows) {
+                table.rows.forEach(row => {
+                    const r = row.c.map(cell => {
+                        if (!cell) return '';
+                        if (cell.f) return String(cell.f).normalize('NFC');
+                        if (cell.v === null || cell.v === undefined) return '';
+                        const sv = String(cell.v).normalize('NFC');
+                        const dateMatch = sv.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+                        if (dateMatch) {
+                            const dd = String(parseInt(dateMatch[3])).padStart(2, '0');
+                            const mm = String(parseInt(dateMatch[2]) + 1).padStart(2, '0');
+                            return dd + '/' + mm + '/' + dateMatch[1];
+                        }
+                        return sv;
+                    });
+                    rows.push(r);
+                });
+            }
+            resolve(rows);
+        };
+        const timer = setTimeout(() => {
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            resolve([]); // Don't fail entire load if Trips sheet times out
+        }, timeoutMs);
+        const script = document.createElement('script');
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&sheet=${encodeURIComponent(sheetName)}&headers=1`;
+        script.onerror = () => {
+            delete window[callbackName];
+            clearTimeout(timer);
+            resolve([]); // Don't fail entire load
+        };
+        document.body.appendChild(script);
+    });
+}
+
 // ====== HÀM TẢI TOÀN BỘ DỮ LIỆU ======
 async function loadAllData() {
     showLoading(true);
@@ -1105,15 +1156,29 @@ async function loadAllData() {
             })
         );
 
-        const [empRowsArrays, supRows, masterRows] = await Promise.all([
+        const [empRowsArrays, supRows, masterRows, tripsRows] = await Promise.all([
             Promise.all(empPromises),
             fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID),
-            fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID)
+            fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID),
+            fetchSheetByNameJSONP(CONFIG.SHEET_EMPLOYEE_ID, 'Trips')
         ]);
         const empRows = empRowsArrays.flat();
 
+        // ═══════════════════════════════════════
+        // XỬ LÝ DỮ LIỆU CHUYẾN ĐI (Trips)
+        // Cột: A=tripCode, B=empCode, C=empName, D=plate, E=date
+        // ═══════════════════════════════════════
+        tripsData = [];
+        tripsRows.forEach(r => {
+            if (!r || r.length < 2) return;
+            const code = (r[1] || '').replace(/[^0-9]/g, '').trim();
+            const dateStr = (r[4] || '').trim();
+            if (!code || !dateStr) return;
+            tripsData.push({ tripCode: (r[0]||'').trim(), code, name: (r[2]||'').trim(), plate: (r[3]||'').trim(), dateStr });
+        });
+
         // Debug log
-        console.log(`✅ Loaded: NV=${empRows.length} rows, NCC=${supRows.length} rows, Master=${masterRows.length} rows`);
+        console.log(`✅ Loaded: NV=${empRows.length} rows, NCC=${supRows.length} rows, Master=${masterRows.length} rows, Trips=${tripsData.length} rows`);
 
         // ═══════════════════════════════════════
         // XỬ LÝ DANH SÁCH NV CHUẨN (Master)
@@ -1242,7 +1307,7 @@ async function loadAllData() {
         // ═══════════════════════════════════════
         const freqMap = {};
         employeeData.forEach(e => {
-            const key = e.name + '|' + e.code;
+            const key = removeAccents(e.name).toUpperCase() + '|' + e.code;
             if (!freqMap[key]) freqMap[key] = { name: e.name, code: e.code, count: 0 };
             freqMap[key].count++;
         });
@@ -1796,7 +1861,7 @@ function renderRanking(month, whFilter) {
     const whMap = {}; 
     filtered.forEach(e => {
         const wh = e.shortWH || 'Khác';
-        const key = e.name + '|' + e.code;
+        const key = e.code && e.code.length >= 5 ? e.code : (removeAccents(e.name).toUpperCase() + '|' + e.code);
         if (!whMap[wh]) whMap[wh] = {};
         if (!whMap[wh][key]) {
             const master = masterList.find(m => m.code === e.code);
@@ -1807,17 +1872,18 @@ function renderRanking(month, whFilter) {
     });
 
     const syncedDates = new Set();
+    console.log('🔍 tripsData.length =', tripsData.length);
     tripsData.forEach(t => {
         syncedDates.add(t.dateStr);
         // Find if this driver is in whMap
         Object.values(whMap).forEach(whGrp => {
-            const keys = Object.keys(whGrp);
             const key = Object.keys(whGrp).find(k => whGrp[k].code === String(t.code));
             if (key) {
                 whGrp[key].workedDays.add(t.dateStr);
             }
         });
     });
+    console.log('🔍 syncedDates:', syncedDates.size, 'ngày:', [...syncedDates].sort().join(', '));
 
     // ★ Bổ sung NV từ master list chưa báo cáo (đảm bảo 4 kho luôn hiện)
     if (masterList.length > 0) {
@@ -1826,9 +1892,11 @@ function renderRanking(month, whFilter) {
             if (!wh || wh === m.warehouse) return; // Không thuộc 4 kho
             if (whFilter && wh !== whFilter) return;
             if (!whMap[wh]) whMap[wh] = {};
-            const key = m.name + '|' + m.code;
-            if (!whMap[wh][key]) {
-                whMap[wh][key] = { name: m.name, code: m.code, plate: formatPlate(m.plate), days: new Set() };
+            const key = m.code && m.code.length >= 5 ? m.code : (removeAccents(m.name).toUpperCase() + '|' + m.code);
+            // Cũng check xem code này đã tồn tại trong whMap chưa (bất kể key format)
+            const existsByCode = m.code && Object.values(whMap[wh]).some(e => e.code === m.code);
+            if (!whMap[wh][key] && !existsByCode) {
+                whMap[wh][key] = { name: m.name, code: m.code, plate: formatPlate(m.plate), days: new Set(), workedDays: new Set() };
             }
         });
     }

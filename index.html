@@ -457,41 +457,12 @@
     <div style="margin-bottom: 24px; display: flex; justify-content: center;">
         <div class="tabs">
             <button class="tab active" onclick="switchTab('daily', this)">📋 Bảng theo dõi</button>
-            <button class="tab" onclick="switchTab('overview', this)">🚚 Trạng thái xe</button>
             <button class="tab" onclick="switchTab('ranking', this)">👤 Danh sách NV</button>
             <button class="tab" onclick="switchTab('fraud', this)">🚨 Cảnh báo gian lận <span class="badge badge-danger" id="fraudBadge" style="margin-left:4px;font-size:11px;">0</span></button>
             <button class="tab" onclick="switchTab('typo', this)">⚠️ Cảnh báo gõ sai <span class="badge badge-danger" id="typoBadge" style="margin-left:4px;font-size:11px;">0</span></button>
         </div>
     </div>
 
-    <!-- ========== TAB: TRẠNG THÁI XE ========== -->
-    <div class="section" id="tabOverview" style="display: none;">
-        <div class="section-header">
-            <div class="section-title">📊 Tổng quát trạng thái xe</div>
-        </div>
-        <div class="section-body">
-            <div style="display: flex; gap: 24px; flex-wrap: wrap;">
-                <!-- Đang chạy -->
-                <div style="flex: 1; min-width: 300px; background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; padding: 20px;">
-                    <h3 style="color: #4ade80; margin-top: 0; display: flex; align-items: center; justify-content: space-between; font-size: 16px; border-bottom: 1px solid rgba(34, 197, 94, 0.2); padding-bottom: 12px; margin-bottom: 16px;">
-                        <span>🟢 Xe đang chạy</span>
-                        <span id="activeCount" style="background: #22c55e; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 600;">0</span>
-                    </h3>
-                    <div id="activeList" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                    </div>
-                </div>
-                <!-- Nghỉ chạy -->
-                <div style="flex: 1; min-width: 300px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 20px;">
-                    <h3 style="color: #f87171; margin-top: 0; display: flex; align-items: center; justify-content: space-between; font-size: 16px; border-bottom: 1px solid rgba(239, 68, 68, 0.2); padding-bottom: 12px; margin-bottom: 16px;">
-                        <span>🔴 Xe nghỉ chạy</span>
-                        <span id="inactiveCount" style="background: #ef4444; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 600;">0</span>
-                    </h3>
-                    <div id="inactiveList" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- ========== TAB: BẢNG THEO DÕI HÀNG NGÀY ========== -->
     <div class="section" id="tabDaily">
@@ -1648,8 +1619,8 @@ function renderAll() {
     // Vẽ xếp hạng
     renderRanking(month, whFilter);
 
-    // Vẽ trạng thái xe
-    renderOverview();
+    // Vẽ trạng thái xe (TAB ĐÃ BỎ)
+    // renderOverview();
 
     // Vẽ cảnh báo gõ sai (chỉ trong kỳ)
     renderTypoWarnings(month);
@@ -2629,7 +2600,7 @@ function switchTab(tab, el) {
     document.getElementById('tabTypo').style.display = tab === 'typo' ? '' : 'none';
 
     if (tab === 'overview') {
-        renderOverview();
+        // renderOverview(); // TAB ĐÃ BỎ
     }
 }
 

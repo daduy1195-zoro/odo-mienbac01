@@ -458,6 +458,7 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('daily', this)">📋 Bảng theo dõi</button>
             <button class="tab" onclick="switchTab('ranking', this)">👤 Danh sách NV</button>
+            <button class="tab" onclick="switchTab('ncc', this)">📊 Đối soát NCC</button>
             <button class="tab" onclick="switchTab('fraud', this)">🚨 Cảnh báo gian lận <span class="badge badge-danger" id="fraudBadge" style="margin-left:4px;font-size:11px;">0</span></button>
             <button class="tab" onclick="switchTab('typo', this)">⚠️ Cảnh báo gõ sai <span class="badge badge-danger" id="typoBadge" style="margin-left:4px;font-size:11px;">0</span></button>
         </div>
@@ -531,6 +532,21 @@
         </div>
     </div>
 
+    <!-- ========== TAB: ĐỐI SOÁT NCC ========== -->
+    <div class="section" id="tabNCC" style="display:none;">
+        <div class="section-header">
+            <div class="section-title">📊 Đối soát dữ liệu nhà cung cấp xe tải</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <span class="badge badge-info" id="nccTotalCost">0 đ</span>
+            </div>
+        </div>
+        <div class="section-body">
+            <div class="table-scroll" id="nccTableContainer">
+                <div class="empty-state"><div class="icon">📊</div><p>Đang tải dữ liệu...</p></div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Toast Notification -->
@@ -561,6 +577,13 @@ const CONFIG = {
     // Link Google Sheet danh sách NV chuẩn (master list)
     SHEET_MASTER_ID: '1RMe38TNV-EoIAradnynYmk8mt7l9pNWqJELM9O84Wxc',
     SHEET_MASTER_GID: '1254809645',
+    
+    // Cấu hình NCC Sheets
+    NCC_SHEETS: [
+        { id: '1yoJt9GevdgfaMkWxbCfoUOuazDUJHnUY', label: 'T5/2026' },
+        { id: '1OH2r6swrDSBmOlmGpVyFqAC2kqehkqX0', label: 'T6/2026' },
+        { id: '1-uL7wvTpE2QwDOjSJsrqIsEpU83zf353', label: 'T7/2026' }
+    ],
 
     // Telegram Proxy (token ẩn trên server Google Apps Script)
     TELEGRAM_TOKEN: '8633414952:AAEsbut_yJIKXWzcKtuLDIFVGul1pY5E_6o',
@@ -976,6 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const applyFilters = () => {
         updateFilters();
         renderAll();
+        loadNccData();
     };
     monthSelect.addEventListener('change', applyFilters);
     document.getElementById('filterWarehouse').addEventListener('change', applyFilters);
@@ -994,6 +1018,196 @@ document.addEventListener('DOMContentLoaded', () => {
 // Cách hoạt động: tạo thẻ <script> trỏ tới Google Sheet, Google trả dữ liệu
 // qua hàm callback, không cần fetch() nên không bị chặn.
 let _jsonpCounter = 0;
+
+function fetchNccSheetJSONP(sheetId) {
+    return new Promise((resolve, reject) => {
+        const callbackName = '_sheetCB_' + (++_jsonpCounter) + '_' + Date.now();
+        const timeoutMs = 30000;
+        window[callbackName] = function(data) {
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            clearTimeout(timer);
+            if (!data || data.status !== 'ok') {
+                resolve([]);
+                return;
+            }
+            const rows = [];
+            const table = data.table;
+            if (table.rows) {
+                // skip first 2 rows
+                const dataRows = table.rows.slice(2);
+                dataRows.forEach(row => {
+                    const r = row.c.map(cell => {
+                        if (!cell) return 0;
+                        if (cell.v === null || cell.v === undefined) return 0;
+                        return cell.v;
+                    });
+                    rows.push(r);
+                });
+            }
+            resolve(rows);
+        };
+        const timer = setTimeout(() => {
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            resolve([]); 
+        }, timeoutMs);
+        const script = document.createElement('script');
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&headers=0`;
+        script.onerror = () => {
+            delete window[callbackName];
+            clearTimeout(timer);
+            resolve([]); 
+        };
+        document.body.appendChild(script);
+    });
+}
+
+async function loadNccData() {
+    const month = document.getElementById('filterMonth').value;
+    const filterSelect = document.getElementById('filterWarehouse');
+    const filterWarehouse = filterSelect ? filterSelect.value : '';
+    const container = document.getElementById('nccTableContainer');
+    
+    if(!container) return;
+    
+    // Find matching sheet id based on month
+    let sheetId = null;
+    const cycleYear = month.split('-')[0];
+    const cycleMonth = parseInt(month.split('-')[1]);
+    const monthLabel = `T${cycleMonth}/${cycleYear}`;
+    
+    const configSheet = CONFIG.NCC_SHEETS.find(s => s.label === monthLabel);
+    if(configSheet) {
+        sheetId = configSheet.id;
+    }
+    
+    if(!sheetId) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Không có dữ liệu NCC cho kỳ ${monthLabel}</p></div>`;
+        return;
+    }
+    
+    container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div><span style="color: var(--text-muted); font-size: 13px;">Đang tải dữ liệu NCC...</span></div>';
+    
+    try {
+        const rows = await fetchNccSheetJSONP(sheetId);
+        
+        let pivotData = {};
+        
+        rows.forEach(r => {
+            if(!r || r.length < 28) return;
+            // stt must be numeric
+            if(r[0] === '' || isNaN(r[0])) return;
+            
+            let kho = String(r[27] || '').trim();
+            const khuVuc = String(r[26] || '').trim();
+            const bienSo = String(r[3] || '').trim();
+            
+            if(!kho && khuVuc.includes('GXT-Miền Bắc')) kho = 'Kho GXT Hưng Yên';
+            if(kho.includes('Miền Bắc')) kho = 'Kho GXT Hưng Yên';
+            
+            if(filterWarehouse) {
+                const shortWH = shortWarehouse(kho);
+                if(shortWH !== filterWarehouse && filterWarehouse !== '') return;
+            }
+            
+            if(!pivotData[kho]) pivotData[kho] = {};
+            if(!pivotData[kho][bienSo]) {
+                pivotData[kho][bienSo] = {
+                    chiPhi: 0, kmPhatSinh: 0, phiVuotKm: 0, 
+                    thoiGianTangCa: 0, phiTangCa: 0, phiCauDuong: 0
+                };
+            }
+            
+            pivotData[kho][bienSo].chiPhi += Number(r[24] || 0);
+            pivotData[kho][bienSo].kmPhatSinh += Number(r[16] || 0);
+            pivotData[kho][bienSo].phiVuotKm += Number(r[17] || 0);
+            pivotData[kho][bienSo].thoiGianTangCa += Number(r[10] || 0);
+            pivotData[kho][bienSo].phiTangCa += Number(r[11] || 0);
+            pivotData[kho][bienSo].phiCauDuong += Number(r[18] || 0);
+        });
+        
+        renderNcc(pivotData);
+        
+    } catch(e) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>Lỗi khi tải dữ liệu NCC: ${e.message}</p></div>`;
+    }
+}
+
+function renderNcc(pivotData) {
+    const container = document.getElementById('nccTableContainer');
+    if(!container) return;
+    
+    if(Object.keys(pivotData).length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Không có dữ liệu NCC</p></div>';
+        document.getElementById('nccTotalCost').innerText = '0 đ';
+        return;
+    }
+    
+    let html = `<table>
+        <thead>
+            <tr>
+                <th>Kho / Biển số xe</th>
+                <th style="text-align:right">Tổng chi phí<br>(trước thuế)</th>
+                <th style="text-align:right">Số KM phát sinh</th>
+                <th style="text-align:right">Phí vượt KM</th>
+                <th style="text-align:right">TG tăng ca<br>(h)</th>
+                <th style="text-align:right">Phí tăng ca</th>
+                <th style="text-align:right">Phí cầu đường</th>
+            </tr>
+        </thead>
+        <tbody>`;
+        
+    let grandTotalCost = 0;
+    
+    for(const kho of Object.keys(pivotData).sort()) {
+        const xeList = pivotData[kho];
+        let subCost = 0, subKm = 0, subPhiVuot = 0, subTgOt = 0, subPhiOt = 0, subPhiCau = 0;
+        
+        let carRows = '';
+        for(const bienSo of Object.keys(xeList).sort()) {
+            const data = xeList[bienSo];
+            subCost += data.chiPhi;
+            subKm += data.kmPhatSinh;
+            subPhiVuot += data.phiVuotKm;
+            subTgOt += data.thoiGianTangCa;
+            subPhiOt += data.phiTangCa;
+            subPhiCau += data.phiCauDuong;
+            
+            carRows += `
+                <tr>
+                    <td style="padding-left: 32px; font-family: monospace;">${escapeHtml(bienSo)}</td>
+                    <td style="text-align:right">${Math.round(data.chiPhi).toLocaleString('vi-VN')}</td>
+                    <td style="text-align:right">${Math.round(data.kmPhatSinh).toLocaleString('vi-VN')}</td>
+                    <td style="text-align:right">${Math.round(data.phiVuotKm).toLocaleString('vi-VN')}</td>
+                    <td style="text-align:right">${Number(data.thoiGianTangCa.toFixed(2)).toLocaleString('vi-VN')}</td>
+                    <td style="text-align:right">${Math.round(data.phiTangCa).toLocaleString('vi-VN')}</td>
+                    <td style="text-align:right">${Math.round(data.phiCauDuong).toLocaleString('vi-VN')}</td>
+                </tr>
+            `;
+        }
+        
+        grandTotalCost += subCost;
+        
+        html += `
+            <tr style="background: rgba(20, 184, 166, 0.15);">
+                <td style="font-weight: bold; color: var(--accent);">${escapeHtml(kho)}</td>
+                <td style="text-align:right; font-weight: bold;">${Math.round(subCost).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold;">${Math.round(subKm).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold;">${Math.round(subPhiVuot).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold;">${Number(subTgOt.toFixed(2)).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold;">${Math.round(subPhiOt).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold;">${Math.round(subPhiCau).toLocaleString('vi-VN')}</td>
+            </tr>
+            ${carRows}
+        `;
+    }
+    
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+    
+    document.getElementById('nccTotalCost').innerText = Math.round(grandTotalCost).toLocaleString('vi-VN') + ' đ';
+}
 
 function fetchSheetJSONP(sheetId, gid) {
     return new Promise((resolve, reject) => {
@@ -1387,6 +1601,7 @@ async function loadAllData() {
 
         // Vẽ giao diện
         renderAll();
+        loadNccData();
 
         // Cập nhật thời gian refresh
         const now = new Date();
@@ -2596,6 +2811,7 @@ function switchTab(tab, el) {
     document.getElementById('tabDaily').style.display = tab === 'daily' ? '' : 'none';
     document.getElementById('tabOverview').style.display = tab === 'overview' ? '' : 'none';
     document.getElementById('tabRanking').style.display = tab === 'ranking' ? '' : 'none';
+    document.getElementById('tabNCC').style.display = tab === 'ncc' ? '' : 'none';
     document.getElementById('tabFraud').style.display = tab === 'fraud' ? '' : 'none';
     document.getElementById('tabTypo').style.display = tab === 'typo' ? '' : 'none';
 

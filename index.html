@@ -1111,6 +1111,14 @@ async function loadNccData() {
             if(!kho && khuVuc.includes('GXT-Miền Bắc')) kho = 'Kho GXT Hưng Yên';
             if(kho.includes('Miền Bắc')) kho = 'Kho GXT Hưng Yên';
             
+            // Chỉ hiện 4 kho quản lý
+            const khoUpper = kho.toUpperCase();
+            const is4Kho = khoUpper.includes('HẢI DƯƠNG') || khoUpper.includes('HAI DUONG') ||
+                           khoUpper.includes('HẢI PHÒNG') || khoUpper.includes('HAI PHONG') ||
+                           khoUpper.includes('HƯNG YÊN') || khoUpper.includes('HUNG YEN') ||
+                           khoUpper.includes('THÁI BÌNH') || khoUpper.includes('THAI BINH');
+            if(!is4Kho) return;
+            
             if(filterWarehouse) {
                 const shortWH = shortWarehouse(kho);
                 if(shortWH !== filterWarehouse && filterWarehouse !== '') return;

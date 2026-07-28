@@ -1953,29 +1953,8 @@ function renderRanking(month, whFilter) {
                 return p ? `${parseInt(p[1])}/${parseInt(p[2])}` : d;
             };
 
-            // Format thành ranges (gộp ngày liên tiếp)
-            function toRanges(dates) {
-                const ranges = [];
-                if (dates.length === 0) return ranges;
-                let start = dates[0], end = dates[0];
-                let lastIdx = allDatesInCycle.indexOf(dates[0]);
-                for (let i = 1; i < dates.length; i++) {
-                    const current = dates[i];
-                    const currentIdx = allDatesInCycle.indexOf(current);
-                    if (currentIdx === lastIdx + 1) {
-                        end = current;
-                    } else {
-                        ranges.push(start === end ? toShort(start) : `${toShort(start)} → ${toShort(end)}`);
-                        start = current; end = current;
-                    }
-                    lastIdx = currentIdx;
-                }
-                ranges.push(start === end ? toShort(start) : `${toShort(start)} → ${toShort(end)}`);
-                return ranges;
-            }
-
-            const missingRanges = toRanges(workedNoReport);
-            const offDayRanges = toRanges(offDays);
+            const missingRanges = workedNoReport.map(d => toShort(d));
+            const offDayRanges = offDays.map(d => toShort(d));
 
             return { ...e, uniqueDays, rate, missingDates: missingRanges, offDays: offDayRanges, myExpectedDays };
         });
@@ -2010,7 +1989,7 @@ function renderRanking(month, whFilter) {
                             ? `<span style="color:var(--danger);font-size:12px;">${e.missingDates.join(', ')}</span>`
                             : '<span style="color:var(--success);font-size:12px;">✅ Đủ</span>';
                         const offDaysHtml = e.offDays && e.offDays.length > 0
-                            ? `<span style="color:var(--text-muted);font-size:12px;">${e.offDays.join(', ')}</span>`
+                            ? `<span style="color:#ffffff;font-size:12px;">${e.offDays.join(', ')}</span>`
                             : '<span style="color:var(--text-muted);font-size:12px;">—</span>';
                         return `<tr>
                             <td>${i + 1}</td>

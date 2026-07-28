@@ -1936,11 +1936,16 @@ function renderRanking(month, whFilter) {
             }
             const rate = myExpectedDays > 0 ? Math.round((uniqueDays / myExpectedDays) * 100) : 0;
 
-            // Tính ngày KHÔNG báo cáo = tất cả ngày trong kỳ - ngày đã báo
-            const missingDates = allDatesInCycle.filter(d => {
+            // Tính ngày CÓ ĐI LÀM nhưng KHÔNG báo cáo
+            const workedNoReport = allDatesInCycle.filter(d => {
                 if (e.days.has(d)) return false; // Đã báo
                 if (isTrackedInTrips && syncedDates.has(d) && !e.workedDays.has(d)) return false; // NV nghỉ
-                return true; // Thiếu
+                return true; // Có đi làm nhưng không báo
+            });
+
+            // Tính ngày NGHỈ (không có chuyến đi)
+            const offDays = allDatesInCycle.filter(d => {
+                return isTrackedInTrips && syncedDates.has(d) && !e.workedDays.has(d);
             });
             
             const toShort = (d) => {
@@ -1948,29 +1953,31 @@ function renderRanking(month, whFilter) {
                 return p ? `${parseInt(p[1])}/${parseInt(p[2])}` : d;
             };
 
-            const missingRanges = [];
-            if (missingDates.length > 0) {
-                let start = missingDates[0];
-                let end = missingDates[0];
-                let lastIdx = allDatesInCycle.indexOf(missingDates[0]);
-
-                for (let i = 1; i < missingDates.length; i++) {
-                    const current = missingDates[i];
+            // Format thành ranges (gộp ngày liên tiếp)
+            function toRanges(dates) {
+                const ranges = [];
+                if (dates.length === 0) return ranges;
+                let start = dates[0], end = dates[0];
+                let lastIdx = allDatesInCycle.indexOf(dates[0]);
+                for (let i = 1; i < dates.length; i++) {
+                    const current = dates[i];
                     const currentIdx = allDatesInCycle.indexOf(current);
-
                     if (currentIdx === lastIdx + 1) {
                         end = current;
                     } else {
-                        missingRanges.push(start === end ? toShort(start) : `${toShort(start)} → ${toShort(end)}`);
-                        start = current;
-                        end = current;
+                        ranges.push(start === end ? toShort(start) : `${toShort(start)} → ${toShort(end)}`);
+                        start = current; end = current;
                     }
                     lastIdx = currentIdx;
                 }
-                missingRanges.push(start === end ? toShort(start) : `${toShort(start)} → ${toShort(end)}`);
+                ranges.push(start === end ? toShort(start) : `${toShort(start)} → ${toShort(end)}`);
+                return ranges;
             }
 
-            return { ...e, uniqueDays, rate, missingDates: missingRanges, myExpectedDays };
+            const missingRanges = toRanges(workedNoReport);
+            const offDayRanges = toRanges(offDays);
+
+            return { ...e, uniqueDays, rate, missingDates: missingRanges, offDays: offDayRanges, myExpectedDays };
         });
 
         // Sắp xếp theo % giảm dần
@@ -1992,7 +1999,8 @@ function renderRanking(month, whFilter) {
                     <th style="width:120px;">Biển số xe</th>
                     <th style="width:80px;">Số ngày ODO</th>
                     <th style="width:160px;">% Hoàn thành</th>
-                    <th>Ngày không báo cáo</th>
+                    <th>Đi làm nhưng không báo cáo</th>
+                    <th>Ngày nghỉ</th>
                 </tr></thead>
                 <tbody>
                     ${empList.map((e, i) => {
@@ -2001,6 +2009,9 @@ function renderRanking(month, whFilter) {
                         const missingHtml = e.missingDates.length > 0
                             ? `<span style="color:var(--danger);font-size:12px;">${e.missingDates.join(', ')}</span>`
                             : '<span style="color:var(--success);font-size:12px;">✅ Đủ</span>';
+                        const offDaysHtml = e.offDays && e.offDays.length > 0
+                            ? `<span style="color:var(--text-muted);font-size:12px;">${e.offDays.join(', ')}</span>`
+                            : '<span style="color:var(--text-muted);font-size:12px;">—</span>';
                         return `<tr>
                             <td>${i + 1}</td>
                             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
@@ -2016,6 +2027,7 @@ function renderRanking(month, whFilter) {
                                 </div>
                             </td>
                             <td>${missingHtml}</td>
+                            <td>${offDaysHtml}</td>
                         </tr>`;
                     }).join('')}
                 </tbody>

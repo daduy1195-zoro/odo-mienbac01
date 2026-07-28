@@ -580,9 +580,9 @@ const CONFIG = {
     
     // Cấu hình NCC Sheets
     NCC_SHEETS: [
-        { id: '1yoJt9GevdgfaMkWxbCfoUOuazDUJHnUY', label: 'T5/2026' },
-        { id: '1OH2r6swrDSBmOlmGpVyFqAC2kqehkqX0', label: 'T6/2026' },
-        { id: '1sUIqHPnTB45lngkHPAgYndojfeMP1kKN', label: 'T7/2026' }
+        { id: '1yoJt9GevdgfaMkWxbCfoUOuazDUJHnUY', label: '2026-05' },
+        { id: '1OH2r6swrDSBmOlmGpVyFqAC2kqehkqX0', label: '2026-06' },
+        { id: '1sUIqHPnTB45lngkHPAgYndojfeMP1kKN', label: '2026-07' }
     ],
 
     // Telegram Proxy (token ẩn trên server Google Apps Script)
@@ -1071,23 +1071,17 @@ async function loadNccData() {
     
     if(!container) return;
     
-    // Find matching sheet id based on month
-    let sheetId = null;
-    const cycleYear = month.split('-')[0];
-    const cycleMonth = parseInt(month.split('-')[1]);
-    const monthLabel = `T${cycleMonth}/${cycleYear}`;
+    // Match dropdown value (e.g. "2026-07") directly to NCC_SHEETS label
+    console.log('🔍 NCC: month=', month);
     
-    console.log('🔍 NCC: month=', month, 'monthLabel=', monthLabel, 'NCC_SHEETS=', JSON.stringify(CONFIG.NCC_SHEETS));
-    
-    const configSheet = CONFIG.NCC_SHEETS.find(s => s.label === monthLabel);
-    if(configSheet) {
-        sheetId = configSheet.id;
-    }
+    const configSheet = CONFIG.NCC_SHEETS.find(s => s.label === month);
+    const sheetId = configSheet ? configSheet.id : null;
     
     console.log('🔍 NCC: sheetId=', sheetId);
     
     if(!sheetId) {
-        container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Không có dữ liệu NCC cho kỳ ${monthLabel}</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Chưa có dữ liệu đối soát NCC cho kỳ này</p></div>`;
+        document.getElementById('nccTotalCost').innerText = '0 đ';
         return;
     }
     

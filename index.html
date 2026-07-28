@@ -1077,10 +1077,14 @@ async function loadNccData() {
     const cycleMonth = parseInt(month.split('-')[1]);
     const monthLabel = `T${cycleMonth}/${cycleYear}`;
     
+    console.log('🔍 NCC: month=', month, 'monthLabel=', monthLabel, 'NCC_SHEETS=', JSON.stringify(CONFIG.NCC_SHEETS));
+    
     const configSheet = CONFIG.NCC_SHEETS.find(s => s.label === monthLabel);
     if(configSheet) {
         sheetId = configSheet.id;
     }
+    
+    console.log('🔍 NCC: sheetId=', sheetId);
     
     if(!sheetId) {
         container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Không có dữ liệu NCC cho kỳ ${monthLabel}</p></div>`;
@@ -1091,6 +1095,7 @@ async function loadNccData() {
     
     try {
         const rows = await fetchNccSheetJSONP(sheetId);
+        console.log('🔍 NCC: rows loaded =', rows.length, 'first row=', rows[0] ? JSON.stringify(rows[0].slice(0,5)) : 'EMPTY');
         
         let pivotData = {};
         
@@ -2809,15 +2814,10 @@ function switchTab(tab, el) {
     el.classList.add('active');
 
     document.getElementById('tabDaily').style.display = tab === 'daily' ? '' : 'none';
-    document.getElementById('tabOverview').style.display = tab === 'overview' ? '' : 'none';
     document.getElementById('tabRanking').style.display = tab === 'ranking' ? '' : 'none';
     document.getElementById('tabNCC').style.display = tab === 'ncc' ? '' : 'none';
     document.getElementById('tabFraud').style.display = tab === 'fraud' ? '' : 'none';
     document.getElementById('tabTypo').style.display = tab === 'typo' ? '' : 'none';
-
-    if (tab === 'overview') {
-        // renderOverview(); // TAB ĐÃ BỎ
-    }
 }
 
 // ====== TỰ ĐỘNG REFRESH MỖI 30 PHÚT ======

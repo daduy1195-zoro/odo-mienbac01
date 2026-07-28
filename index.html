@@ -1923,18 +1923,23 @@ function renderRanking(month, whFilter) {
         const empList = Object.values(empObj).map(e => {
             const uniqueDays = e.days.size;
             let myExpectedDays = daysElapsed;
-            allDatesInCycle.forEach(d => {
-                // Nếu hệ thống GHN có data của ngày này, nhưng NV không có chuyến -> NV nghỉ
-                if (syncedDates.has(d) && !e.workedDays.has(d)) {
-                    myExpectedDays--;
-                }
-            });
+            // Chỉ trừ ngày nghỉ nếu NV CÓ xuất hiện trong dữ liệu chuyến đi (trips)
+            // Nếu NV không có trong trips → không trừ gì (giữ nguyên daysElapsed)
+            const isTrackedInTrips = e.workedDays && e.workedDays.size > 0;
+            if (isTrackedInTrips) {
+                allDatesInCycle.forEach(d => {
+                    // Nếu hệ thống GHN có data của ngày này, nhưng NV không có chuyến -> NV nghỉ
+                    if (syncedDates.has(d) && !e.workedDays.has(d)) {
+                        myExpectedDays--;
+                    }
+                });
+            }
             const rate = myExpectedDays > 0 ? Math.round((uniqueDays / myExpectedDays) * 100) : 0;
 
             // Tính ngày KHÔNG báo cáo = tất cả ngày trong kỳ - ngày đã báo
             const missingDates = allDatesInCycle.filter(d => {
                 if (e.days.has(d)) return false; // Đã báo
-                if (syncedDates.has(d) && !e.workedDays.has(d)) return false; // NV nghỉ
+                if (isTrackedInTrips && syncedDates.has(d) && !e.workedDays.has(d)) return false; // NV nghỉ
                 return true; // Thiếu
             });
             

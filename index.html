@@ -1545,13 +1545,14 @@ async function loadAllData() {
 
                 // Cùng tên + mã khác chút
                 const isSimilar = (
-                    (nameDist <= 3 && codeDist <= 2 && (nameDist + codeDist) > 0) ||
+                    // Cùng mã NV (rất đáng tin cậy), tên có thể gõ sai nhiều chút
+                    (codeDist === 0 && nameDist > 0 && nameDist <= 5) ||
+                    // Cùng tên chính xác 100%, mã gõ sai vài số
                     (nameDist === 0 && codeDist > 0 && codeDist <= 3) ||
-                    (codeDist === 0 && nameDist > 0 && nameDist <= 3) ||
-                    // Cùng tên, 1 bên thiếu mã
-                    (nameDist <= 2 && (!item.code || !can.code)) ||
-                    // Cùng tên (sai khác rất ít), và can đã có mã chuẩn 7 số -> tự hiểu là người đó
-                    (nameDist <= 2 && can.code && can.code.length === 7)
+                    // Cả tên và mã đều sai một ít
+                    (nameDist > 0 && nameDist <= 2 && codeDist > 0 && codeDist <= 2) ||
+                    // Thiếu mã NV, tên giống gần như tuyệt đối
+                    (nameDist <= 2 && (!item.code || !can.code))
                 );
                 if (isSimilar) { matched = can; break; }
             }

@@ -647,6 +647,16 @@ function shortWarehouse(warehouseName) {
     return warehouseName;
 }
 
+function warehouseColor(shortName) {
+    const colors = {
+        'Hải Dương': 'background:#1e40af;color:#93bbfd;border:1px solid #3b82f6',
+        'Hải Phòng': 'background:#92400e;color:#fcd34d;border:1px solid #f59e0b',
+        'Hưng Yên':  'background:#065f46;color:#6ee7b7;border:1px solid #10b981',
+        'Thái Bình': 'background:#581c87;color:#d8b4fe;border:1px solid #a855f7',
+    };
+    return colors[shortName] || 'background:rgba(59,130,246,.15);color:#93bbfd;border:1px solid rgba(59,130,246,0.2)';
+}
+
 // Tách tên kho ra khỏi tên NV (NV ghi nhầm kho vào ô tên)
 // VD: "Kho Giao Hàng Nặng Hưng Nguyễn Văn Hiểu" → "Nguyễn Văn Hiểu"
 function stripWarehouseFromName(rawName) {
@@ -2005,7 +2015,7 @@ function renderDailyTable(filtered) {
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
             <td style="font-family:monospace; font-weight:600;">${escapeHtml(e.plate)}</td>
             <td style="font-size:12px;">${escapeHtml(e.supplier)}</td>
-            <td><span class="badge badge-info">${escapeHtml(e.shortWH)}</span></td>
+            <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:monospace;white-space:nowrap;">${escapeHtml(e.hourStart || '—')}</td>
             <td style="font-family:monospace;white-space:nowrap;">${escapeHtml(e.hourEnd || '—')}</td>
             <td style="font-weight:700;color:${otColor};text-align:center;">${escapeHtml(otDisplay)}</td>
@@ -2348,7 +2358,7 @@ function renderFraudWarnings(filtered) {
             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
             <td style="font-family:monospace;font-weight:600;">${escapeHtml(e.plate)}</td>
-            <td><span class="badge badge-info">${escapeHtml(e.shortWH)}</span></td>
+            <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:monospace;">${escapeHtml(e.hourStart || '—')}</td>
             <td style="font-family:monospace;">${escapeHtml(e.hourEnd || '—')}</td>
             <td style="font-weight:700;color:${otColor};">${escapeHtml(otDisplay)}</td>

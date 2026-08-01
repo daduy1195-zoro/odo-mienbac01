@@ -1370,12 +1370,14 @@ async function loadAllData() {
             })
         );
 
-        const [empRowsArrays, supRows, masterRows, tripsRows] = await Promise.all([
+        const [empRowsArrays, supRows, masterRowsGH, masterRowsPH, tripsRows] = await Promise.all([
             Promise.all(empPromises),
             fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID),
-            fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID),
+            fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID), // Mặc định NVGH
+            fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'NVPH').catch(e => { console.warn('Không lấy được NVPH:', e); return []; }),
             fetchSheetByNameJSONP(CONFIG.SHEET_EMPLOYEE_ID, 'Trips')
         ]);
+        const allMasterRows = [...masterRowsGH, ...masterRowsPH];
         const empRows = empRowsArrays.flat();
 
         // ═══════════════════════════════════════
@@ -1392,14 +1394,14 @@ async function loadAllData() {
         });
 
         // Debug log
-        console.log(`✅ Loaded: NV=${empRows.length} rows, NCC=${supRows.length} rows, Master=${masterRows.length} rows, Trips=${tripsData.length} rows`);
+        console.log(`✅ Loaded: NV=${empRows.length} rows, NCC=${supRows.length} rows, Master=${allMasterRows.length} rows, Trips=${tripsData.length} rows`);
 
         // ═══════════════════════════════════════
         // XỬ LÝ DANH SÁCH NV CHUẨN (Master)
         // Cột: A=MãNV, B=Tên, C=Biển số, D=NCC, E=Loại xe, F=Tỉnh, G=Kho
         // ═══════════════════════════════════════
         masterList = [];
-        masterRows.forEach(r => {
+        allMasterRows.forEach(r => {
             if (!r || r.length < 3) return;
             const code = (r[0] || '').replace(/[^0-9]/g, '').trim();
             const name = normalizeTone((r[1] || '').trim().normalize('NFC').toUpperCase());

@@ -458,7 +458,7 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('daily', this)">📋 Bảng theo dõi</button>
             <button class="tab" onclick="switchTab('ranking', this)">👤 Danh sách NV</button>
-            <button class="tab" onclick="switchTab('ncc', this)">🔒 Đối soát NCC</button>
+            <button class="tab" onclick="switchTab('ncc', this)">🔒 Chi phí xe NCC</button>
             <button class="tab" onclick="switchTab('fraud', this)">🚨 Cảnh báo gian lận <span class="badge badge-danger" id="fraudBadge" style="margin-left:4px;font-size:11px;">0</span></button>
             <button class="tab" onclick="switchTab('typo', this)">⚠️ Cảnh báo gõ sai <span class="badge badge-danger" id="typoBadge" style="margin-left:4px;font-size:11px;">0</span></button>
         </div>
@@ -532,10 +532,10 @@
         </div>
     </div>
 
-    <!-- ========== TAB: ĐỐI SOÁT NCC ========== -->
+    <!-- ========== TAB: CHI PHÍ XE NCC ========== -->
     <div class="section" id="tabNCC" style="display:none;">
         <div class="section-header">
-            <div class="section-title">📊 Đối soát dữ liệu nhà cung cấp xe tải</div>
+            <div class="section-title">📊 Chi phí xe NCC</div>
             <div style="display:flex;gap:8px;align-items:center;">
                 <span class="badge badge-info" id="nccTotalCost">0 đ</span>
             </div>
@@ -1078,7 +1078,7 @@ async function loadNccData() {
     console.log('🔍 NCC: sheetId=', sheetId);
     
     if(!sheetId) {
-        container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Chưa có dữ liệu đối soát NCC cho kỳ này</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>Chưa có dữ liệu chi phí xe NCC cho kỳ này</p></div>`;
         document.getElementById('nccTotalCost').innerText = '0 đ';
         return;
     }
@@ -2815,13 +2815,13 @@ const _NCC_PASS = 'odo2026';
 function switchTab(tab, el) {
     // Yêu cầu password khi vào tab NCC
     if (tab === 'ncc' && !_nccUnlocked) {
-        const pw = prompt('🔒 Nhập mật khẩu để xem Đối soát NCC:');
+        const pw = prompt('🔒 Nhập mật khẩu để xem Chi phí xe NCC:');
         if (pw !== _NCC_PASS) {
             if (pw !== null) alert('❌ Mật khẩu không đúng!');
             return;
         }
         _nccUnlocked = true;
-        el.innerHTML = '📊 Đối soát NCC';
+        el.innerHTML = '📊 Chi phí xe NCC';
     }
 
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));

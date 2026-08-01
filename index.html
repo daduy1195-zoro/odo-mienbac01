@@ -458,7 +458,7 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('daily', this)">📋 Bảng theo dõi</button>
             <button class="tab" onclick="switchTab('ranking', this)">👤 Danh sách NV</button>
-            <button class="tab" onclick="switchTab('ncc', this)">📊 Đối soát NCC</button>
+            <button class="tab" id="btnTabNcc" style="display:none;" onclick="switchTab('ncc', this)">📊 Đối soát NCC</button>
             <button class="tab" onclick="switchTab('fraud', this)">🚨 Cảnh báo gian lận <span class="badge badge-danger" id="fraudBadge" style="margin-left:4px;font-size:11px;">0</span></button>
             <button class="tab" onclick="switchTab('typo', this)">⚠️ Cảnh báo gõ sai <span class="badge badge-danger" id="typoBadge" style="margin-left:4px;font-size:11px;">0</span></button>
         </div>
@@ -993,7 +993,11 @@ document.addEventListener('DOMContentLoaded', () => {
     monthSelect.innerHTML = optionsHtml;
     monthSelect.value = currentMonthStr;
 
-    // Gắn sự kiện lọc
+    // Gắn sự kiện lọc    // Chỉ hiện tab NCC khi URL có ?ncc=1
+    if (new URLSearchParams(window.location.search).get('ncc') === '1') {
+        document.getElementById('btnTabNcc').style.display = '';
+    }
+
     const applyFilters = () => {
         updateFilters();
         renderAll();
@@ -1153,7 +1157,7 @@ function renderNcc(pivotData) {
         <thead>
             <tr>
                 <th>Kho / Biển số xe</th>
-                <th style="text-align:right">Tổng chi phí<br>(trước thuế)</th>
+                <th style="text-align:right;color:#fbbf24;">Tổng chi phí<br>(trước thuế)</th>
                 <th style="text-align:right">Số KM phát sinh</th>
                 <th style="text-align:right">Phí vượt KM</th>
                 <th style="text-align:right">TG tăng ca<br>(h)</th>
@@ -1182,7 +1186,7 @@ function renderNcc(pivotData) {
             carRows += `
                 <tr>
                     <td style="padding-left: 32px; font-family: monospace;">${escapeHtml(bienSo)}</td>
-                    <td style="text-align:right">${Math.round(data.chiPhi).toLocaleString('vi-VN')}</td>
+                    <td style="text-align:right;color:#fbbf24;font-weight:600;">${Math.round(data.chiPhi).toLocaleString('vi-VN')}</td>
                     <td style="text-align:right">${Math.round(data.kmPhatSinh).toLocaleString('vi-VN')}</td>
                     <td style="text-align:right">${Math.round(data.phiVuotKm).toLocaleString('vi-VN')}</td>
                     <td style="text-align:right">${Number(data.thoiGianTangCa.toFixed(2)).toLocaleString('vi-VN')}</td>
@@ -1197,7 +1201,7 @@ function renderNcc(pivotData) {
         html += `
             <tr style="background: rgba(20, 184, 166, 0.15);">
                 <td style="font-weight: bold; color: var(--accent);">${escapeHtml(kho)}</td>
-                <td style="text-align:right; font-weight: bold;">${Math.round(subCost).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:#f59e0b;">${Math.round(subCost).toLocaleString('vi-VN')}</td>
                 <td style="text-align:right; font-weight: bold;">${Math.round(subKm).toLocaleString('vi-VN')}</td>
                 <td style="text-align:right; font-weight: bold;">${Math.round(subPhiVuot).toLocaleString('vi-VN')}</td>
                 <td style="text-align:right; font-weight: bold;">${Number(subTgOt.toFixed(2)).toLocaleString('vi-VN')}</td>

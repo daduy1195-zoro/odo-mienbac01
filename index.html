@@ -3584,6 +3584,23 @@ async function loadLastmileData() {
         });
         console.log('✅ Sorted. First date: ' + (lastmileData[0] ? lastmileData[0].dateStr : 'N/A'));
         isLastmileLoaded = true;
+        // Set default date = kỳ đối soát
+        try {
+            var dateRangeEl = document.getElementById('dateRange');
+            if (dateRangeEl) {
+                var rangeText = dateRangeEl.textContent || '';
+                var match = rangeText.match(/(\d{2})\/(\d{2})\s*→\s*(\d{2})\/(\d{2})\/(\d{4})/);
+                if (match) {
+                    var fromDate = match[5] + '-' + match[2] + '-' + match[1];
+                    var toDate = match[5] + '-' + match[4] + '-' + match[3];
+                    var lmFrom = document.getElementById('lmDateFrom');
+                    var lmTo = document.getElementById('lmDateTo');
+                    if (lmFrom && !lmFrom.value) lmFrom.value = fromDate;
+                    if (lmTo && !lmTo.value) lmTo.value = toDate;
+                    console.log('📅 LM dates:', fromDate, '→', toDate);
+                }
+            }
+        } catch(e) {}
         renderLastmile();
         showToast('✅', 'Đã tải ' + lastmileData.length + ' chuyến!');
     } catch (err) {
@@ -3605,7 +3622,7 @@ function renderLastmile() {
     console.log('🔍 Filters: hub=' + filterHub + ', from=' + filterDateFrom + ', to=' + filterDateTo);
     
     var filtered = [];
-    for (var i = 0; i < lastmileData.length && filtered.length < 1000; i++) {
+    for (var i = 0; i < lastmileData.length && filtered.length < 5000; i++) {
         var row = lastmileData[i];
         if (filterHub && row.hubName !== filterHub) continue;
         if (filterDateFrom || filterDateTo) {
@@ -3633,7 +3650,7 @@ function renderLastmile() {
         grouped[hub].push(filtered[j]);
     }
     
-    var html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filtered.length + '/' + lastmileData.length + ' chuyến (tối đa 1000). Dùng bộ lọc ngày để thu hẹp.</div>';
+    var html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filtered.length + '/' + lastmileData.length + ' chuyến (tối đa 5000). Dùng bộ lọc ngày để thu hẹp.</div>';
     var hubs = Object.keys(grouped);
     console.log('🏭 Hubs: ' + hubs.join(', '));
     

@@ -381,6 +381,7 @@
         .empty-state p { font-size: 14px; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -475,6 +476,7 @@
             <button class="tab" onclick="switchTab('ncc', this)">🔒 Chi phí xe NCC</button>
             <button class="tab" onclick="switchTab('fraud', this)">🚨 Cảnh báo gian lận <span class="badge badge-danger" id="fraudBadge" style="margin-left:4px;font-size:11px;">0</span></button>
             <button class="tab" onclick="switchTab('typo', this)">⚠️ Cảnh báo gõ sai <span class="badge badge-danger" id="typoBadge" style="margin-left:4px;font-size:11px;">0</span></button>
+            <button class="tab" onclick="switchTab('nccTrip', this)">🔗 Ghép chuyến đi NCC</button>
         </div>
     </div>
 
@@ -561,6 +563,28 @@
         </div>
     </div>
 
+    <!-- ========== TAB: GHÉP CHUYẾN ĐI NCC ========== -->
+    <div class="section" id="tabNccTrip" style="display:none;">
+        <div class="section-header">
+            <div class="section-title">🔗 Ghép chuyến đi NCC</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <select id="nccTripWhFilter" onchange="renderNccTrip()" style="background:var(--bg-secondary);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;">
+                    <option value="">Tất cả 4 kho</option>
+                    <option value="Hải Dương">Hải Dương</option>
+                    <option value="Hải Phòng">Hải Phòng</option>
+                    <option value="Hưng Yên">Hưng Yên</option>
+                    <option value="Thái Bình">Thái Bình</option>
+                </select>
+                <button class="btn btn-primary" onclick="exportNccTripExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
+            </div>
+        </div>
+        <div class="section-body">
+            <div id="nccTripContainer">
+                <div class="empty-state"><div class="icon">🔗</div><p>Nhấn "Tải dữ liệu" để bắt đầu...</p></div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Toast Notification -->
@@ -595,6 +619,15 @@ const CONFIG = {
     // Cấu hình NCC Sheets
     NCC_SHEETS: [
         { id: '1sUIqHPnTB45lngkHPAgYndojfeMP1kKN', label: '2026-06' }
+    ],
+    NCC_TRIP_SHEETS: [
+        { id: '1IkFbWbeiGziC4HtVrBhQBtnpCX_IYK97-aTDAzZ5KdQ', gid: '18133367', ncc: 'Thiên Phú' },
+        { id: '1B2bsvnrJE_0oq0RPEYXwgZLlbvSxZc-S-suLla1P8OQ', gid: '1878847442', ncc: 'Duy Phát' },
+        { id: '12YJXYirj5gM2HOfcXU8e8QsUkANfh_N-36x-3WC52oc', gid: '679483124', ncc: 'Hoàng Minh' },
+        { id: '1WnRDyMNg2OGHzH_93Re44UY3C5CqpflkrV_qbdQcR3Q', gid: '536151443', ncc: 'Hoa Vinh' },
+        { id: '1yqf8Bg6Tmq4v-qOzdpY9G4Y1OEnhQ5e7OURq017SiZI', gid: '2147444878', ncc: 'Đạo Trường An' },
+        { id: '1IEvRqHBhbCB5xWFCdL7qLrkwGF5CndWND9fIWllWvTU', gid: '1417740285', ncc: 'TAL' },
+        { id: '1rXUGApnp82pHkgr4759_N3K53twVj6tw59L4WhOvBpk', gid: '544655290', ncc: 'Đại Minh' },
     ],
 
     // Telegram Proxy (token ẩn trên server Google Apps Script)
@@ -2844,6 +2877,248 @@ async function sendWarehouseRankingTelegram(whName, evt) {
     btn.innerHTML = originalText;
 }
 
+// ====== GHÉP CHUYẾN ĐI NCC ======
+let nccTripData = [];
+let isNccTripLoaded = false;
+
+async function loadNccTripData() {
+    if (isNccTripLoaded) return;
+    
+    const container = document.getElementById('nccTripContainer');
+    container.innerHTML = '<div class="loading-overlay" style="position:relative;height:100px;display:flex;align-items:center;justify-content:center"><div class="spinner"></div><span style="margin-left:10px;color:var(--text-muted)">Đang tải dữ liệu từ Google Sheets...</span></div>';
+    
+    try {
+        let allNccData = [];
+        const normalizeStr = s => s ? s.toString().trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
+        
+        // Prepare GHN trips map for fast lookup: normalize(plate) + dateStr -> tripCode
+        const ghnTripMap = new Map();
+        if (typeof tripsData !== 'undefined' && Array.isArray(tripsData)) {
+            tripsData.forEach(trip => {
+                if (!trip.plate || !trip.dateStr) return;
+                const normPlate = normalizeStr(trip.plate);
+                const key = `${normPlate}_${trip.dateStr}`;
+                // Keep the first matching trip
+                if (!ghnTripMap.has(key)) {
+                    ghnTripMap.set(key, trip.tripCode);
+                }
+            });
+        }
+        
+        for (const sheet of CONFIG.NCC_TRIP_SHEETS) {
+            try {
+                // Using existing fetchSheetJSONP function
+                const rawData = await fetchSheetJSONP(sheet.id, sheet.gid, 1);
+                
+                // Search for header row
+                let headerRowIdx = -1;
+                for (let i = 0; i < Math.min(10, rawData.length); i++) {
+                    const rowStr = rawData[i].map(c => (c || '').toString().toLowerCase()).join(' ');
+                    if (rowStr.includes('biển số') || rowStr.includes('biển xe')) {
+                        headerRowIdx = i;
+                        break;
+                    }
+                }
+                
+                const startRow = headerRowIdx > -1 ? headerRowIdx + 1 : 1;
+                
+                for (let i = startRow; i < rawData.length; i++) {
+                    const row = rawData[i];
+                    if (!row || row.length < 5) continue;
+                    
+                    const dateStr = row[1];
+                    const plate = row[2];
+                    
+                    if (!dateStr || !plate || plate.toString().toUpperCase().includes('OFF')) continue;
+                    
+                    const vehicleCode = row[3] || '';
+                    const route = row[4] || row[5] || '';
+                    // Giờ đi/về: một số NCC dùng col 8/9 (Thiên Phú, Đại Minh), số khác dùng col 7/8
+                    let hourStart = '', hourEnd = '';
+                    if (row[8] && row[9] && row[8].toString().includes(':') && row[9].toString().includes(':')) {
+                        hourStart = row[8]; hourEnd = row[9];
+                    } else if (row[7] && row[8] && row[7].toString().includes(':') && row[8].toString().includes(':')) {
+                        hourStart = row[7]; hourEnd = row[8];
+                    } else {
+                        hourStart = row[8] || row[7] || ''; hourEnd = row[9] || row[8] || '';
+                    }
+                    
+                    // Kho is either in route or a specific column (AB ~ index 27)
+                    let khoStr = route.toString().toLowerCase() + " " + (row[27] || '').toString().toLowerCase();
+                    let warehouse = '';
+                    if (khoStr.includes('hải phòng')) warehouse = 'Hải Phòng';
+                    else if (khoStr.includes('hải dương')) warehouse = 'Hải Dương';
+                    else if (khoStr.includes('hưng yên')) warehouse = 'Hưng Yên';
+                    else if (khoStr.includes('thái bình')) warehouse = 'Thái Bình';
+                    
+                    if (!warehouse) continue;
+                    
+                    const kmStart = row[14] || '';
+                    const kmEnd = row[15] || '';
+                    
+                    const normPlate = normalizeStr(plate);
+                    const matchKey = `${normPlate}_${dateStr}`;
+                    const matchedTripCode = ghnTripMap.get(matchKey);
+                    
+                    allNccData.push({
+                        ncc: sheet.ncc,
+                        dateStr: dateStr.toString(),
+                        plate: plate.toString(),
+                        vehicleCode: vehicleCode.toString(),
+                        route: route.toString(),
+                        kmStart: kmStart.toString(),
+                        kmEnd: kmEnd.toString(),
+                        hourStart: hourStart.toString(),
+                        hourEnd: hourEnd.toString(),
+                        warehouse: warehouse,
+                        ghnTripCode: matchedTripCode || null
+                    });
+                }
+            } catch(e) {
+                console.error(`Error loading sheet ${sheet.ncc}:`, e);
+            }
+        }
+        
+        nccTripData = allNccData;
+        isNccTripLoaded = true;
+        renderNccTrip();
+        showToast('✅', 'Đã tải xong dữ liệu Ghép chuyến đi NCC!');
+    } catch (err) {
+        console.error('Error in loadNccTripData:', err);
+        container.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>Lỗi tải dữ liệu: ${err.message}</p></div>`;
+    }
+}
+
+function updateNccTripCode(index, value) {
+    if (nccTripData[index]) {
+        nccTripData[index].ghnTripCode = value;
+    }
+}
+
+function renderNccTrip() {
+    const container = document.getElementById('nccTripContainer');
+    if (!isNccTripLoaded) {
+        return;
+    }
+    if (nccTripData.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu phù hợp.</p></div>';
+        return;
+    }
+    
+    const filterWh = document.getElementById('nccTripWhFilter').value;
+    
+    // Group by warehouse
+    const grouped = {};
+    let filteredCount = 0;
+    
+    nccTripData.forEach((row, idx) => {
+        if (filterWh && row.warehouse !== filterWh) return;
+        if (!grouped[row.warehouse]) grouped[row.warehouse] = [];
+        grouped[row.warehouse].push({ ...row, originalIndex: idx });
+        filteredCount++;
+    });
+    
+    if (filteredCount === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho kho này.</p></div>';
+        return;
+    }
+    
+    let html = '';
+    
+    for (const [wh, rows] of Object.entries(grouped)) {
+        html += `
+        <div class="ranking-card">
+            <div class="ranking-card-header">
+                <h3><span style="${warehouseColor(wh)}"></span> ${wh}</h3>
+                <span class="badge badge-info">${rows.length} chuyến</span>
+            </div>
+            <div class="table-scroll" style="max-height: 400px;">
+                <table class="ranking-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Ngày</th>
+                            <th>NCC</th>
+                            <th>Biển số xe</th>
+                            <th>Lộ trình</th>
+                            <th>KM đi - về</th>
+                            <th>Giờ đi - về</th>
+                            <th>Mã chuyến GHN</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        rows.forEach((r, i) => {
+            const hasMatch = !!r.ghnTripCode;
+            const statusHtml = hasMatch 
+                ? '<span style="color:var(--success);">✅ Khớp</span>' 
+                : '<span style="color:var(--warning);">⚠️ Thiếu mã</span>';
+                
+            const ghnHtml = hasMatch
+                ? `<strong style="color:var(--success);">${r.ghnTripCode}</strong>`
+                : `<input type="text" class="form-control" style="background:#fff3cd; color:#856404; width:120px;" placeholder="Nhập mã..." onchange="updateNccTripCode(${r.originalIndex}, this.value)" value="${r.ghnTripCode || ''}">`;
+                
+            html += `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${escapeHtml(r.dateStr)}</td>
+                    <td>${escapeHtml(r.ncc)}</td>
+                    <td><strong>${escapeHtml(r.plate)}</strong></td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
+                    <td>${escapeHtml(r.kmStart)} - ${escapeHtml(r.kmEnd)}</td>
+                    <td>${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
+                    <td>${ghnHtml}</td>
+                    <td>${statusHtml}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        `;
+    }
+    
+    container.innerHTML = `<div class="ranking-grid" style="grid-template-columns: 1fr;">${html}</div>`;
+}
+
+function exportNccTripExcel() {
+    if (!nccTripData || nccTripData.length === 0) {
+        showToast('❌', 'Chưa có dữ liệu để xuất!');
+        return;
+    }
+    if (typeof XLSX === 'undefined') {
+        showToast('❌', 'Thư viện Excel chưa được tải xong!');
+        return;
+    }
+    
+    const filterWh = document.getElementById('nccTripWhFilter').value;
+    const exportData = nccTripData
+        .filter(r => filterWh ? r.warehouse === filterWh : true)
+        .map(r => ({
+            'Ngày': r.dateStr,
+            'Tên NCC': r.ncc,
+            'Biển số xe': r.plate,
+            'Kho': r.warehouse,
+            'Lộ trình': r.route,
+            'KM đi': r.kmStart,
+            'KM về': r.kmEnd,
+            'Giờ đi': r.hourStart,
+            'Giờ về': r.hourEnd,
+            'Mã chuyến đi GHN': r.ghnTripCode || '',
+            'Trạng thái': r.ghnTripCode ? 'Đã khớp' : 'Thiếu mã'
+        }));
+        
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ghep Chuyen");
+    XLSX.writeFile(wb, `Ghep_Chuyen_NCC_${filterWh || 'Tat_Ca'}.xlsx`);
+}
+
 // ====== CHUYỂN TAB ======
 let _nccUnlocked = false;
 const _NCC_PASS = 'admin123';
@@ -2868,6 +3143,11 @@ function switchTab(tab, el) {
     document.getElementById('tabNCC').style.display = tab === 'ncc' ? '' : 'none';
     document.getElementById('tabFraud').style.display = tab === 'fraud' ? '' : 'none';
     document.getElementById('tabTypo').style.display = tab === 'typo' ? '' : 'none';
+    document.getElementById('tabNccTrip').style.display = tab === 'nccTrip' ? '' : 'none';
+    
+    if (tab === 'nccTrip' && !isNccTripLoaded) {
+        loadNccTripData();
+    }
 }
 
 // ====== TỰ ĐỘNG REFRESH MỖI 30 PHÚT ======

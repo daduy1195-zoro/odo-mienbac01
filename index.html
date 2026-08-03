@@ -3002,9 +3002,14 @@ function parseNccTabData(rawData, nccName, ghnTripMap) {
             if (row[ci]) searchStr += ' ' + row[ci].toString().toLowerCase();
         }
         
+        // ★ Quy tắc KV: KV2/KV3 = Hải Dương (dù route ghi "Hải Phòng")
         let warehouse = '';
-        if (searchStr.includes('hải phòng')) warehouse = 'Hải Phòng';
-        else if (searchStr.includes('hải dương')) warehouse = 'Hải Dương';
+        const hasKV2 = /kv2|kv3/i.test(searchStr);
+        const hasKV1 = /kv1/i.test(searchStr);
+        
+        if (searchStr.includes('hải dương')) warehouse = 'Hải Dương';
+        else if (searchStr.includes('hải phòng') && hasKV2) warehouse = 'Hải Dương'; // KV2/KV3 thuộc Hải Dương
+        else if (searchStr.includes('hải phòng')) warehouse = 'Hải Phòng';
         else if (searchStr.includes('hưng yên')) warehouse = 'Hưng Yên';
         else if (searchStr.includes('thái bình')) warehouse = 'Thái Bình';
         

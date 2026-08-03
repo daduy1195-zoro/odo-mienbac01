@@ -3529,6 +3529,13 @@ async function loadLastmileData() {
             return db.localeCompare(da);
         });
         isLastmileLoaded = true;
+        // Set default date filter: last 7 days
+        var today = new Date();
+        var weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        var lmFrom = document.getElementById('lmDateFrom');
+        var lmTo = document.getElementById('lmDateTo');
+        if (lmFrom && !lmFrom.value) lmFrom.value = weekAgo.toISOString().slice(0,10);
+        if (lmTo && !lmTo.value) lmTo.value = today.toISOString().slice(0,10);
         renderLastmile();
         showToast('✅', 'Đã tải ' + lastmileData.length + ' chuyến Lastmile!');
     } catch (err) {
@@ -3549,32 +3556,35 @@ function renderLastmile() {
     var filterDateTo = document.getElementById('lmDateTo') ? document.getElementById('lmDateTo').value : '';
     var grouped = {};
     var filteredCount = 0;
+    var MAX_ROWS = 2000;
     lastmileData.forEach(function(row) {
-        if (filterHub && row.hubName !== filterHub) return;
+        if (filteredCount >= MAX_ROWS) return;
+        if (filterHub && String(row.hubName || '').indexOf(filterHub) === -1) return;
         if (filterDateFrom || filterDateTo) {
-            var parts = row.dateStr ? row.dateStr.split('/') : [];
+            var parts = row.dateStr ? String(row.dateStr).split('/') : [];
             if (parts.length === 3) {
                 var rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
                 if (filterDateFrom && rowDate < filterDateFrom) return;
                 if (filterDateTo && rowDate > filterDateTo) return;
             }
         }
-        var hub = row.hubName || 'Không xác định';
+        var hub = String(row.hubName || 'Không xác định');
         if (!grouped[hub]) grouped[hub] = [];
         grouped[hub].push(row);
         filteredCount++;
     });
     if (filteredCount === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho bộ lọc này.</p></div>';
+        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho bộ lọc này. Hãy chọn khoảng ngày.</p></div>';
         return;
     }
-    var html = '';
+    var html = '<div style="padding:8px 16px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filteredCount + '/' + lastmileData.length + ' chuyến (tối đa ' + MAX_ROWS + '). Dùng bộ lọc ngày để thu hẹp.</div>';
     for (var hub in grouped) {
         var rows = grouped[hub];
-        html += '<div class="ranking-card"><div class="ranking-card-header"><h3><span style="' + warehouseColor(hub) + '"></span> ' + hub + '</h3><span class="badge badge-info">' + rows.length + ' chuyến</span></div><div class="table-scroll" style="max-height:500px;"><table class="ranking-table"><thead><tr><th>#</th><th>Ngày</th><th>Mã chuyến</th><th>Biển số xe</th><th>Tạo</th><th>Bắt đầu</th><th>Kết thúc</th><th>Người tạo</th><th>Lấy</th><th>Giao</th><th>Trả</th><th>Tài xế</th><th>SĐT</th><th>Đối tác</th></tr></thead><tbody>';
-        rows.forEach(function(r, i) {
-            html += '<tr><td>' + (i+1) + '</td><td>' + escapeHtml(r.dateStr) + '</td><td style="font-size:11px;">' + escapeHtml(r.tripCode) + '</td><td><strong>' + escapeHtml(r.plate) + '</strong></td><td style="font-size:11px;">' + escapeHtml(r.createdTime) + '</td><td style="font-size:11px;">' + escapeHtml(r.startTime) + '</td><td style="font-size:11px;">' + escapeHtml(r.endTime) + '</td><td>' + escapeHtml(r.createdByName) + '</td><td>' + (r.pickCount||0) + '</td><td>' + (r.deliverCount||0) + '</td><td>' + (r.returnCount||0) + '</td><td>' + escapeHtml(r.driverName) + '</td><td>' + escapeHtml(r.driverPhone) + '</td><td>' + escapeHtml(r.servicePartner) + '</td></tr>';
-        });
+        html += '<div class="ranking-card"><div class="ranking-card-header"><h3>' + hub + '</h3><span class="badge badge-info">' + rows.length + ' chuyến</span></div><div class="table-scroll" style="max-height:600px;overflow-y:auto;"><table class="ranking-table"><thead><tr><th>#</th><th>Ngày</th><th>Mã chuyến</th><th>Biển số xe</th><th>Tạo</th><th>Bắt đầu</th><th>Kết thúc</th><th>Người tạo</th><th>Lấy</th><th>Giao</th><th>Trả</th><th>Tài xế</th><th>SĐT</th><th>Đối tác</th></tr></thead><tbody>';
+        for (var i = 0; i < rows.length; i++) {
+            var r = rows[i];
+            html += '<tr><td>' + (i+1) + '</td><td>' + escapeHtml(String(r.dateStr||'')) + '</td><td style="font-size:11px;">' + escapeHtml(String(r.tripCode||'')) + '</td><td><strong>' + escapeHtml(String(r.plate||'')) + '</strong></td><td style="font-size:11px;">' + escapeHtml(String(r.createdTime||'')) + '</td><td style="font-size:11px;">' + escapeHtml(String(r.startTime||'')) + '</td><td style="font-size:11px;">' + escapeHtml(String(r.endTime||'')) + '</td><td>' + escapeHtml(String(r.createdByName||'')) + '</td><td>' + (r.pickCount||0) + '</td><td>' + (r.deliverCount||0) + '</td><td>' + (r.returnCount||0) + '</td><td>' + escapeHtml(String(r.driverName||'')) + '</td><td>' + escapeHtml(String(r.driverPhone||'')) + '</td><td>' + escapeHtml(String(r.servicePartner||'')) + '</td></tr>';
+        }
         html += '</tbody></table></div></div>';
     }
     container.innerHTML = '<div class="ranking-grid" style="grid-template-columns:1fr;">' + html + '</div>';

@@ -3225,7 +3225,16 @@ async function loadNccTripData() {
                 }
             });
         }
-        console.log(`🔍 GHN Trips map: ${ghnTripMap.size} entries`);
+                console.log(`🔍 GHN Trips map: ${ghnTripMap.size} entries`);
+        
+        // Rematch GHN trip codes for all records (especially archived ones which might have been saved before a GHN trip was created)
+        allNccData.forEach(r => {
+            if (!r.ghnTripCode) {
+                const normPlate = normalizeStr(r.plate);
+                const matchKey = `${normPlate}_${r.dateStr}`;
+                r.ghnTripCode = ghnTripMap.get(matchKey) || null;
+            }
+        });
         
         let totalTabs = 0, totalRows = 0;
         

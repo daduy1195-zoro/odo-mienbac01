@@ -1426,6 +1426,12 @@ async function loadAllData() {
         const newTripsToArchive = [];
         
         tripsData = [...archivedTrips];
+        tripsData.forEach(t => {
+            if (t.dateStr && t.dateStr.includes('T') && t.dateStr.endsWith('Z')) {
+                const d = new Date(t.dateStr);
+                t.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+            }
+        });
         tripsRows.forEach(r => {
             if (!r || r.length < 2) return;
             const code = (r[1] || '').replace(/[^0-9]/g, '').trim();
@@ -1477,7 +1483,10 @@ async function loadAllData() {
         employeeData = [...archivedOdo];
         // Phục hồi dateObj cho dữ liệu từ archive
         employeeData.forEach(e => {
-            if (e.dateStr && !e.dateObj) {
+            if (e.dateStr && e.dateStr.includes('T') && e.dateStr.endsWith('Z')) {
+                e.dateObj = new Date(e.dateStr);
+                e.dateStr = `${String(e.dateObj.getDate()).padStart(2, '0')}/${String(e.dateObj.getMonth() + 1).padStart(2, '0')}/${e.dateObj.getFullYear()}`;
+            } else if (e.dateStr && !e.dateObj) {
                 const dateParts = e.dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
                 if (dateParts) e.dateObj = new Date(parseInt(dateParts[3]), parseInt(dateParts[2]) - 1, parseInt(dateParts[1]));
             }
@@ -3134,6 +3143,13 @@ async function loadNccTripData() {
         const archivedKeys = new Set(archivedData.map(r => r.id));
         
         let allNccData = [...archivedData];
+        allNccData.forEach(r => {
+            if (r.dateStr && r.dateStr.includes('T') && r.dateStr.endsWith('Z')) {
+                const d = new Date(r.dateStr);
+                r.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+            }
+        });
+        
         let newRecordsToArchive = [];
         const normalizeStr = s => s ? s.toString().trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
         

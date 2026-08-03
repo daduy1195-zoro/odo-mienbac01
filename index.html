@@ -1625,7 +1625,7 @@ async function loadAllData() {
 
             const fakePlate = rawNameCode;
             const realEntries = employeeData.filter(e =>
-                !platePattern.test(StringString(e.name + (e.code ? e.code : '')).replace(/\s/g, '')) &&
+                !platePattern.test(String(e.name + (e.code ? e.code : '')).replace(/\s/g, '')) &&
                 e.plate && String(e.plate).replace(/[\s\-.]/g, '') === String(fakePlate).replace(/[\s\-.]/g, '')
             ).sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
 

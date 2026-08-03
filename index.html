@@ -2881,28 +2881,34 @@ async function sendWarehouseRankingTelegram(whName, evt) {
 let nccTripData = [];
 let isNccTripLoaded = false;
 
-// Hàm lấy danh sách tên tab + GID từ Google Sheet
+// Hàm lấy danh sách tên tab + GID từ Google Sheet (dùng /htmlview)
 async function getSheetTabNames(sheetId) {
-    return new Promise((resolve) => {
-        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
-        fetch(url, { credentials: 'omit' })
-            .then(r => r.text())
-            .then(html => {
-                const tabs = [];
-                // Pattern: sheet-button-{GID} ... docs-sheet-tab-caption>{name}
-                const matches = html.matchAll(/sheet-button-(\d+)[\s\S]*?docs-sheet-tab-caption[^>]*>([^<]+)/g);
-                for (const m of matches) {
-                    tabs.push({ name: m[2].trim(), gid: m[1] });
-                }
-                // Fallback: chỉ lấy tên nếu không match được GID
-                if (tabs.length === 0) {
-                    const nameMatches = html.matchAll(/docs-sheet-tab-caption[^>]*>([^<]+)/g);
-                    for (const m of nameMatches) tabs.push({ name: m[1].trim(), gid: '' });
-                }
-                resolve(tabs);
-            })
-            .catch(() => resolve([]));
-    });
+    try {
+        // ★ Dùng /htmlview - chứa items.push({name: "...", gid: "..."})
+        const htmlviewUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/htmlview`;
+        const res = await fetch(htmlviewUrl, { credentials: 'omit' });
+        const html = await res.text();
+        
+        const tabs = [];
+        // Pattern: items.push({name: "TabName", pageUrl: "...gid=12345", gid: "12345"})
+        const matches = html.matchAll(/items\.push\(\{name:\s*"([^"]+)"[^}]*gid:\s*"(\d+)"/g);
+        for (const m of matches) {
+            tabs.push({ name: m[1], gid: m[2] });
+        }
+        
+        if (tabs.length > 0) return tabs;
+        
+        // Fallback: /edit chỉ lấy tên tab (không có GID)
+        const editRes = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/edit`, { credentials: 'omit' });
+        const editHtml = await editRes.text();
+        const nameMatches = editHtml.matchAll(/docs-sheet-tab-caption[^>]*>([^<]+)/g);
+        const fallback = [];
+        for (const m of nameMatches) fallback.push({ name: m[1].trim(), gid: '' });
+        return fallback;
+    } catch(e) {
+        console.warn('getSheetTabNames error:', e);
+        return [];
+    }
 }
 
 // Các tab KHÔNG phải dữ liệu xe (skip)
@@ -3206,9 +3212,9 @@ function renderNccTrip() {
             html += `
                 <tr>
                     <td>${i + 1}</td>
-                    <td>${r.sheetId && r.tabName ? (() => {
-                        const cellRef = encodeURIComponent("'" + r.tabName + "'!B" + r.sourceRow);
-                        const sheetUrl = 'https://docs.google.com/spreadsheets/d/' + r.sheetId + '/edit#range=' + cellRef;
+                    <td>${r.sheetId ? (() => {
+                        let sheetUrl = 'https://docs.google.com/spreadsheets/d/' + r.sheetId + '/edit';
+                        if (r.tabGid) sheetUrl += '#gid=' + r.tabGid + '&range=B' + r.sourceRow;
                         return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
                     })() : escapeHtml(r.dateStr)}</td>
                     <td>${escapeHtml(r.ncc)}</td>

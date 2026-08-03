@@ -2921,7 +2921,7 @@ function isVehicleTab(tabName) {
 }
 
 // Hàm parse dữ liệu từ 1 tab NCC
-function parseNccTabData(rawData, nccName, ghnTripMap) {
+function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName) {
     const results = [];
     const normalizeStr = s => s ? s.toString().trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
     
@@ -3028,7 +3028,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap) {
             dateStr, plate, vehicleCode, route,
             kmStart, kmEnd, hourStart, hourEnd,
             warehouse,
-            ghnTripCode: matchedTripCode
+            ghnTripCode: matchedTripCode,
+            sheetId: sheetId || '',
+            tabName: tabName || ''
         });
     }
     return results;
@@ -3071,7 +3073,7 @@ async function loadNccTripData() {
                     // Fallback: dùng GID nếu không lấy được tab names
                     console.log(`⚠️ ${sheet.ncc}: Không lấy được tab names, dùng GID ${sheet.gid}`);
                     const rawData = await fetchSheetJSONP(sheet.id, sheet.gid);
-                    const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap);
+                    const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, 'GID:' + sheet.gid);
                     allNccData.push(...parsed);
                     totalTabs++;
                     totalRows += parsed.length;
@@ -3088,7 +3090,7 @@ async function loadNccTripData() {
                         const rawData = await fetchSheetByNameJSONP(sheet.id, tabName);
                         if (rawData.length === 0) continue;
                         
-                        const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap);
+                        const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, tabName);
                         if (parsed.length > 0) {
                             allNccData.push(...parsed);
                             totalTabs++;
@@ -3196,7 +3198,7 @@ function renderNccTrip() {
             html += `
                 <tr>
                     <td>${i + 1}</td>
-                    <td>${escapeHtml(r.dateStr)}</td>
+                    <td>${r.sheetId ? `<a href="https://docs.google.com/spreadsheets/d/${r.sheetId}/edit" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở sheet ${escapeHtml(r.ncc)} - Tab: ${escapeHtml(r.tabName)}">${escapeHtml(r.dateStr)}</a>` : escapeHtml(r.dateStr)}</td>
                     <td>${escapeHtml(r.ncc)}</td>
                     <td><strong>${escapeHtml(r.plate)}</strong></td>
                     <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>

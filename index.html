@@ -883,7 +883,7 @@ function detectTypos(data) {
     const masterPlateList = [];
     masterList.forEach(m => {
         if (m.plate) {
-            const p = m.String(plate).toUpperCase().replace(/[\s\-\.]/g, '');
+            const p = String(m.plate).toUpperCase().replace(/[\s\-\.]/g, '');
             masterPlates.add(p);
             masterPlateList.push(p);
         }
@@ -900,7 +900,7 @@ function detectTypos(data) {
 
     data.forEach(e => {
         if (!e.plate) return;
-        const pNorm = e.String(plate).toUpperCase().replace(/[\s\-\.]/g, '');
+        const pNorm = String(e.plate).toUpperCase().replace(/[\s\-\.]/g, '');
 
         // Kiểm tra có khớp chính xác với 1 biển nào đó trong danh sách Master không
         if (masterPlates.has(pNorm)) return; // Đúng → bỏ qua
@@ -3507,8 +3507,8 @@ function startAutoTelegramReport() {
 
 // ====== TIỆN ÍCH ======
 function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // Tra tỉnh từ mã biển số xe

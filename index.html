@@ -2935,6 +2935,40 @@ function parseNccTabData(rawData, nccName, ghnTripMap) {
         }
     }
     
+    // ★ Xác định vị trí cột KM vào/ra từ header row
+    let colKmStart = -1, colKmEnd = -1;
+    if (headerRowIdx > -1) {
+        const hdr = rawData[headerRowIdx].map(c => (c || '').toString().toLowerCase().trim());
+        for (let ci = 0; ci < hdr.length; ci++) {
+            const h = hdr[ci];
+            if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
+            if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
+        }
+    }
+    // Fallback: nếu không tìm được trong header, thử scan data row đầu tiên
+    // để phát hiện 2 cột liên tiếp có giá trị lớn (>1000) là odometer readings
+    if (colKmStart === -1 || colKmEnd === -1) {
+        const startRow = headerRowIdx > -1 ? headerRowIdx + 1 : 0;
+        for (let i = startRow; i < Math.min(startRow + 5, rawData.length); i++) {
+            const row = rawData[i];
+            if (!row) continue;
+            for (let ci = 12; ci <= 16; ci++) {
+                const v1 = parseFloat((row[ci] || '').toString().replace(/[^\d.]/g, ''));
+                const v2 = parseFloat((row[ci+1] || '').toString().replace(/[^\d.]/g, ''));
+                // KM vào ca và KM ra ca phải > 1000 và gần nhau (chênh < 500)
+                if (v1 > 1000 && v2 > 1000 && Math.abs(v2 - v1) < 500) {
+                    colKmStart = ci;
+                    colKmEnd = ci + 1;
+                    break;
+                }
+            }
+            if (colKmStart > -1) break;
+        }
+    }
+    // Final fallback
+    if (colKmStart === -1) colKmStart = 14;
+    if (colKmEnd === -1) colKmEnd = 15;
+    
     const startRow = headerRowIdx > -1 ? headerRowIdx + 1 : 0;
     
     for (let i = startRow; i < rawData.length; i++) {
@@ -2948,8 +2982,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap) {
         // Bỏ qua row không hợp lệ
         if (!dateStr || !plate) continue;
         if (plate.toUpperCase().includes('OFF')) continue;
-        if (!dateStr.match(/\d{2}\/\d{2}\/\d{4}/)) continue; // Phải là ngày DD/MM/YYYY
-        if (stt && isNaN(stt) && !stt.match(/^\d/)) continue; // STT phải là số
+        if (!dateStr.match(/\d{2}\/\d{2}\/\d{4}/)) continue;
+        if (stt && isNaN(stt) && !stt.match(/^\d/)) continue;
         
         const vehicleCode = (row[3] || '').toString().trim();
         const route = (row[4] || row[5] || '').toString().trim();
@@ -2962,9 +2996,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap) {
             if (v.includes(':') && hourStart && !hourEnd) { hourEnd = v; break; }
         }
         
-        // Xác định kho/tỉnh từ route + column Kho (AB ~ index 27)
+        // Xác định kho/tỉnh từ route + column Kho
         let searchStr = route.toLowerCase();
-        // Thêm thông tin từ các cột phụ (khu vực, kho)
         for (let ci = 25; ci <= 28; ci++) {
             if (row[ci]) searchStr += ' ' + row[ci].toString().toLowerCase();
         }
@@ -2975,10 +3008,10 @@ function parseNccTabData(rawData, nccName, ghnTripMap) {
         else if (searchStr.includes('hưng yên')) warehouse = 'Hưng Yên';
         else if (searchStr.includes('thái bình')) warehouse = 'Thái Bình';
         
-        if (!warehouse) continue; // Không thuộc 4 tỉnh → bỏ
+        if (!warehouse) continue;
         
-        const kmStart = (row[14] || '').toString().trim();
-        const kmEnd = (row[15] || '').toString().trim();
+        const kmStart = (row[colKmStart] || '').toString().trim();
+        const kmEnd = (row[colKmEnd] || '').toString().trim();
         
         // Ghép mã chuyến GHN
         const normPlate = normalizeStr(plate);

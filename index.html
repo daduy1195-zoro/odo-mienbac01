@@ -883,7 +883,7 @@ function detectTypos(data) {
     const masterPlateList = [];
     masterList.forEach(m => {
         if (m.plate) {
-            const p = m.plate.toUpperCase().replace(/[\s\-\.]/g, '');
+            const p = m.String(plate).toUpperCase().replace(/[\s\-\.]/g, '');
             masterPlates.add(p);
             masterPlateList.push(p);
         }
@@ -900,7 +900,7 @@ function detectTypos(data) {
 
     data.forEach(e => {
         if (!e.plate) return;
-        const pNorm = e.plate.toUpperCase().replace(/[\s\-\.]/g, '');
+        const pNorm = e.String(plate).toUpperCase().replace(/[\s\-\.]/g, '');
 
         // Kiểm tra có khớp chính xác với 1 biển nào đó trong danh sách Master không
         if (masterPlates.has(pNorm)) return; // Đúng → bỏ qua
@@ -1431,15 +1431,17 @@ async function loadAllData() {
                 const d = new Date(t.dateStr);
                 t.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
             }
+            if (t.code) t.code = String(t.code);
+            if (t.plate) t.plate = String(t.plate);
         });
         tripsRows.forEach(r => {
             if (!r || r.length < 2) return;
-            const code = (r[1] || '').replace(/[^0-9]/g, '').trim();
-            const dateStr = (r[4] || '').trim();
+            const code = String(r[1] || '').replace(/[^0-9]/g, '').trim();
+            const dateStr = String(r[4] || '').trim();
             if (!code || !dateStr) return;
-            const tripCode = (r[0]||'').trim();
+            const tripCode = String(r[0]||'').trim();
             if (tripCode && !archivedTripKeys.has(tripCode)) {
-                const obj = { id: tripCode, tripCode, code, name: (r[2]||'').trim(), plate: (r[3]||'').trim(), dateStr };
+                const obj = { id: tripCode, tripCode, code, name: String(r[2]||'').trim(), plate: String(r[3]||'').trim(), dateStr };
                 tripsData.push(obj);
                 newTripsToArchive.push(obj);
                 archivedTripKeys.add(tripCode);
@@ -1458,14 +1460,14 @@ async function loadAllData() {
         masterList = [];
         allMasterRows.forEach(r => {
             if (!r || r.length < 3) return;
-            const code = (r[0] || '').replace(/[^0-9]/g, '').trim();
+            const code = String(r[0] || '').replace(/[^0-9]/g, '').trim();
             const name = normalizeTone((r[1] || '').trim().normalize('NFC').toUpperCase());
-            const plate = (r[2] || '').trim().toUpperCase().replace(/[\s\-\.]/g, '');
+            const plate = String(r[2] || '').trim().toUpperCase().replace(/[\s\-\.]/g, '');
             const ncc = (r[3] || '').trim();
             const province = (r[5] || '').trim();
             const warehouse = (r[6] || '').trim();
             const backupStr = (r[10] || '').trim().toUpperCase(); // Cột K = Biển số xe tăng cường
-            const backupPlates = backupStr ? backupStr.split(/[\n,;]+/).map(p => p.replace(/[\s\-\.]/g, '')).filter(Boolean) : [];
+            const backupPlates = backupStr ? backupStr.split(/[\n,;]+/).map(p => String(p).replace(/[\s\-\.]/g, '')).filter(Boolean) : [];
             if (!code || !name) return;
             masterList.push({ code, name, plate, ncc, province, warehouse, backupPlates });
         });
@@ -1487,9 +1489,48 @@ async function loadAllData() {
                 e.dateObj = new Date(e.dateStr);
                 e.dateStr = `${String(e.dateObj.getDate()).padStart(2, '0')}/${String(e.dateObj.getMonth() + 1).padStart(2, '0')}/${e.dateObj.getFullYear()}`;
             } else if (e.dateStr && !e.dateObj) {
-                const dateParts = e.dateStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+                const dateParts = String(e.dateStr).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
                 if (dateParts) e.dateObj = new Date(parseInt(dateParts[3]), parseInt(dateParts[2]) - 1, parseInt(dateParts[1]));
             }
+            ['hourStart', 'hourEnd'].forEach(field => {
+                if (e[field]) {
+                    const strVal = String(e[field]);
+                    if (strVal.includes('T') && strVal.endsWith('Z')) {
+                        const d = new Date(strVal);
+                        e[field] = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                    } else if (typeof e[field] === 'number') {
+                        const totalMins = Math.round(e[field] * 24 * 60);
+                        const h = Math.floor(totalMins / 60);
+                        const m = totalMins % 60;
+                        e[field] = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    } else {
+                        e[field] = strVal;
+                    }
+                }
+            });
+            
+            // Phục hồi giờ nếu bị convert thành ISO String từ Archive
+            ['hourStart', 'hourEnd'].forEach(field => {
+                if (e[field]) {
+                    const strVal = String(e[field]);
+                    if (strVal.includes('T') && strVal.endsWith('Z')) {
+                        const d = new Date(strVal);
+                        e[field] = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                    } else if (typeof e[field] === 'number') {
+                        // Trưởng hợp Google Sheets API trả về số thập phân cho thời gian
+                        const totalMins = Math.round(e[field] * 24 * 60);
+                        const h = Math.floor(totalMins / 60);
+                        const m = totalMins % 60;
+                        e[field] = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    } else {
+                        e[field] = strVal;
+                    }
+                }
+            });
+            
+            if (e.plate) e.plate = String(e.plate);
+            if (e.code) e.code = String(e.code);
+            if (e.name) e.name = String(e.name);
         });
         
         allEmployeeNames.clear();
@@ -1515,7 +1556,7 @@ async function loadAllData() {
                 // Cắt phần tên (tất cả những gì trước đoạn code)
                 nameRaw = fullName.substring(0, codeMatch.index).trim();
                 // Bỏ các ký tự đặc biệt dư thừa nối giữa tên và mã (VD: '-', '_', '(')
-                nameRaw = nameRaw.replace(/[\s\-_\(\[\]\,]+$/, '');
+                nameRaw = String(nameRaw).replace(/[\s\-_\(\[\]\,]+$/, '');
             }
 
             // ★ Tách tên kho khỏi tên NV nếu NV ghi nhầm kho vào tên ★
@@ -1531,7 +1572,7 @@ async function loadAllData() {
             const hourEnd = (r[13] || '').trim();
 
             const gid = r._gid || CONFIG.SHEET_EMPLOYEE_GIDS[0];
-            const normPlate = plate ? plate.toUpperCase().replace(/[\s\-\.]/g, '') : '';
+            const normPlate = plate ? String(plate).toUpperCase().replace(/[\s\-\.]/g, '') : '';
             const jsMatchKey = dateStr && normPlate ? `${dateStr}_${normPlate}` : '';
             let matchKey = '';
             if (gid === '1274066622') {
@@ -1579,13 +1620,13 @@ async function loadAllData() {
         // ═══════════════════════════════════════
         const platePattern = /^\d{2}[A-Z]-?\d{3,5}\.?\d{0,2}$/i;
         employeeData.forEach(entry => {
-            const rawNameCode = (entry.name + (entry.code ? entry.code : '')).replace(/\s/g, '');
+            const rawNameCode = String(entry.name + (entry.code ? entry.code : '')).replace(/\s/g, '');
             if (!platePattern.test(rawNameCode)) return;
 
             const fakePlate = rawNameCode;
             const realEntries = employeeData.filter(e =>
-                !platePattern.test((e.name + (e.code ? e.code : '')).replace(/\s/g, '')) &&
-                e.plate && e.plate.replace(/[\s\-.]/g, '') === fakePlate.replace(/[\s\-.]/g, '')
+                !platePattern.test(StringString(e.name + (e.code ? e.code : '')).replace(/\s/g, '')) &&
+                e.plate && String(e.plate).replace(/[\s\-.]/g, '') === String(fakePlate).replace(/[\s\-.]/g, '')
             ).sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
 
             if (realEntries.length > 0) {
@@ -1688,7 +1729,7 @@ async function loadAllData() {
             const warehouse = (r[7] || '').trim();
             const nvghStatus = (r[8] || '').trim();  // Cột I: "x" = NV chưa báo cáo
             const matchKey = (r[13] || '').trim();
-              const normPlate = plate ? plate.toUpperCase().replace(/[\s\-\.]/g, '') : '';
+              const normPlate = plate ? String(plate).toUpperCase().replace(/[\s\-\.]/g, '') : '';
               const jsMatchKey = dateStr && normPlate ? `${dateStr}_${normPlate}` : '';
 
             // ★ CHỈ LẤY CHUYẾN THUỘC 4 KHO CỦA MÌNH ★
@@ -1758,7 +1799,7 @@ function updateFilters() {
         if (month && e.dateObj && !isInCycle(e.dateObj, month)) return;
 
         // Xử lý tên nhân viên (bỏ qua nếu là biển số xe)
-        const nameClean = (e.name + (e.code ? e.code : '')).replace(/\s/g, '');
+        const nameClean = String(e.name + (e.code ? e.code : '')).replace(/\s/g, '');
         const isNotPlate = e.name && !platePattern.test(nameClean);
         const empStr = isNotPlate ? (e.name + (e.code ? ' ' + e.code : '')) : '';
         const ePlate = e.plate || '';
@@ -2071,7 +2112,7 @@ function renderDailyTable(filtered) {
         let otColor = 'var(--text-muted)';
         if (e.hourEnd) {
             // Parse giờ về (hỗ trợ nhiều format: "19:30", "19h30", "19:30:00", "7:30:00 PM", v.v.)
-            const timeStr = e.hourEnd.replace(/h/gi, ':');
+            const timeStr = String(e.hourEnd).replace(/h/gi, ':');
             const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
             if (timeParts) {
                 let hours = parseInt(timeParts[1]);
@@ -2271,7 +2312,7 @@ function renderRanking(month, whFilter) {
         empList.sort((a, b) => b.rate - a.rate || b.uniqueDays - a.uniqueDays);
 
         html += `
-        <div class="ranking-card" id="ranking-wh-${wh.replace(/\s+/g, '-')}" style="grid-column: 1 / -1;">
+        <div class="ranking-card" id="ranking-wh-${String(wh).replace(/\s+/g, '-')}" style="grid-column: 1 / -1;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h3>🏢 Kho ${escapeHtml(wh)} <span style="font-weight:400;color:var(--text-muted);font-size:13px;">(${empList.length} NV · ${daysElapsed} ngày)</span></h3>
                 <button class="btn btn-primary" onclick="sendWarehouseRankingTelegram('${wh}', event)" style="padding:4px 10px; font-size:11px;">
@@ -2350,7 +2391,7 @@ function renderFraudWarnings(filtered) {
 
         // Kiểm tra Tăng ca > 3 tiếng
         if (e.hourEnd) {
-            const timeStr = e.hourEnd.replace(/h/gi, ':');
+            const timeStr = String(e.hourEnd).replace(/h/gi, ':');
             const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
             if (timeParts) {
                 let hours = parseInt(timeParts[1]);
@@ -2412,7 +2453,7 @@ function renderFraudWarnings(filtered) {
         // Tính tăng ca hiển thị
         let otDisplay = '—';
         if (e.hourEnd) {
-            const timeStr = e.hourEnd.replace(/h/gi, ':');
+            const timeStr = String(e.hourEnd).replace(/h/gi, ':');
             const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
             if (timeParts) {
                 let hours = parseInt(timeParts[1]);
@@ -2445,7 +2486,7 @@ function renderFraudWarnings(filtered) {
         // Tính otMinutes để tô màu
         let fraudOtMins = 0;
         if (e.hourEnd) {
-            const ts2 = e.hourEnd.replace(/h/gi, ':');
+            const ts2 = String(e.hourEnd).replace(/h/gi, ':');
             const tp2 = ts2.match(/(\d{1,2}):(\d{2})/);
             if (tp2) {
                 let h2 = parseInt(tp2[1]);
@@ -2893,7 +2934,7 @@ async function sendWarehouseRankingTelegram(whName, evt) {
         const cycleStr = `${String(cycle.start.getDate()).padStart(2,'0')}/${String(cycle.start.getMonth()+1).padStart(2,'0')} → ${String(cycle.end.getDate()).padStart(2,'0')}/${String(cycle.end.getMonth()+1).padStart(2,'0')}/${cycle.end.getFullYear()}`;
         
         // Tìm element block kho này
-        const blockId = `ranking-wh-${whName.replace(/\s+/g, '-')}`;
+        const blockId = `ranking-wh-${String(whName).replace(/\s+/g, '-')}`;
         const whBlock = document.getElementById(blockId);
         if (!whBlock) throw new Error('Không tìm thấy giao diện kho ' + whName);
 
@@ -3012,7 +3053,7 @@ function isVehicleTab(tabName) {
 // Hàm parse dữ liệu từ 1 tab NCC
 function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid) {
     const results = [];
-    const normalizeStr = s => s ? s.toString().trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
+    const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
     
     // Tìm header row (chứa "Biển số" hoặc "STT")
     let headerRowIdx = -1;
@@ -3148,10 +3189,11 @@ async function loadNccTripData() {
                 const d = new Date(r.dateStr);
                 r.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
             }
+            if (r.plate) r.plate = String(r.plate);
         });
         
         let newRecordsToArchive = [];
-        const normalizeStr = s => s ? s.toString().trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
+        const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
         
         // Build GHN trips map: normalize(plate) + dateStr → tripCode
         const ghnTripMap = new Map();

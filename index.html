@@ -569,6 +569,18 @@
         <div class="section-header">
             <div class="section-title">🔗 Ghép chuyến đi NCC</div>
             <div style="display:flex;gap:8px;align-items:center;">
+                <input type="date" id="nccTripDateFrom" onchange="renderNccTrip()" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;" title="Từ ngày">
+                <input type="date" id="nccTripDateTo" onchange="renderNccTrip()" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;" title="Đến ngày">
+                <select id="nccTripNccFilter" onchange="renderNccTrip()" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;">
+                    <option value="">Tất cả NCC</option>
+                    <option value="Thiên Phú">Thiên Phú</option>
+                    <option value="Duy Phát">Duy Phát</option>
+                    <option value="Hoàng Minh">Hoàng Minh</option>
+                    <option value="Hoa Vinh">Hoa Vinh</option>
+                    <option value="Đạo Trường An">Đạo Trường An</option>
+                    <option value="TAL">TAL</option>
+                    <option value="Đại Minh">Đại Minh</option>
+                </select>
                 <select id="nccTripWhFilter" onchange="renderNccTrip()" style="background:var(--bg-secondary);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;">
                     <option value="">Tất cả 4 kho</option>
                     <option value="Hải Dương">Hải Dương</option>
@@ -584,6 +596,30 @@
                 <div class="empty-state"><div class="icon">🔗</div><p>Nhấn "Tải dữ liệu" để bắt đầu...</p></div>
             </div>
         </div>
+
+    <!-- ========== TAB: LASTMILE ========== -->
+    <div class="section" id="tabLastmile" style="display:none;">
+        <div class="section-header">
+            <div class="section-title">🚚 Báo cáo chuyến đi Lastmile</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <input type="date" id="lmDateFrom" onchange="renderLastmile()" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;" title="Từ ngày">
+                <input type="date" id="lmDateTo" onchange="renderLastmile()" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;" title="Đến ngày">
+                <select id="lmHubFilter" onchange="renderLastmile()" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;">
+                    <option value="">Tất cả 4 kho</option>
+                    <option value="Hải Phòng">Hải Phòng</option>
+                    <option value="Hải Dương">Hải Dương</option>
+                    <option value="Hưng Yên">Hưng Yên</option>
+                    <option value="Thái Bình">Thái Bình</option>
+                </select>
+                <button class="btn btn-primary" onclick="exportLastmileExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
+            </div>
+        </div>
+        <div class="section-body">
+            <div id="lastmileContainer">
+                <div class="empty-state"><div class="icon">🚚</div><p>Nhấn tab để tải dữ liệu...</p></div>
+            </div>
+        </div>
+    </div>
     </div>
 
 </div>
@@ -3002,6 +3038,8 @@ async function saveToArchive(sheetName, newRecords) {
 // ====== GHÉP CHUYẾN ĐI NCC ======
 let nccTripData = [];
 let isNccTripLoaded = false;
+let lastmileData = [];
+let isLastmileLoaded = false;
 
 // Hàm lấy danh sách tên tab + GID từ Google Sheet (dùng /htmlview)
 async function getSheetTabNames(sheetId) {
@@ -3334,6 +3372,9 @@ function renderNccTrip() {
     }
     
     const filterWh = document.getElementById('nccTripWhFilter').value;
+    const filterNcc = document.getElementById('nccTripNccFilter') ? document.getElementById('nccTripNccFilter').value : '';
+    const filterDateFrom = document.getElementById('nccTripDateFrom') ? document.getElementById('nccTripDateFrom').value : '';
+    const filterDateTo = document.getElementById('nccTripDateTo') ? document.getElementById('nccTripDateTo').value : '';
     
     // Group by warehouse
     const grouped = {};
@@ -3341,6 +3382,15 @@ function renderNccTrip() {
     
     nccTripData.forEach((row, idx) => {
         if (filterWh && row.warehouse !== filterWh) return;
+        if (filterNcc && row.ncc !== filterNcc) return;
+        if (filterDateFrom || filterDateTo) {
+            const parts = row.dateStr ? row.dateStr.split('/') : [];
+            if (parts.length === 3) {
+                const rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+                if (filterDateFrom && rowDate < filterDateFrom) return;
+                if (filterDateTo && rowDate > filterDateTo) return;
+            }
+        }
         if (!grouped[row.warehouse]) grouped[row.warehouse] = [];
         grouped[row.warehouse].push({ ...row, originalIndex: idx });
         filteredCount++;
@@ -3455,6 +3505,93 @@ function exportNccTripExcel() {
 let _nccUnlocked = false;
 const _NCC_PASS = 'admin123';
 
+
+// ====== LASTMILE REPORT ======
+async function loadLastmileData() {
+    if (isLastmileLoaded) return;
+    const container = document.getElementById('lastmileContainer');
+    container.innerHTML = '<div class="loading-overlay" style="position:relative;height:100px;display:flex;align-items:center;justify-content:center"><div class="spinner"></div><span style="margin-left:10px;color:var(--text-muted)">Đang tải dữ liệu Lastmile...</span></div>';
+    try {
+        const archivedData = await fetchArchivedData('lm_trips');
+        console.log('📦 Archived Lastmile: ' + archivedData.length + ' records');
+        lastmileData = archivedData.filter(function(r) {
+            var partner = String(r.servicePartner || '').toLowerCase();
+            return !partner.includes('ahamove');
+        });
+        lastmileData.forEach(function(r) {
+            ['dateStr','createdTime','startTime','endTime','tripCode','plate','hubName','hubId','driverId','driverName','driverPhone','createdById','createdByName','servicePartner'].forEach(function(f) {
+                if (r[f]) r[f] = String(r[f]);
+            });
+        });
+        lastmileData.sort(function(a, b) {
+            var da = a.dateStr ? a.dateStr.split('/').reverse().join('') : '';
+            var db = b.dateStr ? b.dateStr.split('/').reverse().join('') : '';
+            return db.localeCompare(da);
+        });
+        isLastmileLoaded = true;
+        renderLastmile();
+        showToast('✅', 'Đã tải ' + lastmileData.length + ' chuyến Lastmile!');
+    } catch (err) {
+        console.error('Error in loadLastmileData:', err);
+        container.innerHTML = '<div class="empty-state"><div class="icon">❌</div><p>Lỗi tải dữ liệu: ' + err.message + '</p></div>';
+    }
+}
+
+function renderLastmile() {
+    var container = document.getElementById('lastmileContainer');
+    if (!isLastmileLoaded) return;
+    if (lastmileData.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu.</p></div>';
+        return;
+    }
+    var filterHub = document.getElementById('lmHubFilter') ? document.getElementById('lmHubFilter').value : '';
+    var filterDateFrom = document.getElementById('lmDateFrom') ? document.getElementById('lmDateFrom').value : '';
+    var filterDateTo = document.getElementById('lmDateTo') ? document.getElementById('lmDateTo').value : '';
+    var grouped = {};
+    var filteredCount = 0;
+    lastmileData.forEach(function(row) {
+        if (filterHub && row.hubName !== filterHub) return;
+        if (filterDateFrom || filterDateTo) {
+            var parts = row.dateStr ? row.dateStr.split('/') : [];
+            if (parts.length === 3) {
+                var rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+                if (filterDateFrom && rowDate < filterDateFrom) return;
+                if (filterDateTo && rowDate > filterDateTo) return;
+            }
+        }
+        var hub = row.hubName || 'Không xác định';
+        if (!grouped[hub]) grouped[hub] = [];
+        grouped[hub].push(row);
+        filteredCount++;
+    });
+    if (filteredCount === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho bộ lọc này.</p></div>';
+        return;
+    }
+    var html = '';
+    for (var hub in grouped) {
+        var rows = grouped[hub];
+        html += '<div class="ranking-card"><div class="ranking-card-header"><h3><span style="' + warehouseColor(hub) + '"></span> ' + hub + '</h3><span class="badge badge-info">' + rows.length + ' chuyến</span></div><div class="table-scroll" style="max-height:500px;"><table class="ranking-table"><thead><tr><th>#</th><th>Ngày</th><th>Mã chuyến</th><th>Biển số xe</th><th>Tạo</th><th>Bắt đầu</th><th>Kết thúc</th><th>Người tạo</th><th>Lấy</th><th>Giao</th><th>Trả</th><th>Tài xế</th><th>SĐT</th><th>Đối tác</th></tr></thead><tbody>';
+        rows.forEach(function(r, i) {
+            html += '<tr><td>' + (i+1) + '</td><td>' + escapeHtml(r.dateStr) + '</td><td style="font-size:11px;">' + escapeHtml(r.tripCode) + '</td><td><strong>' + escapeHtml(r.plate) + '</strong></td><td style="font-size:11px;">' + escapeHtml(r.createdTime) + '</td><td style="font-size:11px;">' + escapeHtml(r.startTime) + '</td><td style="font-size:11px;">' + escapeHtml(r.endTime) + '</td><td>' + escapeHtml(r.createdByName) + '</td><td>' + (r.pickCount||0) + '</td><td>' + (r.deliverCount||0) + '</td><td>' + (r.returnCount||0) + '</td><td>' + escapeHtml(r.driverName) + '</td><td>' + escapeHtml(r.driverPhone) + '</td><td>' + escapeHtml(r.servicePartner) + '</td></tr>';
+        });
+        html += '</tbody></table></div></div>';
+    }
+    container.innerHTML = '<div class="ranking-grid" style="grid-template-columns:1fr;">' + html + '</div>';
+}
+
+function exportLastmileExcel() {
+    if (!lastmileData || lastmileData.length === 0) { showToast('❌', 'Chưa có dữ liệu!'); return; }
+    if (typeof XLSX === 'undefined') { showToast('❌', 'Thư viện Excel chưa tải!'); return; }
+    var rows = lastmileData.map(function(r,i) { return [i+1, r.dateStr, r.hubName, r.tripCode, r.plate, r.createdTime, r.startTime, r.endTime, r.createdById, r.createdByName, r.pickCount||0, r.deliverCount||0, r.returnCount||0, r.orderCount||0, r.driverId, r.driverName, r.driverPhone, r.servicePartner]; });
+    rows.unshift(['STT','Ngày','Hub','Mã chuyến đi','Biển số xe','Tạo','Bắt đầu','Kết thúc','Người tạo (Mã)','Người tạo (Tên)','Lấy','Giao','Trả','Tổng ĐH','Tài xế (Mã)','Tài xế (Tên)','SĐT','Đối tác']);
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Lastmile');
+    XLSX.writeFile(wb, 'lastmile_trips_' + new Date().toISOString().slice(0,10) + '.xlsx');
+    showToast('✅', 'Đã xuất Excel!');
+}
+
 function switchTab(tab, el) {
     // Yêu cầu password khi vào tab NCC
     if (tab === 'ncc' && !_nccUnlocked) {
@@ -3476,9 +3613,13 @@ function switchTab(tab, el) {
     document.getElementById('tabFraud').style.display = tab === 'fraud' ? '' : 'none';
     document.getElementById('tabTypo').style.display = tab === 'typo' ? '' : 'none';
     document.getElementById('tabNccTrip').style.display = tab === 'nccTrip' ? '' : 'none';
+    document.getElementById('tabLastmile').style.display = tab === 'lastmile' ? '' : 'none';
     
     if (tab === 'nccTrip' && !isNccTripLoaded) {
         loadNccTripData();
+    }
+    if (tab === 'lastmile' && !isLastmileLoaded) {
+        loadLastmileData();
     }
 }
 

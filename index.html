@@ -3509,87 +3509,132 @@ const _NCC_PASS = 'admin123';
 // ====== LASTMILE REPORT ======
 async function loadLastmileData() {
     if (isLastmileLoaded) return;
-    const container = document.getElementById('lastmileContainer');
-    container.innerHTML = '<div class="loading-overlay" style="position:relative;height:100px;display:flex;align-items:center;justify-content:center"><div class="spinner"></div><span style="margin-left:10px;color:var(--text-muted)">Đang tải dữ liệu Lastmile...</span></div>';
+    var container = document.getElementById('lastmileContainer');
+    console.log('🚀 loadLastmileData: starting...');
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 10px"></div>Đang tải dữ liệu Lastmile...</div>';
     try {
-        const archivedData = await fetchArchivedData('lm_trips');
+        var archivedData = await fetchArchivedData('lm_trips');
         console.log('📦 Archived Lastmile: ' + archivedData.length + ' records');
-        lastmileData = archivedData.filter(function(r) {
+        if (archivedData.length > 0) {
+            console.log('📋 Sample record keys:', Object.keys(archivedData[0]).join(', '));
+            console.log('📋 Sample record:', JSON.stringify(archivedData[0]).slice(0, 300));
+        }
+        lastmileData = [];
+        for (var i = 0; i < archivedData.length; i++) {
+            var r = archivedData[i];
             var partner = String(r.servicePartner || '').toLowerCase();
-            return !partner.includes('ahamove');
-        });
-        lastmileData.forEach(function(r) {
-            ['dateStr','createdTime','startTime','endTime','tripCode','plate','hubName','hubId','driverId','driverName','driverPhone','createdById','createdByName','servicePartner'].forEach(function(f) {
-                if (r[f]) r[f] = String(r[f]);
-            });
-        });
+            if (partner.indexOf('ahamove') !== -1) continue;
+            // String-ify everything
+            r.dateStr = String(r.dateStr || '');
+            r.tripCode = String(r.tripCode || '');
+            r.plate = String(r.plate || '');
+            r.hubName = String(r.hubName || '');
+            r.hubId = String(r.hubId || '');
+            r.createdTime = String(r.createdTime || '');
+            r.startTime = String(r.startTime || '');
+            r.endTime = String(r.endTime || '');
+            r.createdById = String(r.createdById || '');
+            r.createdByName = String(r.createdByName || '');
+            r.driverId = String(r.driverId || '');
+            r.driverName = String(r.driverName || '');
+            r.driverPhone = String(r.driverPhone || '');
+            r.servicePartner = String(r.servicePartner || '');
+            lastmileData.push(r);
+        }
+        console.log('✅ After filter Ahamove: ' + lastmileData.length + ' records');
         lastmileData.sort(function(a, b) {
             var da = a.dateStr ? a.dateStr.split('/').reverse().join('') : '';
             var db = b.dateStr ? b.dateStr.split('/').reverse().join('') : '';
             return db.localeCompare(da);
         });
+        console.log('✅ Sorted. First date: ' + (lastmileData[0] ? lastmileData[0].dateStr : 'N/A'));
         isLastmileLoaded = true;
-        // Set default date filter: last 7 days
-        var today = new Date();
-        var weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-        var lmFrom = document.getElementById('lmDateFrom');
-        var lmTo = document.getElementById('lmDateTo');
-        if (lmFrom && !lmFrom.value) lmFrom.value = weekAgo.toISOString().slice(0,10);
-        if (lmTo && !lmTo.value) lmTo.value = today.toISOString().slice(0,10);
         renderLastmile();
-        showToast('✅', 'Đã tải ' + lastmileData.length + ' chuyến Lastmile!');
+        showToast('✅', 'Đã tải ' + lastmileData.length + ' chuyến!');
     } catch (err) {
-        console.error('Error in loadLastmileData:', err);
-        container.innerHTML = '<div class="empty-state"><div class="icon">❌</div><p>Lỗi tải dữ liệu: ' + err.message + '</p></div>';
+        console.error('❌ loadLastmileData ERROR:', err);
+        container.innerHTML = '<div style="padding:40px;text-align:center;color:#ff6b6b"><h3>❌ Lỗi</h3><p>' + String(err.message || err) + '</p></div>';
     }
 }
-
 function renderLastmile() {
+    console.log('🎨 renderLastmile called, isLoaded=' + isLastmileLoaded + ', data=' + lastmileData.length);
     var container = document.getElementById('lastmileContainer');
-    if (!isLastmileLoaded) return;
-    if (lastmileData.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu.</p></div>';
+    if (!container) { console.error('❌ container not found!'); return; }
+    if (!isLastmileLoaded || lastmileData.length === 0) {
+        container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Không có dữ liệu.</div>';
         return;
     }
     var filterHub = document.getElementById('lmHubFilter') ? document.getElementById('lmHubFilter').value : '';
     var filterDateFrom = document.getElementById('lmDateFrom') ? document.getElementById('lmDateFrom').value : '';
     var filterDateTo = document.getElementById('lmDateTo') ? document.getElementById('lmDateTo').value : '';
-    var grouped = {};
-    var filteredCount = 0;
-    var MAX_ROWS = 2000;
-    lastmileData.forEach(function(row) {
-        if (filteredCount >= MAX_ROWS) return;
-        if (filterHub && String(row.hubName || '').indexOf(filterHub) === -1) return;
+    console.log('🔍 Filters: hub=' + filterHub + ', from=' + filterDateFrom + ', to=' + filterDateTo);
+    
+    var filtered = [];
+    for (var i = 0; i < lastmileData.length && filtered.length < 1000; i++) {
+        var row = lastmileData[i];
+        if (filterHub && row.hubName !== filterHub) continue;
         if (filterDateFrom || filterDateTo) {
-            var parts = row.dateStr ? String(row.dateStr).split('/') : [];
+            var parts = row.dateStr.split('/');
             if (parts.length === 3) {
                 var rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
-                if (filterDateFrom && rowDate < filterDateFrom) return;
-                if (filterDateTo && rowDate > filterDateTo) return;
+                if (filterDateFrom && rowDate < filterDateFrom) continue;
+                if (filterDateTo && rowDate > filterDateTo) continue;
             }
         }
-        var hub = String(row.hubName || 'Không xác định');
-        if (!grouped[hub]) grouped[hub] = [];
-        grouped[hub].push(row);
-        filteredCount++;
-    });
-    if (filteredCount === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho bộ lọc này. Hãy chọn khoảng ngày.</p></div>';
+        filtered.push(row);
+    }
+    console.log('📊 Filtered: ' + filtered.length + ' rows');
+    
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Không có dữ liệu trong khoảng ngày này.</div>';
         return;
     }
-    var html = '<div style="padding:8px 16px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filteredCount + '/' + lastmileData.length + ' chuyến (tối đa ' + MAX_ROWS + '). Dùng bộ lọc ngày để thu hẹp.</div>';
-    for (var hub in grouped) {
-        var rows = grouped[hub];
-        html += '<div class="ranking-card"><div class="ranking-card-header"><h3>' + hub + '</h3><span class="badge badge-info">' + rows.length + ' chuyến</span></div><div class="table-scroll" style="max-height:600px;overflow-y:auto;"><table class="ranking-table"><thead><tr><th>#</th><th>Ngày</th><th>Mã chuyến</th><th>Biển số xe</th><th>Tạo</th><th>Bắt đầu</th><th>Kết thúc</th><th>Người tạo</th><th>Lấy</th><th>Giao</th><th>Trả</th><th>Tài xế</th><th>SĐT</th><th>Đối tác</th></tr></thead><tbody>';
-        for (var i = 0; i < rows.length; i++) {
-            var r = rows[i];
-            html += '<tr><td>' + (i+1) + '</td><td>' + escapeHtml(String(r.dateStr||'')) + '</td><td style="font-size:11px;">' + escapeHtml(String(r.tripCode||'')) + '</td><td><strong>' + escapeHtml(String(r.plate||'')) + '</strong></td><td style="font-size:11px;">' + escapeHtml(String(r.createdTime||'')) + '</td><td style="font-size:11px;">' + escapeHtml(String(r.startTime||'')) + '</td><td style="font-size:11px;">' + escapeHtml(String(r.endTime||'')) + '</td><td>' + escapeHtml(String(r.createdByName||'')) + '</td><td>' + (r.pickCount||0) + '</td><td>' + (r.deliverCount||0) + '</td><td>' + (r.returnCount||0) + '</td><td>' + escapeHtml(String(r.driverName||'')) + '</td><td>' + escapeHtml(String(r.driverPhone||'')) + '</td><td>' + escapeHtml(String(r.servicePartner||'')) + '</td></tr>';
+    
+    // Group by hub
+    var grouped = {};
+    for (var j = 0; j < filtered.length; j++) {
+        var hub = filtered[j].hubName || 'Khác';
+        if (!grouped[hub]) grouped[hub] = [];
+        grouped[hub].push(filtered[j]);
+    }
+    
+    var html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filtered.length + '/' + lastmileData.length + ' chuyến (tối đa 1000). Dùng bộ lọc ngày để thu hẹp.</div>';
+    var hubs = Object.keys(grouped);
+    console.log('🏭 Hubs: ' + hubs.join(', '));
+    
+    for (var k = 0; k < hubs.length; k++) {
+        var hubName = hubs[k];
+        var rows = grouped[hubName];
+        html += '<div class="ranking-card">';
+        html += '<div class="ranking-card-header"><h3>' + hubName + '</h3><span class="badge badge-info">' + rows.length + ' chuyến</span></div>';
+        html += '<div class="table-scroll" style="max-height:600px;overflow-y:auto;">';
+        html += '<table class="ranking-table"><thead><tr>';
+        html += '<th>#</th><th>Ngày</th><th>Mã chuyến</th><th>Biển số</th><th>Bắt đầu</th><th>Kết thúc</th><th>Người tạo</th><th>Lấy</th><th>Giao</th><th>Trả</th><th>Tài xế</th><th>Đối tác</th>';
+        html += '</tr></thead><tbody>';
+        for (var m = 0; m < rows.length; m++) {
+            var r = rows[m];
+            html += '<tr>';
+            html += '<td>' + (m+1) + '</td>';
+            html += '<td>' + (r.dateStr || '') + '</td>';
+            html += '<td style="font-size:11px">' + (r.tripCode || '') + '</td>';
+            html += '<td><strong>' + (r.plate || '') + '</strong></td>';
+            html += '<td style="font-size:11px">' + (r.startTime || '') + '</td>';
+            html += '<td style="font-size:11px">' + (r.endTime || '') + '</td>';
+            html += '<td>' + (r.createdByName || '') + '</td>';
+            html += '<td>' + (r.pickCount || 0) + '</td>';
+            html += '<td>' + (r.deliverCount || 0) + '</td>';
+            html += '<td>' + (r.returnCount || 0) + '</td>';
+            html += '<td>' + (r.driverName || '') + '</td>';
+            html += '<td>' + (r.servicePartner || '') + '</td>';
+            html += '</tr>';
         }
         html += '</tbody></table></div></div>';
     }
-    container.innerHTML = '<div class="ranking-grid" style="grid-template-columns:1fr;">' + html + '</div>';
+    
+    console.log('✅ HTML built, length=' + html.length);
+    container.innerHTML = '<div class="ranking-grid" style="grid-template-columns:1fr">' + html + '</div>';
+    console.log('✅ renderLastmile done!');
 }
-
 function exportLastmileExcel() {
     if (!lastmileData || lastmileData.length === 0) { showToast('❌', 'Chưa có dữ liệu!'); return; }
     if (typeof XLSX === 'undefined') { showToast('❌', 'Thư viện Excel chưa tải!'); return; }

@@ -3183,13 +3183,31 @@ async function loadNccTripData() {
         console.log(`📦 Archived NCC Trips: ${archivedData.length} records`);
         const archivedKeys = new Set(archivedData.map(r => r.id));
         
-        let allNccData = [...archivedData];
+                let allNccData = [...archivedData];
         allNccData.forEach(r => {
             if (r.dateStr && r.dateStr.includes('T') && r.dateStr.endsWith('Z')) {
                 const d = new Date(r.dateStr);
                 r.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
             }
             if (r.plate) r.plate = String(r.plate);
+            
+            // Phục hồi giờ cho NCC Trips
+            ['hourStart', 'hourEnd'].forEach(field => {
+                if (r[field]) {
+                    const strVal = String(r[field]);
+                    if (strVal.includes('T') && strVal.endsWith('Z')) {
+                        const d = new Date(strVal);
+                        r[field] = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                    } else if (typeof r[field] === 'number') {
+                        const totalMins = Math.round(r[field] * 24 * 60);
+                        const h = Math.floor(totalMins / 60);
+                        const m = totalMins % 60;
+                        r[field] = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    } else {
+                        r[field] = strVal;
+                    }
+                }
+            });
         });
         
         let newRecordsToArchive = [];

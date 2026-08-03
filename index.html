@@ -3524,16 +3524,50 @@ async function loadLastmileData() {
         for (var i = 0; i < archivedData.length; i++) {
             var r = archivedData[i];
             var partner = String(r.servicePartner || '').toLowerCase();
+            if (String(r.id || '') === 'test001') continue;
             if (partner.indexOf('ahamove') !== -1) continue;
             // String-ify everything
             r.dateStr = String(r.dateStr || '');
+            // Fix ISO dates from Google Sheets (2026-08-02T17:00:00.000Z → 02/08/2026)
+            if (r.dateStr && r.dateStr.indexOf('T') > -1) {
+                try {
+                    var d = new Date(r.dateStr);
+                    if (!isNaN(d.getTime())) {
+                        r.dateStr = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+                    }
+                } catch(e) {}
+            }
             r.tripCode = String(r.tripCode || '');
             r.plate = String(r.plate || '');
             r.hubName = String(r.hubName || '');
             r.hubId = String(r.hubId || '');
             r.createdTime = String(r.createdTime || '');
+            if (r.createdTime && r.createdTime.indexOf('T') > -1) {
+                try {
+                    var dtcreatedTime = new Date(r.createdTime);
+                    if (!isNaN(dtcreatedTime.getTime())) {
+                        r.createdTime = String(dtcreatedTime.getDate()).padStart(2,'0') + '/' + String(dtcreatedTime.getMonth()+1).padStart(2,'0') + '/' + dtcreatedTime.getFullYear() + ' ' + String(dtcreatedTime.getHours()).padStart(2,'0') + ':' + String(dtcreatedTime.getMinutes()).padStart(2,'0');
+                    }
+                } catch(e) {}
+            }
             r.startTime = String(r.startTime || '');
+            if (r.startTime && r.startTime.indexOf('T') > -1) {
+                try {
+                    var dtstartTime = new Date(r.startTime);
+                    if (!isNaN(dtstartTime.getTime())) {
+                        r.startTime = String(dtstartTime.getDate()).padStart(2,'0') + '/' + String(dtstartTime.getMonth()+1).padStart(2,'0') + '/' + dtstartTime.getFullYear() + ' ' + String(dtstartTime.getHours()).padStart(2,'0') + ':' + String(dtstartTime.getMinutes()).padStart(2,'0');
+                    }
+                } catch(e) {}
+            }
             r.endTime = String(r.endTime || '');
+            if (r.endTime && r.endTime.indexOf('T') > -1) {
+                try {
+                    var dtendTime = new Date(r.endTime);
+                    if (!isNaN(dtendTime.getTime())) {
+                        r.endTime = String(dtendTime.getDate()).padStart(2,'0') + '/' + String(dtendTime.getMonth()+1).padStart(2,'0') + '/' + dtendTime.getFullYear() + ' ' + String(dtendTime.getHours()).padStart(2,'0') + ':' + String(dtendTime.getMinutes()).padStart(2,'0');
+                    }
+                } catch(e) {}
+            }
             r.createdById = String(r.createdById || '');
             r.createdByName = String(r.createdByName || '');
             r.driverId = String(r.driverId || '');

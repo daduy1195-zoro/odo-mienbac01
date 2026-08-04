@@ -3925,9 +3925,8 @@ function showToast(icon, msg) {
 
 // script_recon3way.js
 
-
 window.renderRecon3Way = function() {
-    const container = document.getElementById('recon3WayContainer');
+    var container = document.getElementById('recon3WayContainer');
     if (!container) return;
 
     if (!isNccTripLoaded || !isLastmileLoaded) {
@@ -3935,328 +3934,190 @@ window.renderRecon3Way = function() {
         return;
     }
 
-    const nccFilter = document.getElementById('filterNcc') ? document.getElementById('filterNcc').value : '';
-    const dateFrom = document.getElementById('filterDateFrom') ? document.getElementById('filterDateFrom').value : '';
-    const dateTo = document.getElementById('filterDateTo') ? document.getElementById('filterDateTo').value : '';
-    const whFilter = document.getElementById('filterWarehouse') ? document.getElementById('filterWarehouse').value : '';
-    const month = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
+    var nccFilter = document.getElementById('filterNcc') ? document.getElementById('filterNcc').value : '';
+    var dateFrom = document.getElementById('filterDateFrom') ? document.getElementById('filterDateFrom').value : '';
+    var dateTo = document.getElementById('filterDateTo') ? document.getElementById('filterDateTo').value : '';
+    var whFilter = document.getElementById('filterWarehouse') ? document.getElementById('filterWarehouse').value : '';
+    var month = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
 
-    // 1. Filter LM
-    let lmFiltered = lastmileData.filter(l => {
-        if (whFilter && l.hubName && !l.hubName.includes(whFilter)) return false;
-        
+    var np = function(p) { return p ? String(p).toUpperCase().replace(/[\s\-\.]/g, '') : ''; };
+    var ns = function(s) { return s ? String(s).trim().toLowerCase() : ''; };
+
+    var dateInRange = function(dateStr) {
+        if (!dateStr) return false;
+        var parts = dateStr.split('/');
+        if (parts.length !== 3) return false;
         if (dateFrom || dateTo) {
-            const parts = l.dateStr ? l.dateStr.split('/') : [];
-            if (parts.length === 3) {
-                const rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
-                if (dateFrom && rowDate < dateFrom) return false;
-                if (dateTo && rowDate > dateTo) return false;
-            }
+            var rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+            if (dateFrom && rowDate < dateFrom) return false;
+            if (dateTo && rowDate > dateTo) return false;
         } else if (month) {
-            const parts = l.dateStr ? l.dateStr.split('/') : [];
-            if (parts.length === 3) {
-                 const dObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                 if (!isInCycle(dObj, month)) return false;
-            }
+            var dObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            if (!isInCycle(dObj, month)) return false;
         }
         return true;
-    });
-
-    // 2. Filter EMP (already filtered in `filtered` in renderAll, but let's re-filter safely)
-    let eFiltered = employeeData.filter(e => {
-        if (!e.dateObj) return false;
-        if (month && !dateFrom && !dateTo && !isInCycle(e.dateObj, month)) return false;
-        if (whFilter && e.shortWH !== whFilter) return false;
-        if (nccFilter && norm(e.supplier) !== norm(nccFilter)) return false;
-        if (dateFrom || dateTo) {
-            const parts = e.dateStr ? e.dateStr.split('/') : [];
-            if (parts.length === 3) {
-                const rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
-                if (dateFrom && rowDate < dateFrom) return false;
-                if (dateTo && rowDate > dateTo) return false;
-            }
-        }
-        return true;
-    });
-
-    // 3. Filter SUP
-    let sFiltered = supplierData.filter(s => {
-        if (month && !dateFrom && !dateTo && s.dateObj && !isInCycle(s.dateObj, month)) return false;
-        if (whFilter && s.shortWH !== whFilter) return false;
-        if (nccFilter && norm(s.ncc) !== norm(nccFilter)) return false;
-        if (dateFrom || dateTo) {
-            const parts = s.dateStr ? s.dateStr.split('/') : [];
-            if (parts.length === 3) {
-                const rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
-                if (dateFrom && rowDate < dateFrom) return false;
-                if (dateTo && rowDate > dateTo) return false;
-            }
-        }
-        return true;
-    });
-
-    // Build Map
-    const map = new Map();
-    const datePlateToTripCode = new Map();
-    
-    lmFiltered.forEach(l => {
-        const tc = l.tripCode;
-        if (!tc) return;
-        if (!map.has(tc)) map.set(tc, { tc, lm: [], emp: [], sup: [] });
-        map.get(tc).lm.push(l);
-        
-        if (l.dateStr && l.plate) {
-            const normPlate = l.plate.toUpperCase().replace(/[\s\-.]/g, '');
-            const dpKey = l.dateStr + '_' + normPlate;
-            if (!datePlateToTripCode.has(dpKey)) datePlateToTripCode.set(dpKey, []);
-            datePlateToTripCode.get(dpKey).push(tc);
-        }
-    });
-
-    eFiltered.forEach((e, idx) => {
-        let tc = (e.matchKey || '').trim();
-        
-        if (tc && map.has(tc)) {
-            map.get(tc).emp.push(e);
-            return;
-        }
-        
-        if (e.jsMatchKey && datePlateToTripCode.has(e.jsMatchKey)) {
-            const possibleTcs = datePlateToTripCode.get(e.jsMatchKey);
-            let matchedTc = possibleTcs[0];
-            for (const ptc of possibleTcs) {
-                if (map.get(ptc).emp.length === 0) {
-                    matchedTc = ptc;
-                    break;
-                }
-            }
-            map.get(matchedTc).emp.push(e);
-            return;
-        }
-        
-        const fakeKey = 'ORPHAN_EMP_' + idx;
-        map.set(fakeKey, { tc: fakeKey, lm: [], emp: [e], sup: [] });
-    });
-
-    sFiltered.forEach((s, idx) => {
-        let tc = (s.matchKey || '').trim();
-        
-        if (tc && map.has(tc)) {
-            map.get(tc).sup.push(s);
-            return;
-        }
-        
-        if (s.jsMatchKey && datePlateToTripCode.has(s.jsMatchKey)) {
-            const possibleTcs = datePlateToTripCode.get(s.jsMatchKey);
-            let matchedTc = possibleTcs[0];
-            for (const ptc of possibleTcs) {
-                if (map.get(ptc).sup.length === 0) {
-                    matchedTc = ptc;
-                    break;
-                }
-            }
-            map.get(matchedTc).sup.push(s);
-            return;
-        }
-        
-        const fakeKey = 'ORPHAN_SUP_' + idx;
-        if(!map.has(fakeKey)) map.set(fakeKey, { tc: fakeKey, lm: [], emp: [], sup: [] });
-        map.get(fakeKey).sup.push(s);
-    });
-
-    const groups = {
-        perfect: [],
-        missingEmp: [],
-        missingSup: [],
-        orphanEmp: [],
-        orphanSup: [],
-        lmGhost: []
     };
 
-    for (const [key, data] of map.entries()) {
-        const hasLm = data.lm.length > 0;
-        const hasEmp = data.emp.length > 0;
-        const hasSup = data.sup.length > 0;
-        
-        if (hasLm && hasEmp && hasSup) {
-            groups.perfect.push(data);
-        } else if (hasLm && !hasEmp && hasSup) {
-            groups.missingEmp.push(data);
-        } else if (hasLm && hasEmp && !hasSup) {
-            groups.missingSup.push(data);
-        } else if (!hasLm && hasEmp) {
-            groups.orphanEmp.push(data);
-        } else if (!hasLm && hasSup) {
-            groups.orphanSup.push(data);
-        } else if (hasLm && !hasEmp && !hasSup) {
-            // Apply NCC filter for lmGhost based on servicePartner if selected
-            if (nccFilter) {
-                const sp = data.lm[0].servicePartner;
-                if (sp && norm(sp).includes(norm(nccFilter))) {
-                    groups.lmGhost.push(data);
-                }
-            } else {
-                groups.lmGhost.push(data);
-            }
+    var map = new Map();
+
+    var makeKey = function(dateStr, plate) {
+        return dateStr + '_' + np(plate);
+    };
+
+    var getOrCreate = function(dateStr, plate) {
+        var key = makeKey(dateStr, plate);
+        if (!map.has(key)) {
+            map.set(key, { key: key, date: dateStr, plate: plate, lm: [], emp: [], sup: [], tripCodes: [], hub: '' });
         }
+        return map.get(key);
+    };
+
+    // 1. Lastmile
+    lastmileData.forEach(function(l) {
+        if (!l.dateStr || !l.plate) return;
+        if (whFilter && l.hubName && !l.hubName.includes(whFilter)) return;
+        if (!dateInRange(l.dateStr)) return;
+        var entry = getOrCreate(l.dateStr, l.plate);
+        entry.lm.push(l);
+        if (l.tripCode && entry.tripCodes.indexOf(l.tripCode) === -1) entry.tripCodes.push(l.tripCode);
+        if (!entry.hub && l.hubName) entry.hub = l.hubName;
+    });
+
+    // 2. Employee
+    employeeData.forEach(function(e) {
+        if (!e.dateObj || !e.plate || !e.dateStr) return;
+        if (whFilter && e.shortWH !== whFilter) return;
+        if (nccFilter && ns(e.supplier) !== ns(nccFilter)) return;
+        if (!dateInRange(e.dateStr)) return;
+        var entry = getOrCreate(e.dateStr, e.plate);
+        entry.emp.push(e);
+        if (!entry.hub && e.shortWH) entry.hub = e.shortWH;
+    });
+
+    // 3. Supplier (NCC trip)
+    if (typeof nccTripData !== 'undefined' && Array.isArray(nccTripData)) {
+        nccTripData.forEach(function(s) {
+            if (!s.dateStr || !s.plate) return;
+            if (whFilter && s.shortWH && s.shortWH !== whFilter) return;
+            if (nccFilter && ns(s.ncc) !== ns(nccFilter)) return;
+            if (!dateInRange(s.dateStr)) return;
+            var entry = getOrCreate(s.dateStr, s.plate);
+            entry.sup.push(s);
+            if (!entry.hub && s.shortWH) entry.hub = s.shortWH;
+        });
     }
 
-    // Sort all arrays by date descending
-    const sortFn = (a, b) => {
-        let da = '', db = '';
-        if (a.lm[0]) da = a.lm[0].dateStr;
-        else if (a.emp[0]) da = a.emp[0].dateStr;
-        else if (a.sup[0]) da = a.sup[0].dateStr;
-        
-        if (b.lm[0]) db = b.lm[0].dateStr;
-        else if (b.emp[0]) db = b.emp[0].dateStr;
-        else if (b.sup[0]) db = b.sup[0].dateStr;
-        
-        const revA = da ? da.split('/').reverse().join('') : '';
-        const revB = db ? db.split('/').reverse().join('') : '';
+    var groups = { perfect: [], missingEmp: [], missingSup: [], orphanEmp: [], orphanSup: [], lmGhost: [] };
+
+    map.forEach(function(data) {
+        var hasLm = data.lm.length > 0;
+        var hasEmp = data.emp.length > 0;
+        var hasSup = data.sup.length > 0;
+        if (hasLm && hasEmp && hasSup) groups.perfect.push(data);
+        else if (hasLm && !hasEmp && hasSup) groups.missingEmp.push(data);
+        else if (hasLm && hasEmp && !hasSup) groups.missingSup.push(data);
+        else if (!hasLm && hasEmp && !hasSup) groups.orphanEmp.push(data);
+        else if (!hasLm && !hasEmp && hasSup) groups.orphanSup.push(data);
+        else if (!hasLm && hasEmp && hasSup) groups.orphanEmp.push(data);
+        else if (hasLm && !hasEmp && !hasSup) groups.lmGhost.push(data);
+    });
+
+    var sortFn = function(a, b) {
+        var revA = a.date ? a.date.split('/').reverse().join('') : '';
+        var revB = b.date ? b.date.split('/').reverse().join('') : '';
         return revB.localeCompare(revA);
     };
+    Object.keys(groups).forEach(function(k) { groups[k].sort(sortFn); });
+    window.recon3WayGroups = groups;
 
-    Object.values(groups).forEach(arr => arr.sort(sortFn));
-    window.recon3WayGroups = groups; // Save for export
+    var renderRow = function(d, i, badgeColor, badgeText) {
+        var ncc = (d.emp[0] ? d.emp[0].supplier : '') || (d.sup[0] ? d.sup[0].ncc : '') || '';
+        var wh = d.hub || '';
+        var tripCodesStr = d.tripCodes.length > 0 ? d.tripCodes.join(', ') : '<span class="text-muted">Không có</span>';
+        var lmCount = d.lm.length;
+        var odo = '\u2014';
+        if (d.emp.length > 0) { var tk = 0; d.emp.forEach(function(e) { tk += (e.kmEnd - e.kmStart) || 0; }); odo = tk + ' km'; }
+        var supKm = '\u2014';
+        if (d.sup.length > 0) { var sk = 0; d.sup.forEach(function(s) { sk += (s.km || 0); }); supKm = sk + ' km'; }
 
-    // Render HTML
-    const renderRow = (d, i, badgeColor, badgeText) => {
-        const date = (d.lm[0]?.dateStr) || (d.emp[0]?.dateStr) || (d.sup[0]?.dateStr) || '';
-        const plate = (d.lm[0]?.plate) || (d.emp[0]?.plate) || (d.sup[0]?.plate) || '';
-        const ncc = (d.emp[0]?.supplier) || (d.sup[0]?.ncc) || (d.lm[0]?.servicePartner) || '';
-        const wh = (d.lm[0]?.hubName) || (d.emp[0]?.shortWH) || (d.sup[0]?.shortWH) || '';
-        
-        const odo = d.emp[0] ? `${(d.emp[0].kmEnd - d.emp[0].kmStart) || 0} km` : '<span class="text-muted">Chưa báo</span>';
-        const cost = d.sup[0] ? `${(d.sup[0].km || 0)} km` : '<span class="text-muted">Chưa chốt</span>';
-        const lmKm = d.lm[0] ? 'Có Lastmile' : '<span class="text-danger">Không có LM</span>';
-
-        return `<tr>
-            <td>${i + 1}</td>
-            <td style="white-space:nowrap;">${date}</td>
-            <td><strong style="color:var(--primary);">${d.tc.startsWith('ORPHAN') ? 'Không mã GHN' : d.tc}</strong></td>
-            <td>${plate}</td>
-            <td>${ncc}</td>
-            <td>${wh}</td>
-            <td>${odo}</td>
-            <td>${cost}</td>
-            <td>${lmKm}</td>
-            <td><span class="badge" style="background:${badgeColor};color:#fff;">${badgeText}</span></td>
-        </tr>`;
+        return '<tr>' +
+            '<td>' + (i + 1) + '</td>' +
+            '<td style="white-space:nowrap;">' + d.date + '</td>' +
+            '<td><strong>' + d.plate + '</strong></td>' +
+            '<td>' + ncc + '</td>' +
+            '<td>' + wh + '</td>' +
+            '<td style="font-size:11px;">' + tripCodesStr + '</td>' +
+            '<td style="text-align:center;">' + lmCount + '</td>' +
+            '<td>' + odo + '</td>' +
+            '<td>' + supKm + '</td>' +
+            '<td><span class="badge" style="background:' + badgeColor + ';color:#fff;">' + badgeText + '</span></td>' +
+            '</tr>';
     };
 
-    let html = `
-    <div style="display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;">
-        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(34, 197, 94, 0.1);border:1px solid rgba(34,197,94,0.3);">
-            <div class="stat-title" style="color:#4ade80;">✅ Hoàn hảo (Khớp 3 bên)</div>
-            <div class="stat-value" style="color:#4ade80;">${groups.perfect.length}</div>
-        </div>
-        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(234, 179, 8, 0.1);border:1px solid rgba(234,179,8,0.3);">
-            <div class="stat-title" style="color:#facc15;">⚠️ Thiếu NV báo cáo</div>
-            <div class="stat-value" style="color:#facc15;">${groups.missingEmp.length}</div>
-        </div>
-        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(249, 115, 22, 0.1);border:1px solid rgba(249,115,22,0.3);">
-            <div class="stat-title" style="color:#fb923c;">⚠️ Thiếu NCC đối soát</div>
-            <div class="stat-value" style="color:#fb923c;">${groups.missingSup.length}</div>
-        </div>
-        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239,68,68,0.3);">
-            <div class="stat-title" style="color:#f87171;">🚨 NV Báo Cáo Ảo</div>
-            <div class="stat-value" style="color:#f87171;">${groups.orphanEmp.length}</div>
-        </div>
-        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239,68,68,0.3);">
-            <div class="stat-title" style="color:#f87171;">🚨 NCC Chốt Ảo</div>
-            <div class="stat-value" style="color:#f87171;">${groups.orphanSup.length}</div>
-        </div>
-        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(100, 116, 139, 0.1);border:1px solid rgba(100,116,139,0.3);">
-            <div class="stat-title" style="color:#94a3b8;">ℹ️ GHN Dư (Không ai nhận)</div>
-            <div class="stat-value" style="color:#94a3b8;">${groups.lmGhost.length}</div>
-        </div>
-    </div>`;
+    var html = '<div style="display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;">' +
+        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);"><div class="stat-title" style="color:#4ade80;">\u2705 Kh\u1EDBp 3 b\u00EAn</div><div class="stat-value" style="color:#4ade80;">' + groups.perfect.length + '</div></div>' +
+        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);"><div class="stat-title" style="color:#facc15;">\u26A0\uFE0F Thi\u1EBFu NV</div><div class="stat-value" style="color:#facc15;">' + groups.missingEmp.length + '</div></div>' +
+        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);"><div class="stat-title" style="color:#fb923c;">\u26A0\uFE0F Thi\u1EBFu NCC</div><div class="stat-value" style="color:#fb923c;">' + groups.missingSup.length + '</div></div>' +
+        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);"><div class="stat-title" style="color:#f87171;">\uD83D\uDEA8 NV \u1EA2o</div><div class="stat-value" style="color:#f87171;">' + groups.orphanEmp.length + '</div></div>' +
+        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);"><div class="stat-title" style="color:#f87171;">\uD83D\uDEA8 NCC \u1EA2o</div><div class="stat-value" style="color:#f87171;">' + groups.orphanSup.length + '</div></div>' +
+        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(100,116,139,0.1);border:1px solid rgba(100,116,139,0.3);"><div class="stat-title" style="color:#94a3b8;">\u2139\uFE0F GHN d\u01B0</div><div class="stat-value" style="color:#94a3b8;">' + groups.lmGhost.length + '</div></div>' +
+    '</div>';
 
-    const renderTable = (arr, title, badgeColor, badgeText) => {
+    var renderTable = function(arr, title, badgeColor, badgeText) {
         if (arr.length === 0) return '';
-        let tableHtml = `
-        <div class="ranking-card" style="margin-bottom:20px;">
-            <div class="ranking-card-header">
-                <h3 style="color:${badgeColor}">${title}</h3>
-                <span class="badge" style="background:${badgeColor};color:#fff;">${arr.length} chuyến</span>
-            </div>
-            <div class="table-scroll" style="max-height: 400px;">
-                <table class="ranking-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Ngày</th>
-                            <th>Mã chuyến GHN</th>
-                            <th>Biển số</th>
-                            <th>NCC</th>
-                            <th>Kho</th>
-                            <th>NV Báo (Km)</th>
-                            <th>NCC Chốt (Km)</th>
-                            <th>Lastmile</th>
-                            <th>Trạng thái</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        arr.forEach((d, i) => {
-            tableHtml += renderRow(d, i, badgeColor, badgeText);
-        });
-        tableHtml += `</tbody></table></div></div>`;
-        return tableHtml;
+        var tHtml = '<div class="ranking-card" style="margin-bottom:20px;">' +
+            '<div class="ranking-card-header"><h3 style="color:' + badgeColor + '">' + title + '</h3><span class="badge" style="background:' + badgeColor + ';color:#fff;">' + arr.length + ' xe/ng\u00E0y</span></div>' +
+            '<div class="table-scroll" style="max-height:400px;"><table class="ranking-table"><thead><tr>' +
+            '<th>#</th><th>Ng\u00E0y</th><th>Bi\u1EC3n s\u1ED1</th><th>NCC</th><th>Kho</th><th>M\u00E3 chuy\u1EBFn GHN</th><th>S\u1ED1 chuy\u1EBFn LM</th><th>NV B\u00E1o (Km)</th><th>NCC Ch\u1ED1t (Km)</th><th>Tr\u1EA1ng th\u00E1i</th>' +
+            '</tr></thead><tbody>';
+        arr.forEach(function(d, i) { tHtml += renderRow(d, i, badgeColor, badgeText); });
+        tHtml += '</tbody></table></div></div>';
+        return tHtml;
     };
 
-    html += renderTable(groups.missingEmp, '⚠️ THIẾU NHÂN VIÊN BÁO CÁO (Đã có Lastmile & NCC)', '#eab308', 'Thiếu NV');
-    html += renderTable(groups.missingSup, '⚠️ THIẾU NHÀ CUNG CẤP CHỐT (Đã có Lastmile & NV)', '#f97316', 'Thiếu NCC');
-    html += renderTable(groups.orphanEmp, '🚨 BÁO CÁO ẢO TỪ NHÂN VIÊN (Không có trên Lastmile)', '#ef4444', 'NV Báo Ảo');
-    html += renderTable(groups.orphanSup, '🚨 BÁO CÁO ẢO TỪ NHÀ CUNG CẤP (Không có trên Lastmile)', '#ef4444', 'NCC Chốt Ảo');
-    html += renderTable(groups.lmGhost, 'ℹ️ CHUYẾN DƯ TRÊN HỆ THỐNG (Không NV hay NCC nào nhận)', '#64748b', 'Chưa có chủ');
-    html += renderTable(groups.perfect, '✅ KHỚP HOÀN TOÀN (Cả 3 bên)', '#22c55e', 'Hoàn hảo');
+    html += renderTable(groups.missingEmp, '\u26A0\uFE0F THI\u1EEAU NV B\u00C1O C\u00C1O (C\u00F3 Lastmile + NCC, kh\u00F4ng c\u00F3 NV)', '#eab308', 'Thi\u1EBFu NV');
+    html += renderTable(groups.missingSup, '\u26A0\uFE0F THI\u1EEAU NCC \u0110\u1ED0I SO\u00C1T (C\u00F3 Lastmile + NV, kh\u00F4ng c\u00F3 NCC)', '#f97316', 'Thi\u1EBFu NCC');
+    html += renderTable(groups.orphanEmp, '\uD83D\uDEA8 NV B\u00C1O C\u00C1O \u1EA2O (Kh\u00F4ng c\u00F3 tr\u00EAn Lastmile)', '#ef4444', 'NV \u1EA2o');
+    html += renderTable(groups.orphanSup, '\uD83D\uDEA8 NCC CH\u1ED0T \u1EA2O (Kh\u00F4ng c\u00F3 tr\u00EAn Lastmile)', '#ef4444', 'NCC \u1EA2o');
+    html += renderTable(groups.lmGhost, '\u2139\uFE0F CHUY\u1EAAN D\u01AF TR\u00CAN LASTMILE (Kh\u00F4ng NV/NCC n\u00E0o nh\u1EADn)', '#64748b', 'Ch\u01B0a c\u00F3 ch\u1EE7');
+    html += renderTable(groups.perfect, '\u2705 KH\u1EAEP HO\u00C0N TO\u00C0N 3 B\u00CAN', '#22c55e', 'Ho\u00E0n h\u1EA3o');
 
     container.innerHTML = html;
-}
+};
 
 window.exportRecon3WayExcel = function() {
-    if (!window.recon3WayGroups) {
-        showToast('❌', 'Không có dữ liệu để xuất!');
-        return;
-    }
-    
-    let csv = '\\uFEFFSTT,Ngày,Mã chuyến GHN,Biển số,Nhà cung cấp,Kho,Trạng thái,NV Báo Cáo (Km),NCC Chốt (Km),Ghi chú\\n';
-    let rowNum = 1;
-    
-    const writeRows = (arr, statusText) => {
-        arr.forEach(d => {
-            const date = (d.lm[0]?.dateStr) || (d.emp[0]?.dateStr) || (d.sup[0]?.dateStr) || '';
-            const plate = (d.lm[0]?.plate) || (d.emp[0]?.plate) || (d.sup[0]?.plate) || '';
-            const ncc = (d.emp[0]?.supplier) || (d.sup[0]?.ncc) || (d.lm[0]?.servicePartner) || '';
-            const wh = (d.lm[0]?.hubName) || (d.emp[0]?.shortWH) || (d.sup[0]?.shortWH) || '';
-            const odo = d.emp[0] ? (d.emp[0].kmEnd - d.emp[0].kmStart) || 0 : '0';
-            const cost = d.sup[0] ? (d.sup[0].km || 0) : '0';
-            const tc = d.tc.startsWith('ORPHAN') ? 'Không mã GHN' : d.tc;
-            
-            csv += `${rowNum++},"${date}","${tc}","${plate}","${ncc}","${wh}","${statusText}","${odo}","${cost}",""\\n`;
+    if (!window.recon3WayGroups) { showToast('\u274C', 'Kh\u00F4ng c\u00F3 d\u1EEF li\u1EC7u \u0111\u1EC3 xu\u1EA5t!'); return; }
+    var csvRows = [];
+    csvRows.push('STT,Ng\u00E0y,Bi\u1EC3n s\u1ED1,NCC,Kho,M\u00E3 chuy\u1EBFn GHN,S\u1ED1 chuy\u1EBFn LM,NV B\u00E1o C\u00E1o (Km),NCC Ch\u1ED1t (Km),Tr\u1EA1ng th\u00E1i');
+    var rowNum = 1;
+    var writeRows = function(arr, statusText) {
+        arr.forEach(function(d) {
+            var ncc = (d.emp[0] ? d.emp[0].supplier : '') || (d.sup[0] ? d.sup[0].ncc : '') || '';
+            var wh = d.hub || '';
+            var tripCodes = d.tripCodes.join(' | ');
+            var odo = 0; if (d.emp.length > 0) d.emp.forEach(function(e) { odo += (e.kmEnd - e.kmStart) || 0; });
+            var supKm = 0; if (d.sup.length > 0) d.sup.forEach(function(s) { supKm += (s.km || 0); });
+            csvRows.push(rowNum++ + ',"' + d.date + '","' + d.plate + '","' + ncc + '","' + wh + '","' + tripCodes + '",' + d.lm.length + ',' + odo + ',' + supKm + ',"' + statusText + '"');
         });
     };
-    
-    writeRows(window.recon3WayGroups.missingEmp, 'Thiếu NV báo cáo');
-    writeRows(window.recon3WayGroups.missingSup, 'Thiếu NCC đối soát');
-    writeRows(window.recon3WayGroups.orphanEmp, 'NV báo cáo ảo (Không có Lastmile)');
-    writeRows(window.recon3WayGroups.orphanSup, 'NCC chốt ảo (Không có Lastmile)');
-    writeRows(window.recon3WayGroups.lmGhost, 'Chuyến GHN dư (Không ai nhận)');
-    writeRows(window.recon3WayGroups.perfect, 'Khớp hoàn toàn 3 bên');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Doi_Soat_3_Chieu_${new Date().getTime()}.csv`);
+    writeRows(window.recon3WayGroups.missingEmp, 'Thi\u1EBFu NV b\u00E1o c\u00E1o');
+    writeRows(window.recon3WayGroups.missingSup, 'Thi\u1EBFu NCC \u0111\u1ED1i so\u00E1t');
+    writeRows(window.recon3WayGroups.orphanEmp, 'NV b\u00E1o c\u00E1o \u1EA3o');
+    writeRows(window.recon3WayGroups.orphanSup, 'NCC ch\u1ED1t \u1EA3o');
+    writeRows(window.recon3WayGroups.lmGhost, 'Chuy\u1EBFn GHN d\u01B0');
+    writeRows(window.recon3WayGroups.perfect, 'Kh\u1EDBp ho\u00E0n to\u00E0n 3 b\u00EAn');
+    var BOM = '\uFEFF';
+    var blob = new Blob([BOM + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'Doi_Soat_3_Chieu_' + new Date().getTime() + '.csv';
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('✅', 'Đã xuất file Excel!');
+    showToast('\u2705', '\u0110\u00E3 xu\u1EA5t file Excel!');
 };
+
 
 </script>
 </body>

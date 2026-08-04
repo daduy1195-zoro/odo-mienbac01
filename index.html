@@ -1108,6 +1108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof renderNccTrip === 'function') renderNccTrip();
         if (typeof renderLastmile === 'function') renderLastmile();
     };
+    window.applyFilters = applyFilters; // Expose globally for HTML onchange
     monthSelect.addEventListener('change', applyFilters);
     document.getElementById('filterWarehouse').addEventListener('change', applyFilters);
     document.getElementById('filterEmployee').addEventListener('input', applyFilters);

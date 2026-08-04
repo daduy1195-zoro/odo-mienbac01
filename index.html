@@ -127,22 +127,22 @@
 
         /* Filter Bar */
         .filter-bar {
-            display: flex; gap: 12px; margin-bottom: 24px;
-            flex-wrap: wrap; align-items: center;
+            display: flex; gap: 8px; margin-bottom: 24px;
+            flex-wrap: wrap; align-items: center; justify-content: center;
         }
         .filter-group { display: flex; flex-direction: column; gap: 4px; }
-        .filter-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        input, select, input[type="month"] {
+        .filter-label { font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, select, input[type="month"], input[type="date"] {
             background: var(--bg-card);
             border: 1px solid var(--border);
             color: var(--text-primary);
-            padding: 10px 14px;
+            padding: 8px 10px;
             border-radius: var(--radius-sm);
-            font-size: 13px;
+            font-size: 12px;
             font-family: 'Inter', sans-serif;
             cursor: pointer;
             transition: all 0.2s;
-            min-width: 160px;
+            min-width: 110px;
         }
         select:hover, input:hover { border-color: var(--accent); }
         select:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
@@ -449,67 +449,58 @@
     <div class="filter-bar">
         <div class="filter-group">
             <span class="filter-label">Kỳ đối soát</span>
-            <select id="filterMonth">
-                <!-- Options populated by JS -->
-            </select>
+            <select id="filterMonth"></select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Từ ngày</span>
+            <input type="date" id="filterDateFrom" onchange="applyFilters()">
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Đến ngày</span>
+            <input type="date" id="filterDateTo" onchange="applyFilters()">
         </div>
         <div class="filter-group">
             <span class="filter-label">Kho</span>
             <select id="filterWarehouse">
                 <option value="">Tất cả 4 kho</option>
-                <option value="Hải Dương">Kho Hải Dương</option>
-                <option value="Hải Phòng">Kho Hải Phòng</option>
-                <option value="Hưng Yên">Kho Hưng Yên</option>
-                <option value="Thái Bình">Kho Thái Bình</option>
+                <option value="Hải Dương">Hải Dương</option>
+                <option value="Hải Phòng">Hải Phòng</option>
+                <option value="Hưng Yên">Hưng Yên</option>
+                <option value="Thái Bình">Thái Bình</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">NCC</span>
+            <select id="filterNcc" onchange="applyFilters()">
+                <option value="">Tất cả NCC</option>
+                <option value="Thiên Phú">Thiên Phú</option>
+                <option value="Duy Phát">Duy Phát</option>
+                <option value="Hoàng Minh">Hoàng Minh</option>
+                <option value="Hoa Vinh">Hoa Vinh</option>
+                <option value="Đạo Trường An">Đạo Trường An</option>
+                <option value="TAL">TAL</option>
+                <option value="Đại Minh">Đại Minh</option>
             </select>
         </div>
         <div class="filter-group">
             <span class="filter-label">Nhân viên</span>
             <div style="position: relative; display: inline-flex; align-items: center;">
-                <input type="text" id="filterEmployee" list="listEmployee" placeholder="Tất cả nhân viên" autocomplete="off" class="search-filter" style="width: 250px; padding-right: 28px;" oninput="document.getElementById('clearEmp').style.display = this.value ? 'block' : 'none'">
+                <input type="text" id="filterEmployee" list="listEmployee" placeholder="Tất cả NV" autocomplete="off" class="search-filter" style="width: 140px; padding-right: 28px;" oninput="document.getElementById('clearEmp').style.display = this.value ? 'block' : 'none'">
                 <span id="clearEmp" onclick="document.getElementById('filterEmployee').value=''; document.getElementById('filterEmployee').dispatchEvent(new Event('input'));" style="position: absolute; right: 28px; cursor: pointer; color: #94a3b8; display: none; font-size: 16px; font-weight: bold; line-height: 1; padding: 4px; border-radius: 50%;">✕</span>
                 <datalist id="listEmployee"></datalist>
             </div>
         </div>
         <div class="filter-group">
-            <span class="filter-label">Biển số xe</span>
+            <span class="filter-label">Biển số</span>
             <div style="position: relative; display: inline-flex; align-items: center;">
-                <input type="text" id="filterPlate" list="listPlate" placeholder="Tất cả biển số" autocomplete="off" class="search-filter" style="width: 200px; padding-right: 28px;" oninput="document.getElementById('clearPlate').style.display = this.value ? 'block' : 'none'">
+                <input type="text" id="filterPlate" list="listPlate" placeholder="Tất cả BS" autocomplete="off" class="search-filter" style="width: 120px; padding-right: 28px;" oninput="document.getElementById('clearPlate').style.display = this.value ? 'block' : 'none'">
                 <span id="clearPlate" onclick="document.getElementById('filterPlate').value=''; document.getElementById('filterPlate').dispatchEvent(new Event('input'));" style="position: absolute; right: 28px; cursor: pointer; color: #94a3b8; display: none; font-size: 16px; font-weight: bold; line-height: 1; padding: 4px; border-radius: 50%;">✕</span>
                 <datalist id="listPlate"></datalist>
             </div>
         </div>
-        <div class="filter-group" id="filterGroupNccDate" style="display:none;">
-            <span class="filter-label">Từ ngày</span>
-            
-        </div>
-        <div class="filter-group" id="filterGroupLmDateFrom" style="display:none;">
-            <span class="filter-label">Từ ngày</span>
-            <input type="date" id="lmDateFrom2" onchange="renderLastmile()">
-        </div>
-        <div class="filter-group" id="filterGroupLmDateTo" style="display:none;">
-            <span class="filter-label">Đến ngày</span>
-            <input type="date" id="lmDateTo2" onchange="renderLastmile()">
-        </div>
-        <div class="filter-group" id="filterGroupLmHub" style="display:none;">
-            <span class="filter-label">Kho</span>
-            <select id="lmHubFilter2" onchange="renderLastmile()">
-                <option value="">Tất cả 4 kho</option>
-                <option value="Hải Phòng">Hải Phòng</option>
-                <option value="Hải Dương">Hải Dương</option>
-                <option value="Hưng Yên">Hưng Yên</option>
-                <option value="Thái Bình">Thái Bình</option>
-            </select>
-        </div>
-        <div class="filter-group" style="align-self: flex-end;">
-            <button class="btn btn-primary" onclick="sendTelegramReport(event)">
-                📤 Gửi báo cáo Telegram
-            </button>
-        </div>
-        <div class="filter-group" style="align-self: flex-end;">
-            <button class="btn btn-success" onclick="loadAllData()">
-                🔄 Làm mới dữ liệu
-            </button>
+        <div class="filter-group" style="align-self: flex-end; display: flex; flex-direction: row; gap: 8px;">
+            <button class="btn btn-primary" onclick="sendTelegramReport(event)" style="padding: 8px 12px; font-size: 12px;">📤 Gửi BC</button>
+            <button class="btn btn-success" onclick="loadAllData()" style="padding: 8px 12px; font-size: 12px;">🔄 Làm mới</button>
         </div>
     </div>
 
@@ -1135,6 +1126,8 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFilters();
         renderAll();
         loadNccData();
+        if (typeof renderNccTrip === 'function') renderNccTrip();
+        if (typeof renderLastmile === 'function') renderLastmile();
     };
     monthSelect.addEventListener('change', applyFilters);
     document.getElementById('filterWarehouse').addEventListener('change', applyFilters);
@@ -3410,10 +3403,10 @@ function renderNccTrip() {
         return;
     }
     
-    const filterWh = document.getElementById('nccTripWhFilter').value;
-    const filterNcc = document.getElementById('nccTripNccFilter') ? document.getElementById('nccTripNccFilter').value : '';
-    const filterDateFrom = document.getElementById('nccTripDateFrom') ? document.getElementById('nccTripDateFrom').value : '';
-    const filterDateTo = document.getElementById('nccTripDateTo') ? document.getElementById('nccTripDateTo').value : '';
+    const filterWh = document.getElementById('filterWarehouse').value;
+    const filterNcc = document.getElementById('filterNcc').value;
+    const filterDateFrom = document.getElementById('filterDateFrom').value;
+    const filterDateTo = document.getElementById('filterDateTo').value;
     
     // Group by warehouse
     const grouped = {};
@@ -3631,11 +3624,11 @@ async function loadLastmileData() {
                 if (match) {
                     var fromDate = match[5] + '-' + match[2] + '-' + match[1];
                     var toDate = match[5] + '-' + match[4] + '-' + match[3];
-                    var lmFrom = document.getElementById('lmDateFrom');
-                    var lmTo = document.getElementById('lmDateTo');
-                    if (lmFrom && !lmFrom.value) lmFrom.value = fromDate;
-                    if (lmTo && !lmTo.value) lmTo.value = toDate;
-                    console.log('📅 LM dates:', fromDate, '→', toDate);
+                    var filterFrom = document.getElementById('filterDateFrom');
+                    var filterTo = document.getElementById('filterDateTo');
+                    if (filterFrom && !filterFrom.value) filterFrom.value = fromDate;
+                    if (filterTo && !filterTo.value) filterTo.value = toDate;
+                    console.log('📅 Global dates:', fromDate, '→', toDate);
                 }
             }
         } catch(e) {}
@@ -3654,9 +3647,9 @@ function renderLastmile() {
         container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Không có dữ liệu.</div>';
         return;
     }
-    var filterHub = (document.getElementById('lmHubFilter2') ? document.getElementById('lmHubFilter2').value : '') || (document.getElementById('lmHubFilter') ? document.getElementById('lmHubFilter').value : '');
-    var filterDateFrom = (document.getElementById('lmDateFrom2') ? document.getElementById('lmDateFrom2').value : '') || (document.getElementById('lmDateFrom') ? document.getElementById('lmDateFrom').value : '');
-    var filterDateTo = (document.getElementById('lmDateTo2') ? document.getElementById('lmDateTo2').value : '') || (document.getElementById('lmDateTo') ? document.getElementById('lmDateTo').value : '');
+    var filterHub = document.getElementById('filterWarehouse').value;
+    var filterDateFrom = document.getElementById('filterDateFrom').value;
+    var filterDateTo = document.getElementById('filterDateTo').value;
     console.log('🔍 Filters: hub=' + filterHub + ', from=' + filterDateFrom + ', to=' + filterDateTo);
     
     var filtered = [];
@@ -3752,11 +3745,7 @@ function switchTab(tab, el) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
 
-    // Show/hide tab-specific filters
-    var nccFilters = ['filterGroupNccDate','filterGroupNccDateTo','filterGroupNcc'];
-    var lmFilters = ['filterGroupLmDateFrom','filterGroupLmDateTo','filterGroupLmHub'];
-    nccFilters.forEach(function(id) { var e = document.getElementById(id); if(e) e.style.display = tab === 'nccTrip' ? '' : 'none'; });
-    lmFilters.forEach(function(id) { var e = document.getElementById(id); if(e) e.style.display = tab === 'lastmile' ? '' : 'none'; });
+
 
     document.getElementById('tabDaily').style.display = tab === 'daily' ? '' : 'none';
     document.getElementById('tabRanking').style.display = tab === 'ranking' ? '' : 'none';

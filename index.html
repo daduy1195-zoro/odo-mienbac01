@@ -3922,16 +3922,7 @@ function showToast(icon, msg) {
 }
 
 // script_recon3way.js
-function switchTab(tabId, btn) {
-    // Modify existing switchTab to handle recon3Way. 
-    // Wait, switchTab is already defined. I need to make sure switchTab handles recon3Way properly.
-    // In index.html, switchTab sets document.getElementById('tab' + Capitalize(tabId)).style.display = ...
-    // Oh, switchTab logic:
-    // document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
-    // document.getElementById('tab' + tabId.charAt(0).toUpperCase() + tabId.slice(1)).style.display = 'block';
-    // If I use tabId = 'recon3Way', the ID must be 'tabRecon3Way'. This works natively!
-    // But switchTab also calls loadNccTripData/loadLastmileData.
-}
+
 
 window.renderRecon3Way = function() {
     const container = document.getElementById('recon3WayContainer');

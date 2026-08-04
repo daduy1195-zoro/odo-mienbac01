@@ -3805,6 +3805,7 @@ function switchTab(tab, el) {
     document.getElementById('tabTypo').style.display = tab === 'typo' ? '' : 'none';
     document.getElementById('tabNccTrip').style.display = tab === 'nccTrip' ? '' : 'none';
     document.getElementById('tabLastmile').style.display = tab === 'lastmile' ? '' : 'none';
+    document.getElementById('tabRecon3Way').style.display = tab === 'recon3Way' ? '' : 'none';
     
     if (tab === 'nccTrip' && !isNccTripLoaded) {
         loadNccTripData();

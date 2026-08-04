@@ -4013,8 +4013,8 @@ window.renderRecon3Way = function() {
         map.get(tc).lm.push(l);
         
         if (l.dateStr && l.plate) {
-            const normPlate = l.plate.toUpperCase().replace(/[\\s\\-\\.]/g, '');
-            const dpKey = `${l.dateStr}_${normPlate}`;
+            const normPlate = l.plate.toUpperCase().replace(/[\s\-.]/g, '');
+            const dpKey = l.dateStr + '_' + normPlate;
             if (!datePlateToTripCode.has(dpKey)) datePlateToTripCode.set(dpKey, []);
             datePlateToTripCode.get(dpKey).push(tc);
         }
@@ -4041,7 +4041,7 @@ window.renderRecon3Way = function() {
             return;
         }
         
-        const fakeKey = `ORPHAN_EMP_${idx}`;
+        const fakeKey = 'ORPHAN_EMP_' + idx;
         map.set(fakeKey, { tc: fakeKey, lm: [], emp: [e], sup: [] });
     });
 
@@ -4066,7 +4066,7 @@ window.renderRecon3Way = function() {
             return;
         }
         
-        const fakeKey = `ORPHAN_SUP_${idx}`;
+        const fakeKey = 'ORPHAN_SUP_' + idx;
         if(!map.has(fakeKey)) map.set(fakeKey, { tc: fakeKey, lm: [], emp: [], sup: [] });
         map.get(fakeKey).sup.push(s);
     });

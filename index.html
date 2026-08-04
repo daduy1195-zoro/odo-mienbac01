@@ -4014,7 +4014,7 @@ window.renderRecon3Way = function() {
         
         if (l.dateStr && l.plate) {
             const normPlate = l.plate.toUpperCase().replace(/[\\s\\-\\.]/g, '');
-            const dpKey = \`\${l.dateStr}_\${normPlate}\`;
+            const dpKey = `${l.dateStr}_${normPlate}`;
             if (!datePlateToTripCode.has(dpKey)) datePlateToTripCode.set(dpKey, []);
             datePlateToTripCode.get(dpKey).push(tc);
         }
@@ -4041,7 +4041,7 @@ window.renderRecon3Way = function() {
             return;
         }
         
-        const fakeKey = \`ORPHAN_EMP_\${idx}\`;
+        const fakeKey = `ORPHAN_EMP_${idx}`;
         map.set(fakeKey, { tc: fakeKey, lm: [], emp: [e], sup: [] });
     });
 
@@ -4066,7 +4066,7 @@ window.renderRecon3Way = function() {
             return;
         }
         
-        const fakeKey = \`ORPHAN_SUP_\${idx}\`;
+        const fakeKey = `ORPHAN_SUP_${idx}`;
         if(!map.has(fakeKey)) map.set(fakeKey, { tc: fakeKey, lm: [], emp: [], sup: [] });
         map.get(fakeKey).sup.push(s);
     });
@@ -4134,59 +4134,59 @@ window.renderRecon3Way = function() {
         const ncc = (d.emp[0]?.supplier) || (d.sup[0]?.ncc) || (d.lm[0]?.servicePartner) || '';
         const wh = (d.lm[0]?.hubName) || (d.emp[0]?.shortWH) || (d.sup[0]?.shortWH) || '';
         
-        const odo = d.emp[0] ? \`\${(d.emp[0].kmEnd - d.emp[0].kmStart) || 0} km\` : '<span class="text-muted">Chưa báo</span>';
-        const cost = d.sup[0] ? \`\${(d.sup[0].km || 0)} km\` : '<span class="text-muted">Chưa chốt</span>';
+        const odo = d.emp[0] ? `${(d.emp[0].kmEnd - d.emp[0].kmStart) || 0} km` : '<span class="text-muted">Chưa báo</span>';
+        const cost = d.sup[0] ? `${(d.sup[0].km || 0)} km` : '<span class="text-muted">Chưa chốt</span>';
         const lmKm = d.lm[0] ? 'Có Lastmile' : '<span class="text-danger">Không có LM</span>';
 
-        return \`<tr>
-            <td>\${i + 1}</td>
-            <td style="white-space:nowrap;">\${date}</td>
-            <td><strong style="color:var(--primary);">\${d.tc.startsWith('ORPHAN') ? 'Không mã GHN' : d.tc}</strong></td>
-            <td>\${plate}</td>
-            <td>\${ncc}</td>
-            <td>\${wh}</td>
-            <td>\${odo}</td>
-            <td>\${cost}</td>
-            <td>\${lmKm}</td>
-            <td><span class="badge" style="background:\${badgeColor};color:#fff;">\${badgeText}</span></td>
-        </tr>\`;
+        return `<tr>
+            <td>${i + 1}</td>
+            <td style="white-space:nowrap;">${date}</td>
+            <td><strong style="color:var(--primary);">${d.tc.startsWith('ORPHAN') ? 'Không mã GHN' : d.tc}</strong></td>
+            <td>${plate}</td>
+            <td>${ncc}</td>
+            <td>${wh}</td>
+            <td>${odo}</td>
+            <td>${cost}</td>
+            <td>${lmKm}</td>
+            <td><span class="badge" style="background:${badgeColor};color:#fff;">${badgeText}</span></td>
+        </tr>`;
     };
 
-    let html = \`
+    let html = `
     <div style="display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;">
         <div class="stat-card" style="flex:1;min-width:150px;background:rgba(34, 197, 94, 0.1);border:1px solid rgba(34,197,94,0.3);">
             <div class="stat-title" style="color:#4ade80;">✅ Hoàn hảo (Khớp 3 bên)</div>
-            <div class="stat-value" style="color:#4ade80;">\${groups.perfect.length}</div>
+            <div class="stat-value" style="color:#4ade80;">${groups.perfect.length}</div>
         </div>
         <div class="stat-card" style="flex:1;min-width:150px;background:rgba(234, 179, 8, 0.1);border:1px solid rgba(234,179,8,0.3);">
             <div class="stat-title" style="color:#facc15;">⚠️ Thiếu NV báo cáo</div>
-            <div class="stat-value" style="color:#facc15;">\${groups.missingEmp.length}</div>
+            <div class="stat-value" style="color:#facc15;">${groups.missingEmp.length}</div>
         </div>
         <div class="stat-card" style="flex:1;min-width:150px;background:rgba(249, 115, 22, 0.1);border:1px solid rgba(249,115,22,0.3);">
             <div class="stat-title" style="color:#fb923c;">⚠️ Thiếu NCC đối soát</div>
-            <div class="stat-value" style="color:#fb923c;">\${groups.missingSup.length}</div>
+            <div class="stat-value" style="color:#fb923c;">${groups.missingSup.length}</div>
         </div>
         <div class="stat-card" style="flex:1;min-width:150px;background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239,68,68,0.3);">
             <div class="stat-title" style="color:#f87171;">🚨 NV Báo Cáo Ảo</div>
-            <div class="stat-value" style="color:#f87171;">\${groups.orphanEmp.length}</div>
+            <div class="stat-value" style="color:#f87171;">${groups.orphanEmp.length}</div>
         </div>
         <div class="stat-card" style="flex:1;min-width:150px;background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239,68,68,0.3);">
             <div class="stat-title" style="color:#f87171;">🚨 NCC Chốt Ảo</div>
-            <div class="stat-value" style="color:#f87171;">\${groups.orphanSup.length}</div>
+            <div class="stat-value" style="color:#f87171;">${groups.orphanSup.length}</div>
         </div>
         <div class="stat-card" style="flex:1;min-width:150px;background:rgba(100, 116, 139, 0.1);border:1px solid rgba(100,116,139,0.3);">
             <div class="stat-title" style="color:#94a3b8;">ℹ️ GHN Dư (Không ai nhận)</div>
-            <div class="stat-value" style="color:#94a3b8;">\${groups.lmGhost.length}</div>
+            <div class="stat-value" style="color:#94a3b8;">${groups.lmGhost.length}</div>
         </div>
-    </div>\`;
+    </div>`;
 
     const renderTable = (arr, title, badgeColor, badgeText) => {
         if (arr.length === 0) return '';
-        let tableHtml = \`
+        let tableHtml = `
         <div class="ranking-card" style="margin-bottom:20px;">
             <div class="ranking-card-header">
-                <h3 style="color:\${badgeColor}">\${title}</h3>
-                <span class="badge" style="background:\${badgeColor};color:#fff;">\${arr.length} chuyến</span>
+                <h3 style="color:${badgeColor}">${title}</h3>
+                <span class="badge" style="background:${badgeColor};color:#fff;">${arr.length} chuyến</span>
             </div>
             <div class="table-scroll" style="max-height: 400px;">
                 <table class="ranking-table">
@@ -4205,11 +4205,11 @@ window.renderRecon3Way = function() {
                         </tr>
                     </thead>
                     <tbody>
-        \`;
+        `;
         arr.forEach((d, i) => {
             tableHtml += renderRow(d, i, badgeColor, badgeText);
         });
-        tableHtml += \`</tbody></table></div></div>\`;
+        tableHtml += `</tbody></table></div></div>`;
         return tableHtml;
     };
 
@@ -4242,7 +4242,7 @@ window.exportRecon3WayExcel = function() {
             const cost = d.sup[0] ? (d.sup[0].km || 0) : '0';
             const tc = d.tc.startsWith('ORPHAN') ? 'Không mã GHN' : d.tc;
             
-            csv += \`\${rowNum++},"\${date}","\${tc}","\${plate}","\${ncc}","\${wh}","\${statusText}","\${odo}","\${cost}",""\\n\`;
+            csv += `${rowNum++},"${date}","${tc}","${plate}","${ncc}","${wh}","${statusText}","${odo}","${cost}",""\\n`;
         });
     };
     
@@ -4257,7 +4257,7 @@ window.exportRecon3WayExcel = function() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", \`Doi_Soat_3_Chieu_\${new Date().getTime()}.csv\`);
+    link.setAttribute("download", `Doi_Soat_3_Chieu_${new Date().getTime()}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();

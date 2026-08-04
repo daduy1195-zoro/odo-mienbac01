@@ -1441,6 +1441,43 @@ function fetchSheetByNameJSONP(sheetId, sheetName) {
 }
 
 // ====== HÀM TẢI TOÀN BỘ DỮ LIỆU ======
+function normalizeSupplierName(name) {
+    if (!name) return '';
+    let clean = String(name).replace(/^[\\s:;]+/, '').trim();
+    if (!clean) return '';
+    
+    // Capitalize first letter of every word
+    clean = clean.split(/\s+/).map(word => {
+        if (!word) return '';
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    }).join(' ');
+    
+    // Exact mapping for known suppliers to ensure exact matches
+    const noTones = norm(clean); // norm() converts to lower case
+    const standardNames = {
+        'thien phu': 'Thiên Phú',
+        'duy phat': 'Duy Phát',
+        'hoang minh': 'Hoàng Minh',
+        'hoa vinh': 'Hoa Vinh',
+        'dao truong an': 'Đạo Trường An',
+        'dai minh': 'Đại Minh',
+        'tal': 'TAL',
+        'nak': 'NAK',
+        'gach htc': 'Gạch HTC',
+        'tien phat': 'Tiến Phát'
+    };
+    
+    if (standardNames[noTones]) return standardNames[noTones];
+    if (noTones === 'tal') return 'TAL';
+    if (noTones === 'nak') return 'NAK';
+    
+    // Fix edge case for acronyms
+    if (clean.toUpperCase() === 'TAL') return 'TAL';
+    if (clean.toUpperCase() === 'NAK') return 'NAK';
+    
+    return clean;
+}
+
 async function loadAllData() {
     showLoading(true);
     try {
@@ -1614,7 +1651,7 @@ async function loadAllData() {
             const area = (r[3] || '').trim();
             const dateStr = (r[4] || '').trim();
             const plate = (r[9] || '').trim();
-            const supplier = (r[5] || '').trim();
+            const supplier = normalizeSupplierName(r[5]);
             const kmStart = (r[7] || '').trim();
             const kmEnd = (r[12] || '').trim();
             const hourStart = (r[8] || '').trim();

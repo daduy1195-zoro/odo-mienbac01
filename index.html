@@ -2767,7 +2767,7 @@ function renderTypoWarnings(filtered) {
     }
 
     // Bảng 4: ODO gõ sai (Km âm)
-    const odoErrors = cycleData.filter(e => {
+    const odoErrors = filtered.filter(e => {
         const km = parseInt(e.kmEnd) - parseInt(e.kmStart);
         return !isNaN(km) && km < 0;
     });

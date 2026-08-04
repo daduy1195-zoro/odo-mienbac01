@@ -2013,14 +2013,27 @@ function renderAll() {
     const empFilter = document.getElementById('filterEmployee').value;
     const plateSelect = document.getElementById('filterPlate');
     const plateFilter = plateSelect ? plateSelect.value : '';
+    const nccFilter = document.getElementById('filterNcc') ? document.getElementById('filterNcc').value : '';
+    const dateFrom = document.getElementById('filterDateFrom') ? document.getElementById('filterDateFrom').value : '';
+    const dateTo = document.getElementById('filterDateTo') ? document.getElementById('filterDateTo').value : '';
 
-    // Lọc dữ liệu theo kỳ đối soát (26 tháng này → 25 tháng sau) + kho + NV + Biển số
+    // Lọc dữ liệu theo kỳ đối soát (26 tháng này → 25 tháng sau) + kho + NV + Biển số + NCC + Từ ngày + Đến ngày
     let filtered = employeeData.filter(e => {
         if (!e.dateObj) return false;
         if (month && !isInCycle(e.dateObj, month)) return false;
         if (whFilter && e.shortWH !== whFilter) return false;
         if (empFilter && !norm(e.name + (e.code ? ' ' + e.code : '')).includes(norm(empFilter))) return false;
         if (plateFilter && !norm(e.plate).includes(norm(plateFilter))) return false;
+        if (nccFilter && norm(e.supplier) !== norm(nccFilter)) return false;
+        
+        if (dateFrom || dateTo) {
+            const parts = e.dateStr ? e.dateStr.split('/') : [];
+            if (parts.length === 3) {
+                const rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+                if (dateFrom && rowDate < dateFrom) return false;
+                if (dateTo && rowDate > dateTo) return false;
+            }
+        }
         return true;
     });
 
@@ -2034,13 +2047,13 @@ function renderAll() {
     renderDailyTable(filtered);
 
     // Vẽ xếp hạng
-    renderRanking(month, whFilter);
+    renderRanking(filtered, month, whFilter);
 
     // Vẽ trạng thái xe (TAB ĐÃ BỎ)
     // renderOverview();
 
     // Vẽ cảnh báo gõ sai (chỉ trong kỳ)
-    renderTypoWarnings(month);
+    renderTypoWarnings(filtered);
 
     // Vẽ cảnh báo gian lận (chỉ trong kỳ)
     renderFraudWarnings(filtered);
@@ -2219,15 +2232,8 @@ function renderDailyTable(filtered) {
 }
 
 // ====== RENDER XẾP HẠNG ======
-function renderRanking(month, whFilter) {
+function renderRanking(filtered, month, whFilter) {
     const grid = document.getElementById('rankingGrid');
-
-    let filtered = employeeData.filter(e => {
-        if (!e.dateObj) return false;
-        if (month && !isInCycle(e.dateObj, month)) return false;
-        if (whFilter && e.shortWH !== whFilter) return false;
-        return true;
-    });
 
     // Tính số ngày trong kỳ (26 tháng này → 25 tháng sau, tính đến hôm nay)
     let daysElapsed = 1;
@@ -2571,13 +2577,10 @@ function renderFraudWarnings(filtered) {
 }
 
 // ====== RENDER CẢNH BÁO GÕ SAI ======
-function renderTypoWarnings(month) {
+function renderTypoWarnings(filtered) {
     const container = document.getElementById('typoTableContainer');
     // Chỉ lấy dữ liệu trong kỳ đối soát hiện tại
-    const cycleData = month
-        ? employeeData.filter(e => e.dateObj && isInCycle(e.dateObj, month))
-        : employeeData;
-    const { typos, plateTypos, masterMismatches } = detectTypos(cycleData);
+    const { typos, plateTypos, masterMismatches } = detectTypos(filtered);
 
     const totalIssues = typos.length + plateTypos.length + masterMismatches.length;
     document.getElementById('typoBadge').textContent = totalIssues;

@@ -606,25 +606,6 @@
         <div class="section-header">
             <div class="section-title">🔗 Ghép chuyến đi NCC</div>
             <div style="display:flex;gap:8px;align-items:center;">
-                <input type="date" id="nccTripDateFrom" onchange="renderNccTrip()" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;" title="Từ ngày">
-                <input type="date" id="nccTripDateTo" onchange="renderNccTrip()" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;" title="Đến ngày">
-                <select id="nccTripNccFilter" onchange="renderNccTrip()" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;">
-                    <option value="">Tất cả NCC</option>
-                    <option value="Thiên Phú">Thiên Phú</option>
-                    <option value="Duy Phát">Duy Phát</option>
-                    <option value="Hoàng Minh">Hoàng Minh</option>
-                    <option value="Hoa Vinh">Hoa Vinh</option>
-                    <option value="Đạo Trường An">Đạo Trường An</option>
-                    <option value="TAL">TAL</option>
-                    <option value="Đại Minh">Đại Minh</option>
-                </select>
-                <select id="nccTripWhFilter" onchange="renderNccTrip()" style="background:var(--bg-secondary);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:13px;">
-                    <option value="">Tất cả 4 kho</option>
-                    <option value="Hải Dương">Hải Dương</option>
-                    <option value="Hải Phòng">Hải Phòng</option>
-                    <option value="Hưng Yên">Hưng Yên</option>
-                    <option value="Thái Bình">Thái Bình</option>
-                </select>
                 <button class="btn btn-primary" onclick="exportNccTripExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
             </div>
         </div>
@@ -633,23 +614,21 @@
                 <div class="empty-state"><div class="icon">🔗</div><p>Nhấn "Tải dữ liệu" để bắt đầu...</p></div>
             </div>
         </div>
-
-        </div>
+    </div>
 
     <!-- ========== TAB: LASTMILE ========== -->
     <div class="section" id="tabLastmile" style="display:none;">
         <div class="section-header">
             <div class="section-title">🚚 Báo cáo chuyến đi Lastmile</div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                
                 <button class="btn btn-primary" onclick="exportLastmileExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
             </div>
         </div>
         <div class="section-body">
             <div id="lastmileContainer">
-                <div class="empty-state"><div class="icon">🚚</div><p>Nhấn tab để tải dữ liệu...</p></div>
+                <div class="empty-state"><div class="icon">🚚</div><p>Nhấn "Tải dữ liệu" để bắt đầu...</p></div>
             </div>
-    </div>
+        </div>
     </div>
 
 </div>
@@ -3331,31 +3310,43 @@ async function loadNccTripData() {
                 const vehicleTabs = tabInfos.filter(t => isVehicleTab(t.name));
                 console.log(`🚛 ${sheet.ncc}: ${vehicleTabs.length} vehicle tabs → [${vehicleTabs.map(t=>t.name).join(', ')}]`);
                 
-                // ★ Bước 3: Fetch từng tab xe
-                for (const tab of vehicleTabs) {
-                    try {
-                        const rawData = await fetchSheetByNameJSONP(sheet.id, tab.name);
-                        if (rawData.length === 0) continue;
+                // ★ Bước 3: Fetch các tab xe (Concurrent - batch 5)
+                container.querySelector('span').textContent = `Đang quét ${vehicleTabs.length} tabs xe của ${sheet.ncc}...`;
+                
+                const batchSize = 5;
+                for (let i = 0; i < vehicleTabs.length; i += batchSize) {
+                    const batch = vehicleTabs.slice(i, i + batchSize);
+                    
+                    const fetchPromises = batch.map(tab => {
+                        return fetchSheetByNameJSONP(sheet.id, tab.name)
+                            .then(rawData => ({ tab, rawData, success: true }))
+                            .catch(err => ({ tab, success: false, err }));
+                    });
+                    
+                    const results = await Promise.all(fetchPromises);
+                    
+                    for (const res of results) {
+                        if (!res.success || res.rawData.length === 0) continue;
+                        const { tab, rawData } = res;
                         
-                        const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, tab.name, tab.gid);
-                        if (parsed.length > 0) {
-                            for (const record of parsed) {
-                                // Tạo ID duy nhất để chống trùng lặp
-                                record.id = `${normalizeStr(record.dateStr)}_${normalizeStr(record.plate)}_${normalizeStr(record.ncc)}_${normalizeStr(record.route)}`;
-                                
-                                // Nếu ID chưa có trong archive, thêm vào danh sách data và danh sách cần lưu
-                                if (!archivedKeys.has(record.id)) {
-                                    allNccData.push(record);
-                                    newRecordsToArchive.push(record);
-                                    archivedKeys.add(record.id); // Add to set so we don't duplicate within same fetch
+                        try {
+                            const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, tab.name, tab.gid);
+                            if (parsed.length > 0) {
+                                for (const record of parsed) {
+                                    record.id = `${normalizeStr(record.dateStr)}_${normalizeStr(record.plate)}_${normalizeStr(record.ncc)}_${normalizeStr(record.route)}`;
+                                    if (!archivedKeys.has(record.id)) {
+                                        allNccData.push(record);
+                                        newRecordsToArchive.push(record);
+                                        archivedKeys.add(record.id);
+                                    }
                                 }
+                                totalTabs++;
+                                totalRows += parsed.length;
+                                console.log(`  ✅ Tab "${tab.name}" (gid=${tab.gid}): ${parsed.length} chuyến thuộc 4 tỉnh`);
                             }
-                            totalTabs++;
-                            totalRows += parsed.length;
-                            console.log(`  ✅ Tab "${tab.name}" (gid=${tab.gid}): ${parsed.length} chuyến thuộc 4 tỉnh`);
+                        } catch (e) {
+                            console.warn(`  ⚠️ Tab "${tab.name}": ${e.message}`);
                         }
-                    } catch (e) {
-                        console.warn(`  ⚠️ Tab "${tab.name}": ${e.message}`);
                     }
                 }
             } catch(e) {

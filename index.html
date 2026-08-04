@@ -3430,6 +3430,7 @@ async function loadNccTripData() {
         nccTripData = allNccData;
         isNccTripLoaded = true;
         renderNccTrip();
+        if (isLastmileLoaded && typeof renderRecon3Way === 'function') renderRecon3Way();
         showToast('✅', `Đã tải ${totalRows} chuyến live + ${archivedData.length} chuyến lưu trữ!`);
         console.log(`🏁 Tổng: ${totalRows} chuyến từ ${totalTabs} tabs`);
     } catch (err) {
@@ -3666,6 +3667,7 @@ async function loadLastmileData() {
         });
         console.log('✅ Sorted. First date: ' + (lastmileData[0] ? lastmileData[0].dateStr : 'N/A'));
         isLastmileLoaded = true;
+        if (isNccTripLoaded && typeof renderRecon3Way === 'function') renderRecon3Way();
         // Set default date = kỳ đối soát
         try {
             var dateRangeEl = document.getElementById('dateRange');

@@ -3745,7 +3745,7 @@ function renderLastmile() {
         html += '<div class="ranking-card-header"><h3>' + hubName + '</h3><span class="badge badge-info">' + rows.length + ' chuyến</span></div>';
         html += '<div class="table-scroll" style="max-height:600px;overflow-y:auto;">';
         html += '<table class="ranking-table"><thead><tr>';
-        html += '<th>#</th><th>Ngày</th><th>Mã chuyến</th><th>Biển số</th><th>Bắt đầu</th><th>Kết thúc</th><th>Người tạo</th><th>Lấy</th><th>Giao</th><th>Trả</th><th>Tài xế</th><th>Đối tác</th>';
+        html += '<th>#</th><th>Ngày</th><th>Mã chuyến</th><th>Biển số</th><th>Bắt đầu</th><th>Kết thúc</th><th>Người tạo</th><th>Lấy</th><th>Giao</th><th>Trả</th><th>Tài xế</th>';
         html += '</tr></thead><tbody>';
         for (var m = 0; m < rows.length; m++) {
             var r = rows[m];
@@ -3761,7 +3761,6 @@ function renderLastmile() {
             html += '<td>' + (r.deliverCount || 0) + '</td>';
             html += '<td>' + (r.returnCount || 0) + '</td>';
             html += '<td>' + (r.driverName || '') + '</td>';
-            html += '<td>' + (r.servicePartner || '') + '</td>';
             html += '</tr>';
         }
         html += '</tbody></table></div></div>';

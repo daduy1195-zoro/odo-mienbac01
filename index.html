@@ -515,6 +515,7 @@
             <button class="tab" onclick="switchTab('typo', this)">⚠️ Cảnh báo gõ sai <span class="badge badge-danger" id="typoBadge" style="margin-left:4px;font-size:11px;">0</span></button>
             <button class="tab" onclick="switchTab('nccTrip', this)">🔗 Ghép chuyến đi NCC</button>
             <button class="tab" onclick="switchTab('lastmile', this)">🚚 Chuyến đi Lastmile</button>
+            <button class="tab" onclick="switchTab('recon3Way', this)">⚖️ Khớp chuyến 3 chiều</button>
         </div>
     </div>
 
@@ -627,6 +628,22 @@
         <div class="section-body">
             <div id="lastmileContainer">
                 <div class="empty-state"><div class="icon">🚚</div><p>Nhấn "Tải dữ liệu" để bắt đầu...</p></div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========== TAB: ĐỐI SOÁT 3 CHIỀU ========== -->
+    <div class="section" id="tabRecon3Way" style="display:none;">
+        <div class="section-header">
+            <div class="section-title">⚖️ Khớp chuyến 3 chiều (NV - NCC - Lastmile)</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="exportRecon3WayExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
+            </div>
+        </div>
+        <div class="section-body">
+            <div id="recon3WayContainer">
+                <div class="empty-state"><div class="icon">⚖️</div><p>Nhấn tab để tải dữ liệu...</p></div>
             </div>
         </div>
     </div>
@@ -1107,6 +1124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadNccData();
         if (typeof renderNccTrip === 'function') renderNccTrip();
         if (typeof renderLastmile === 'function') renderLastmile();
+        if (typeof renderRecon3Way === 'function') renderRecon3Way();
     };
     window.applyFilters = applyFilters; // Expose globally for HTML onchange
     monthSelect.addEventListener('change', applyFilters);
@@ -3793,6 +3811,12 @@ function switchTab(tab, el) {
     if (tab === 'lastmile' && !isLastmileLoaded) {
         loadLastmileData();
     }
+    if (tab === 'recon3Way' && (!isNccTripLoaded || !isLastmileLoaded)) {
+        if (!isNccTripLoaded) loadNccTripData();
+        if (!isLastmileLoaded) loadLastmileData();
+    } else if (tab === 'recon3Way') {
+        if (typeof renderRecon3Way === 'function') renderRecon3Way();
+    }
 }
 
 // ====== TỰ ĐỘNG REFRESH MỖI 30 PHÚT ======
@@ -3895,6 +3919,351 @@ function showToast(icon, msg) {
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 4000);
 }
+
+// script_recon3way.js
+function switchTab(tabId, btn) {
+    // Modify existing switchTab to handle recon3Way. 
+    // Wait, switchTab is already defined. I need to make sure switchTab handles recon3Way properly.
+    // In index.html, switchTab sets document.getElementById('tab' + Capitalize(tabId)).style.display = ...
+    // Oh, switchTab logic:
+    // document.querySelectorAll('.section').forEach(el => el.style.display = 'none');
+    // document.getElementById('tab' + tabId.charAt(0).toUpperCase() + tabId.slice(1)).style.display = 'block';
+    // If I use tabId = 'recon3Way', the ID must be 'tabRecon3Way'. This works natively!
+    // But switchTab also calls loadNccTripData/loadLastmileData.
+}
+
+window.renderRecon3Way = function() {
+    const container = document.getElementById('recon3WayContainer');
+    if (!container) return;
+
+    if (!isNccTripLoaded || !isLastmileLoaded) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">⌛</div><p>Vui lòng đợi tải xong dữ liệu "Ghép chuyến NCC" và "Lastmile" để đối soát 3 chiều...</p></div>';
+        return;
+    }
+
+    const nccFilter = document.getElementById('filterNcc') ? document.getElementById('filterNcc').value : '';
+    const dateFrom = document.getElementById('filterDateFrom') ? document.getElementById('filterDateFrom').value : '';
+    const dateTo = document.getElementById('filterDateTo') ? document.getElementById('filterDateTo').value : '';
+    const whFilter = document.getElementById('filterWarehouse') ? document.getElementById('filterWarehouse').value : '';
+    const month = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
+
+    // 1. Filter LM
+    let lmFiltered = lastmileData.filter(l => {
+        if (whFilter && l.hubName && !l.hubName.includes(whFilter)) return false;
+        
+        if (dateFrom || dateTo) {
+            const parts = l.dateStr ? l.dateStr.split('/') : [];
+            if (parts.length === 3) {
+                const rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+                if (dateFrom && rowDate < dateFrom) return false;
+                if (dateTo && rowDate > dateTo) return false;
+            }
+        } else if (month) {
+            const parts = l.dateStr ? l.dateStr.split('/') : [];
+            if (parts.length === 3) {
+                 const dObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                 if (!isInCycle(dObj, month)) return false;
+            }
+        }
+        return true;
+    });
+
+    // 2. Filter EMP (already filtered in `filtered` in renderAll, but let's re-filter safely)
+    let eFiltered = employeeData.filter(e => {
+        if (!e.dateObj) return false;
+        if (month && !dateFrom && !dateTo && !isInCycle(e.dateObj, month)) return false;
+        if (whFilter && e.shortWH !== whFilter) return false;
+        if (nccFilter && norm(e.supplier) !== norm(nccFilter)) return false;
+        if (dateFrom || dateTo) {
+            const parts = e.dateStr ? e.dateStr.split('/') : [];
+            if (parts.length === 3) {
+                const rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+                if (dateFrom && rowDate < dateFrom) return false;
+                if (dateTo && rowDate > dateTo) return false;
+            }
+        }
+        return true;
+    });
+
+    // 3. Filter SUP
+    let sFiltered = supplierData.filter(s => {
+        if (month && !dateFrom && !dateTo && s.dateObj && !isInCycle(s.dateObj, month)) return false;
+        if (whFilter && s.shortWH !== whFilter) return false;
+        if (nccFilter && norm(s.ncc) !== norm(nccFilter)) return false;
+        if (dateFrom || dateTo) {
+            const parts = s.dateStr ? s.dateStr.split('/') : [];
+            if (parts.length === 3) {
+                const rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+                if (dateFrom && rowDate < dateFrom) return false;
+                if (dateTo && rowDate > dateTo) return false;
+            }
+        }
+        return true;
+    });
+
+    // Build Map
+    const map = new Map();
+    const datePlateToTripCode = new Map();
+    
+    lmFiltered.forEach(l => {
+        const tc = l.tripCode;
+        if (!tc) return;
+        if (!map.has(tc)) map.set(tc, { tc, lm: [], emp: [], sup: [] });
+        map.get(tc).lm.push(l);
+        
+        if (l.dateStr && l.plate) {
+            const normPlate = l.plate.toUpperCase().replace(/[\\s\\-\\.]/g, '');
+            const dpKey = \`\${l.dateStr}_\${normPlate}\`;
+            if (!datePlateToTripCode.has(dpKey)) datePlateToTripCode.set(dpKey, []);
+            datePlateToTripCode.get(dpKey).push(tc);
+        }
+    });
+
+    eFiltered.forEach((e, idx) => {
+        let tc = (e.matchKey || '').trim();
+        
+        if (tc && map.has(tc)) {
+            map.get(tc).emp.push(e);
+            return;
+        }
+        
+        if (e.jsMatchKey && datePlateToTripCode.has(e.jsMatchKey)) {
+            const possibleTcs = datePlateToTripCode.get(e.jsMatchKey);
+            let matchedTc = possibleTcs[0];
+            for (const ptc of possibleTcs) {
+                if (map.get(ptc).emp.length === 0) {
+                    matchedTc = ptc;
+                    break;
+                }
+            }
+            map.get(matchedTc).emp.push(e);
+            return;
+        }
+        
+        const fakeKey = \`ORPHAN_EMP_\${idx}\`;
+        map.set(fakeKey, { tc: fakeKey, lm: [], emp: [e], sup: [] });
+    });
+
+    sFiltered.forEach((s, idx) => {
+        let tc = (s.matchKey || '').trim();
+        
+        if (tc && map.has(tc)) {
+            map.get(tc).sup.push(s);
+            return;
+        }
+        
+        if (s.jsMatchKey && datePlateToTripCode.has(s.jsMatchKey)) {
+            const possibleTcs = datePlateToTripCode.get(s.jsMatchKey);
+            let matchedTc = possibleTcs[0];
+            for (const ptc of possibleTcs) {
+                if (map.get(ptc).sup.length === 0) {
+                    matchedTc = ptc;
+                    break;
+                }
+            }
+            map.get(matchedTc).sup.push(s);
+            return;
+        }
+        
+        const fakeKey = \`ORPHAN_SUP_\${idx}\`;
+        if(!map.has(fakeKey)) map.set(fakeKey, { tc: fakeKey, lm: [], emp: [], sup: [] });
+        map.get(fakeKey).sup.push(s);
+    });
+
+    const groups = {
+        perfect: [],
+        missingEmp: [],
+        missingSup: [],
+        orphanEmp: [],
+        orphanSup: [],
+        lmGhost: []
+    };
+
+    for (const [key, data] of map.entries()) {
+        const hasLm = data.lm.length > 0;
+        const hasEmp = data.emp.length > 0;
+        const hasSup = data.sup.length > 0;
+        
+        if (hasLm && hasEmp && hasSup) {
+            groups.perfect.push(data);
+        } else if (hasLm && !hasEmp && hasSup) {
+            groups.missingEmp.push(data);
+        } else if (hasLm && hasEmp && !hasSup) {
+            groups.missingSup.push(data);
+        } else if (!hasLm && hasEmp) {
+            groups.orphanEmp.push(data);
+        } else if (!hasLm && hasSup) {
+            groups.orphanSup.push(data);
+        } else if (hasLm && !hasEmp && !hasSup) {
+            // Apply NCC filter for lmGhost based on servicePartner if selected
+            if (nccFilter) {
+                const sp = data.lm[0].servicePartner;
+                if (sp && norm(sp).includes(norm(nccFilter))) {
+                    groups.lmGhost.push(data);
+                }
+            } else {
+                groups.lmGhost.push(data);
+            }
+        }
+    }
+
+    // Sort all arrays by date descending
+    const sortFn = (a, b) => {
+        let da = '', db = '';
+        if (a.lm[0]) da = a.lm[0].dateStr;
+        else if (a.emp[0]) da = a.emp[0].dateStr;
+        else if (a.sup[0]) da = a.sup[0].dateStr;
+        
+        if (b.lm[0]) db = b.lm[0].dateStr;
+        else if (b.emp[0]) db = b.emp[0].dateStr;
+        else if (b.sup[0]) db = b.sup[0].dateStr;
+        
+        const revA = da ? da.split('/').reverse().join('') : '';
+        const revB = db ? db.split('/').reverse().join('') : '';
+        return revB.localeCompare(revA);
+    };
+
+    Object.values(groups).forEach(arr => arr.sort(sortFn));
+    window.recon3WayGroups = groups; // Save for export
+
+    // Render HTML
+    const renderRow = (d, i, badgeColor, badgeText) => {
+        const date = (d.lm[0]?.dateStr) || (d.emp[0]?.dateStr) || (d.sup[0]?.dateStr) || '';
+        const plate = (d.lm[0]?.plate) || (d.emp[0]?.plate) || (d.sup[0]?.plate) || '';
+        const ncc = (d.emp[0]?.supplier) || (d.sup[0]?.ncc) || (d.lm[0]?.servicePartner) || '';
+        const wh = (d.lm[0]?.hubName) || (d.emp[0]?.shortWH) || (d.sup[0]?.shortWH) || '';
+        
+        const odo = d.emp[0] ? \`\${(d.emp[0].kmEnd - d.emp[0].kmStart) || 0} km\` : '<span class="text-muted">Chưa báo</span>';
+        const cost = d.sup[0] ? \`\${(d.sup[0].km || 0)} km\` : '<span class="text-muted">Chưa chốt</span>';
+        const lmKm = d.lm[0] ? 'Có Lastmile' : '<span class="text-danger">Không có LM</span>';
+
+        return \`<tr>
+            <td>\${i + 1}</td>
+            <td style="white-space:nowrap;">\${date}</td>
+            <td><strong style="color:var(--primary);">\${d.tc.startsWith('ORPHAN') ? 'Không mã GHN' : d.tc}</strong></td>
+            <td>\${plate}</td>
+            <td>\${ncc}</td>
+            <td>\${wh}</td>
+            <td>\${odo}</td>
+            <td>\${cost}</td>
+            <td>\${lmKm}</td>
+            <td><span class="badge" style="background:\${badgeColor};color:#fff;">\${badgeText}</span></td>
+        </tr>\`;
+    };
+
+    let html = \`
+    <div style="display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;">
+        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(34, 197, 94, 0.1);border:1px solid rgba(34,197,94,0.3);">
+            <div class="stat-title" style="color:#4ade80;">✅ Hoàn hảo (Khớp 3 bên)</div>
+            <div class="stat-value" style="color:#4ade80;">\${groups.perfect.length}</div>
+        </div>
+        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(234, 179, 8, 0.1);border:1px solid rgba(234,179,8,0.3);">
+            <div class="stat-title" style="color:#facc15;">⚠️ Thiếu NV báo cáo</div>
+            <div class="stat-value" style="color:#facc15;">\${groups.missingEmp.length}</div>
+        </div>
+        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(249, 115, 22, 0.1);border:1px solid rgba(249,115,22,0.3);">
+            <div class="stat-title" style="color:#fb923c;">⚠️ Thiếu NCC đối soát</div>
+            <div class="stat-value" style="color:#fb923c;">\${groups.missingSup.length}</div>
+        </div>
+        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239,68,68,0.3);">
+            <div class="stat-title" style="color:#f87171;">🚨 NV Báo Cáo Ảo</div>
+            <div class="stat-value" style="color:#f87171;">\${groups.orphanEmp.length}</div>
+        </div>
+        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239,68,68,0.3);">
+            <div class="stat-title" style="color:#f87171;">🚨 NCC Chốt Ảo</div>
+            <div class="stat-value" style="color:#f87171;">\${groups.orphanSup.length}</div>
+        </div>
+        <div class="stat-card" style="flex:1;min-width:150px;background:rgba(100, 116, 139, 0.1);border:1px solid rgba(100,116,139,0.3);">
+            <div class="stat-title" style="color:#94a3b8;">ℹ️ GHN Dư (Không ai nhận)</div>
+            <div class="stat-value" style="color:#94a3b8;">\${groups.lmGhost.length}</div>
+        </div>
+    </div>\`;
+
+    const renderTable = (arr, title, badgeColor, badgeText) => {
+        if (arr.length === 0) return '';
+        let tableHtml = \`
+        <div class="ranking-card" style="margin-bottom:20px;">
+            <div class="ranking-card-header">
+                <h3 style="color:\${badgeColor}">\${title}</h3>
+                <span class="badge" style="background:\${badgeColor};color:#fff;">\${arr.length} chuyến</span>
+            </div>
+            <div class="table-scroll" style="max-height: 400px;">
+                <table class="ranking-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Ngày</th>
+                            <th>Mã chuyến GHN</th>
+                            <th>Biển số</th>
+                            <th>NCC</th>
+                            <th>Kho</th>
+                            <th>NV Báo (Km)</th>
+                            <th>NCC Chốt (Km)</th>
+                            <th>Lastmile</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        \`;
+        arr.forEach((d, i) => {
+            tableHtml += renderRow(d, i, badgeColor, badgeText);
+        });
+        tableHtml += \`</tbody></table></div></div>\`;
+        return tableHtml;
+    };
+
+    html += renderTable(groups.missingEmp, '⚠️ THIẾU NHÂN VIÊN BÁO CÁO (Đã có Lastmile & NCC)', '#eab308', 'Thiếu NV');
+    html += renderTable(groups.missingSup, '⚠️ THIẾU NHÀ CUNG CẤP CHỐT (Đã có Lastmile & NV)', '#f97316', 'Thiếu NCC');
+    html += renderTable(groups.orphanEmp, '🚨 BÁO CÁO ẢO TỪ NHÂN VIÊN (Không có trên Lastmile)', '#ef4444', 'NV Báo Ảo');
+    html += renderTable(groups.orphanSup, '🚨 BÁO CÁO ẢO TỪ NHÀ CUNG CẤP (Không có trên Lastmile)', '#ef4444', 'NCC Chốt Ảo');
+    html += renderTable(groups.lmGhost, 'ℹ️ CHUYẾN DƯ TRÊN HỆ THỐNG (Không NV hay NCC nào nhận)', '#64748b', 'Chưa có chủ');
+    html += renderTable(groups.perfect, '✅ KHỚP HOÀN TOÀN (Cả 3 bên)', '#22c55e', 'Hoàn hảo');
+
+    container.innerHTML = html;
+}
+
+window.exportRecon3WayExcel = function() {
+    if (!window.recon3WayGroups) {
+        showToast('❌', 'Không có dữ liệu để xuất!');
+        return;
+    }
+    
+    let csv = '\\uFEFFSTT,Ngày,Mã chuyến GHN,Biển số,Nhà cung cấp,Kho,Trạng thái,NV Báo Cáo (Km),NCC Chốt (Km),Ghi chú\\n';
+    let rowNum = 1;
+    
+    const writeRows = (arr, statusText) => {
+        arr.forEach(d => {
+            const date = (d.lm[0]?.dateStr) || (d.emp[0]?.dateStr) || (d.sup[0]?.dateStr) || '';
+            const plate = (d.lm[0]?.plate) || (d.emp[0]?.plate) || (d.sup[0]?.plate) || '';
+            const ncc = (d.emp[0]?.supplier) || (d.sup[0]?.ncc) || (d.lm[0]?.servicePartner) || '';
+            const wh = (d.lm[0]?.hubName) || (d.emp[0]?.shortWH) || (d.sup[0]?.shortWH) || '';
+            const odo = d.emp[0] ? (d.emp[0].kmEnd - d.emp[0].kmStart) || 0 : '0';
+            const cost = d.sup[0] ? (d.sup[0].km || 0) : '0';
+            const tc = d.tc.startsWith('ORPHAN') ? 'Không mã GHN' : d.tc;
+            
+            csv += \`\${rowNum++},"\${date}","\${tc}","\${plate}","\${ncc}","\${wh}","\${statusText}","\${odo}","\${cost}",""\\n\`;
+        });
+    };
+    
+    writeRows(window.recon3WayGroups.missingEmp, 'Thiếu NV báo cáo');
+    writeRows(window.recon3WayGroups.missingSup, 'Thiếu NCC đối soát');
+    writeRows(window.recon3WayGroups.orphanEmp, 'NV báo cáo ảo (Không có Lastmile)');
+    writeRows(window.recon3WayGroups.orphanSup, 'NCC chốt ảo (Không có Lastmile)');
+    writeRows(window.recon3WayGroups.lmGhost, 'Chuyến GHN dư (Không ai nhận)');
+    writeRows(window.recon3WayGroups.perfect, 'Khớp hoàn toàn 3 bên');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", \`Doi_Soat_3_Chieu_\${new Date().getTime()}.csv\`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('✅', 'Đã xuất file Excel!');
+};
+
 </script>
 </body>
 </html>

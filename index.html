@@ -3990,20 +3990,20 @@ window.renderRecon3Way = function() {
         if (!entry.hub && e.shortWH) entry.hub = e.shortWH;
     });
 
-    // 3. NCC Trip
+    // 3. NCC Trip (field = warehouse, not shortWH; km from kmStart/kmEnd)
     if (typeof nccTripData !== 'undefined' && Array.isArray(nccTripData)) {
         nccTripData.forEach(function(s) {
             if (!s.dateStr || !s.plate) return;
-            if (whFilter && s.shortWH && s.shortWH !== whFilter) return;
+            if (whFilter && s.warehouse && s.warehouse !== whFilter) return;
             if (nccFilter && ns(s.ncc) !== ns(nccFilter)) return;
             if (!dateInRange(s.dateStr)) return;
             var entry = getOrCreate(s.dateStr, s.plate);
             entry.sup.push(s);
-            if (!entry.hub && s.shortWH) entry.hub = s.shortWH;
+            if (!entry.hub && s.warehouse) entry.hub = s.warehouse;
         });
     }
 
-    // Classify + build single array
+    // Classify
     var allRows = [];
     var counts = { perfect: 0, missingEmp: 0, missingSup: 0, orphanEmp: 0, orphanSup: 0, lmGhost: 0 };
 
@@ -4018,10 +4018,11 @@ window.renderRecon3Way = function() {
         allRows.push(d);
     });
 
-    // Sort: problems first (orphan > missing > ghost > perfect), then by date desc
+    // Sort: problems first, then date desc
     var statusOrder = { orphanEmp: 0, orphanSup: 1, missingEmp: 2, missingSup: 3, lmGhost: 4, perfect: 5 };
     allRows.sort(function(a, b) {
-        var oa = statusOrder[a.status] || 0, ob = statusOrder[b.status] || 0;
+        var oa = statusOrder[a.status] !== undefined ? statusOrder[a.status] : 9;
+        var ob = statusOrder[b.status] !== undefined ? statusOrder[b.status] : 9;
         if (oa !== ob) return oa - ob;
         var ra = a.date ? a.date.split('/').reverse().join('') : '';
         var rb = b.date ? b.date.split('/').reverse().join('') : '';
@@ -4030,6 +4031,18 @@ window.renderRecon3Way = function() {
 
     window.recon3WayData = allRows;
     var total = allRows.length;
+
+    // Helper: calc NCC km from kmStart/kmEnd
+    var calcSupKm = function(supArr) {
+        var total = 0;
+        supArr.forEach(function(s) {
+            var ks = parseFloat(String(s.kmStart || '0').replace(/[^\d.]/g, '')) || 0;
+            var ke = parseFloat(String(s.kmEnd || '0').replace(/[^\d.]/g, '')) || 0;
+            var diff = ke - ks;
+            if (diff > 0) total += diff;
+        });
+        return total;
+    };
 
     // ===== RENDER =====
     var html = '';
@@ -4058,17 +4071,29 @@ window.renderRecon3Way = function() {
     html += '<div class="table-scroll" style="max-height:600px;overflow-y:auto;">';
     html += '<table class="ranking-table"><thead><tr>';
     html += '<th>#</th><th>Ng\u00E0y</th><th>Bi\u1EC3n s\u1ED1</th><th>NCC</th><th>Kho</th>';
-    html += '<th>S\u1ED1 chuy\u1EBFn LM</th><th>NV B\u00E1o (Km)</th><th>NCC Ch\u1ED1t (Km)</th><th>Tr\u1EA1ng th\u00E1i</th>';
+    html += '<th>M\u00E3 chuy\u1EBFn GHN</th><th>S\u1ED1 chuy\u1EBFn LM</th><th>NV B\u00E1o (Km)</th><th>NCC Ch\u1ED1t (Km)</th><th>Tr\u1EA1ng th\u00E1i</th>';
     html += '</tr></thead><tbody>';
 
     allRows.forEach(function(d, i) {
         var ncc = (d.emp[0] ? d.emp[0].supplier : '') || (d.sup[0] ? d.sup[0].ncc : '') || '';
         var wh = d.hub || '';
         var lmCount = d.lm.length;
+
+        // Trip codes
+        var tripStr = d.tripCodes.length > 0
+            ? '<span style="font-size:10px;word-break:break-all;">' + d.tripCodes.join(', ') + '</span>'
+            : '<span class="text-muted">\u2014</span>';
+
+        // NV km
         var odo = '\u2014';
         if (d.emp.length > 0) { var tk = 0; d.emp.forEach(function(e) { tk += (e.kmEnd - e.kmStart) || 0; }); odo = tk + ' km'; }
+
+        // NCC km (from kmStart/kmEnd fields)
         var supKm = '\u2014';
-        if (d.sup.length > 0) { var sk = 0; d.sup.forEach(function(s) { sk += (s.km || 0); }); supKm = sk + ' km'; }
+        if (d.sup.length > 0) {
+            var sk = calcSupKm(d.sup);
+            supKm = Math.round(sk) + ' km';
+        }
 
         var rowBg = '';
         if (d.status === 'orphanEmp' || d.status === 'orphanSup') rowBg = 'background:rgba(239,68,68,0.08);';
@@ -4080,6 +4105,7 @@ window.renderRecon3Way = function() {
         html += '<td><strong>' + d.plate + '</strong></td>';
         html += '<td>' + ncc + '</td>';
         html += '<td>' + wh + '</td>';
+        html += '<td>' + tripStr + '</td>';
         html += '<td style="text-align:center;">' + lmCount + '</td>';
         html += '<td>' + odo + '</td>';
         html += '<td>' + supKm + '</td>';
@@ -4093,14 +4119,27 @@ window.renderRecon3Way = function() {
 
 window.exportRecon3WayExcel = function() {
     if (!window.recon3WayData || window.recon3WayData.length === 0) { showToast('\u274C', 'Kh\u00F4ng c\u00F3 d\u1EEF li\u1EC7u!'); return; }
-    var csvRows = ['STT,Ng\u00E0y,Bi\u1EC3n s\u1ED1,NCC,Kho,S\u1ED1 chuy\u1EBFn LM,NV B\u00E1o (Km),NCC Ch\u1ED1t (Km),Tr\u1EA1ng th\u00E1i'];
+
+    var calcSupKm = function(supArr) {
+        var total = 0;
+        supArr.forEach(function(s) {
+            var ks = parseFloat(String(s.kmStart || '0').replace(/[^\d.]/g, '')) || 0;
+            var ke = parseFloat(String(s.kmEnd || '0').replace(/[^\d.]/g, '')) || 0;
+            var diff = ke - ks;
+            if (diff > 0) total += diff;
+        });
+        return total;
+    };
+
+    var csvRows = ['STT,Ng\u00E0y,Bi\u1EC3n s\u1ED1,NCC,Kho,M\u00E3 chuy\u1EBFn GHN,S\u1ED1 chuy\u1EBFn LM,NV B\u00E1o (Km),NCC Ch\u1ED1t (Km),Tr\u1EA1ng th\u00E1i'];
     var rowNum = 1;
     window.recon3WayData.forEach(function(d) {
         var ncc = (d.emp[0] ? d.emp[0].supplier : '') || (d.sup[0] ? d.sup[0].ncc : '') || '';
         var wh = d.hub || '';
+        var tripCodes = d.tripCodes.join(' | ');
         var odo = 0; if (d.emp.length > 0) d.emp.forEach(function(e) { odo += (e.kmEnd - e.kmStart) || 0; });
-        var supKm = 0; if (d.sup.length > 0) d.sup.forEach(function(s) { supKm += (s.km || 0); });
-        csvRows.push(rowNum++ + ',"' + d.date + '","' + d.plate + '","' + ncc + '","' + wh + '",' + d.lm.length + ',' + odo + ',' + supKm + ',"' + d.statusText + '"');
+        var supKm = d.sup.length > 0 ? Math.round(calcSupKm(d.sup)) : 0;
+        csvRows.push(rowNum++ + ',"' + d.date + '","' + d.plate + '","' + ncc + '","' + wh + '","' + tripCodes + '",' + d.lm.length + ',' + odo + ',' + supKm + ',"' + d.statusText + '"');
     });
     var BOM = '\uFEFF';
     var blob = new Blob([BOM + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -4113,6 +4152,7 @@ window.exportRecon3WayExcel = function() {
     document.body.removeChild(link);
     showToast('\u2705', '\u0110\u00E3 xu\u1EA5t file Excel!');
 };
+
 
 
 

@@ -3930,7 +3930,7 @@ window.renderRecon3Way = function() {
     if (!container) return;
 
     if (!isNccTripLoaded || !isLastmileLoaded) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">⌛</div><p>Vui lòng đợi tải xong dữ liệu "Ghép chuyến NCC" và "Lastmile" để đối soát 3 chiều...</p></div>';
+        container.innerHTML = '<div class="empty-state"><div class="icon">\u231B</div><p>Vui l\u00F2ng \u0111\u1EE3i t\u1EA3i xong d\u1EEF li\u1EC7u "Gh\u00E9p chuy\u1EBFn NCC" v\u00E0 "Lastmile" \u0111\u1EC3 \u0111\u1ED1i so\u00E1t 3 chi\u1EC1u...</p></div>';
         return;
     }
 
@@ -3959,11 +3959,7 @@ window.renderRecon3Way = function() {
     };
 
     var map = new Map();
-
-    var makeKey = function(dateStr, plate) {
-        return dateStr + '_' + np(plate);
-    };
-
+    var makeKey = function(dateStr, plate) { return dateStr + '_' + np(plate); };
     var getOrCreate = function(dateStr, plate) {
         var key = makeKey(dateStr, plate);
         if (!map.has(key)) {
@@ -3972,7 +3968,7 @@ window.renderRecon3Way = function() {
         return map.get(key);
     };
 
-    // 1. Lastmile
+    // 1. Lastmile (source of truth)
     lastmileData.forEach(function(l) {
         if (!l.dateStr || !l.plate) return;
         if (whFilter && l.hubName && !l.hubName.includes(whFilter)) return;
@@ -3994,7 +3990,7 @@ window.renderRecon3Way = function() {
         if (!entry.hub && e.shortWH) entry.hub = e.shortWH;
     });
 
-    // 3. Supplier (NCC trip)
+    // 3. NCC Trip
     if (typeof nccTripData !== 'undefined' && Array.isArray(nccTripData)) {
         nccTripData.forEach(function(s) {
             if (!s.dateStr || !s.plate) return;
@@ -4007,105 +4003,105 @@ window.renderRecon3Way = function() {
         });
     }
 
-    var groups = { perfect: [], missingEmp: [], missingSup: [], orphanEmp: [], orphanSup: [], lmGhost: [] };
+    // Classify + build single array
+    var allRows = [];
+    var counts = { perfect: 0, missingEmp: 0, missingSup: 0, orphanEmp: 0, orphanSup: 0, lmGhost: 0 };
 
-    map.forEach(function(data) {
-        var hasLm = data.lm.length > 0;
-        var hasEmp = data.emp.length > 0;
-        var hasSup = data.sup.length > 0;
-        if (hasLm && hasEmp && hasSup) groups.perfect.push(data);
-        else if (hasLm && !hasEmp && hasSup) groups.missingEmp.push(data);
-        else if (hasLm && hasEmp && !hasSup) groups.missingSup.push(data);
-        else if (!hasLm && hasEmp && !hasSup) groups.orphanEmp.push(data);
-        else if (!hasLm && !hasEmp && hasSup) groups.orphanSup.push(data);
-        else if (!hasLm && hasEmp && hasSup) groups.orphanEmp.push(data);
-        else if (hasLm && !hasEmp && !hasSup) groups.lmGhost.push(data);
+    map.forEach(function(d) {
+        var hasLm = d.lm.length > 0, hasEmp = d.emp.length > 0, hasSup = d.sup.length > 0;
+        if (hasLm && hasEmp && hasSup) { d.status = 'perfect'; d.statusText = 'Kh\u1EDBp 3 b\u00EAn'; d.statusColor = '#22c55e'; counts.perfect++; }
+        else if (hasLm && !hasEmp && hasSup) { d.status = 'missingEmp'; d.statusText = 'Thi\u1EBFu NV'; d.statusColor = '#eab308'; counts.missingEmp++; }
+        else if (hasLm && hasEmp && !hasSup) { d.status = 'missingSup'; d.statusText = 'Thi\u1EBFu NCC'; d.statusColor = '#f97316'; counts.missingSup++; }
+        else if (!hasLm && hasEmp) { d.status = 'orphanEmp'; d.statusText = 'NV \u1EA2o'; d.statusColor = '#ef4444'; counts.orphanEmp++; }
+        else if (!hasLm && hasSup) { d.status = 'orphanSup'; d.statusText = 'NCC \u1EA2o'; d.statusColor = '#ef4444'; counts.orphanSup++; }
+        else if (hasLm && !hasEmp && !hasSup) { d.status = 'lmGhost'; d.statusText = 'GHN d\u01B0'; d.statusColor = '#64748b'; counts.lmGhost++; }
+        allRows.push(d);
     });
 
-    var sortFn = function(a, b) {
-        var revA = a.date ? a.date.split('/').reverse().join('') : '';
-        var revB = b.date ? b.date.split('/').reverse().join('') : '';
-        return revB.localeCompare(revA);
-    };
-    Object.keys(groups).forEach(function(k) { groups[k].sort(sortFn); });
-    window.recon3WayGroups = groups;
+    // Sort: problems first (orphan > missing > ghost > perfect), then by date desc
+    var statusOrder = { orphanEmp: 0, orphanSup: 1, missingEmp: 2, missingSup: 3, lmGhost: 4, perfect: 5 };
+    allRows.sort(function(a, b) {
+        var oa = statusOrder[a.status] || 0, ob = statusOrder[b.status] || 0;
+        if (oa !== ob) return oa - ob;
+        var ra = a.date ? a.date.split('/').reverse().join('') : '';
+        var rb = b.date ? b.date.split('/').reverse().join('') : '';
+        return rb.localeCompare(ra);
+    });
 
-    var renderRow = function(d, i, badgeColor, badgeText) {
+    window.recon3WayData = allRows;
+    var total = allRows.length;
+
+    // ===== RENDER =====
+    var html = '';
+
+    // Summary cards
+    html += '<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">';
+    var cards = [
+        { label: '\u2705 Kh\u1EDBp 3 b\u00EAn', count: counts.perfect, color: '#22c55e' },
+        { label: '\u26A0\uFE0F Thi\u1EBFu NV', count: counts.missingEmp, color: '#eab308' },
+        { label: '\u26A0\uFE0F Thi\u1EBFu NCC', count: counts.missingSup, color: '#f97316' },
+        { label: '\uD83D\uDEA8 NV \u1EA2o', count: counts.orphanEmp, color: '#ef4444' },
+        { label: '\uD83D\uDEA8 NCC \u1EA2o', count: counts.orphanSup, color: '#ef4444' },
+        { label: '\u2139\uFE0F GHN d\u01B0', count: counts.lmGhost, color: '#64748b' }
+    ];
+    cards.forEach(function(c) {
+        html += '<div style="flex:1;min-width:120px;padding:14px 16px;background:rgba(0,0,0,0.2);border-left:3px solid ' + c.color + ';border-radius:8px;">';
+        html += '<div style="font-size:12px;color:' + c.color + ';font-weight:600;">' + c.label + '</div>';
+        html += '<div style="font-size:28px;font-weight:800;color:' + c.color + ';">' + c.count + '</div>';
+        html += '</div>';
+    });
+    html += '</div>';
+
+    html += '<div style="padding:8px 0;color:var(--text-muted);font-size:13px;">T\u1ED5ng: <strong>' + total + '</strong> b\u1EA3n ghi (Ng\u00E0y + Xe). S\u1EAFp x\u1EBFp: V\u1EA5n \u0111\u1EC1 nghi\u00EAm tr\u1ECDng l\u00EAn tr\u01B0\u1EDBc.</div>';
+
+    // Single table
+    html += '<div class="table-scroll" style="max-height:600px;overflow-y:auto;">';
+    html += '<table class="ranking-table"><thead><tr>';
+    html += '<th>#</th><th>Ng\u00E0y</th><th>Bi\u1EC3n s\u1ED1</th><th>NCC</th><th>Kho</th>';
+    html += '<th>S\u1ED1 chuy\u1EBFn LM</th><th>NV B\u00E1o (Km)</th><th>NCC Ch\u1ED1t (Km)</th><th>Tr\u1EA1ng th\u00E1i</th>';
+    html += '</tr></thead><tbody>';
+
+    allRows.forEach(function(d, i) {
         var ncc = (d.emp[0] ? d.emp[0].supplier : '') || (d.sup[0] ? d.sup[0].ncc : '') || '';
         var wh = d.hub || '';
-        var tripCodesStr = d.tripCodes.length > 0 ? d.tripCodes.join(', ') : '<span class="text-muted">Không có</span>';
         var lmCount = d.lm.length;
         var odo = '\u2014';
         if (d.emp.length > 0) { var tk = 0; d.emp.forEach(function(e) { tk += (e.kmEnd - e.kmStart) || 0; }); odo = tk + ' km'; }
         var supKm = '\u2014';
         if (d.sup.length > 0) { var sk = 0; d.sup.forEach(function(s) { sk += (s.km || 0); }); supKm = sk + ' km'; }
 
-        return '<tr>' +
-            '<td>' + (i + 1) + '</td>' +
-            '<td style="white-space:nowrap;">' + d.date + '</td>' +
-            '<td><strong>' + d.plate + '</strong></td>' +
-            '<td>' + ncc + '</td>' +
-            '<td>' + wh + '</td>' +
-            '<td style="font-size:11px;">' + tripCodesStr + '</td>' +
-            '<td style="text-align:center;">' + lmCount + '</td>' +
-            '<td>' + odo + '</td>' +
-            '<td>' + supKm + '</td>' +
-            '<td><span class="badge" style="background:' + badgeColor + ';color:#fff;">' + badgeText + '</span></td>' +
-            '</tr>';
-    };
+        var rowBg = '';
+        if (d.status === 'orphanEmp' || d.status === 'orphanSup') rowBg = 'background:rgba(239,68,68,0.08);';
+        else if (d.status === 'missingEmp' || d.status === 'missingSup') rowBg = 'background:rgba(234,179,8,0.06);';
 
-    var html = '<div style="display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;">' +
-        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);"><div class="stat-title" style="color:#4ade80;">\u2705 Kh\u1EDBp 3 b\u00EAn</div><div class="stat-value" style="color:#4ade80;">' + groups.perfect.length + '</div></div>' +
-        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);"><div class="stat-title" style="color:#facc15;">\u26A0\uFE0F Thi\u1EBFu NV</div><div class="stat-value" style="color:#facc15;">' + groups.missingEmp.length + '</div></div>' +
-        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);"><div class="stat-title" style="color:#fb923c;">\u26A0\uFE0F Thi\u1EBFu NCC</div><div class="stat-value" style="color:#fb923c;">' + groups.missingSup.length + '</div></div>' +
-        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);"><div class="stat-title" style="color:#f87171;">\uD83D\uDEA8 NV \u1EA2o</div><div class="stat-value" style="color:#f87171;">' + groups.orphanEmp.length + '</div></div>' +
-        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);"><div class="stat-title" style="color:#f87171;">\uD83D\uDEA8 NCC \u1EA2o</div><div class="stat-value" style="color:#f87171;">' + groups.orphanSup.length + '</div></div>' +
-        '<div class="stat-card" style="flex:1;min-width:140px;background:rgba(100,116,139,0.1);border:1px solid rgba(100,116,139,0.3);"><div class="stat-title" style="color:#94a3b8;">\u2139\uFE0F GHN d\u01B0</div><div class="stat-value" style="color:#94a3b8;">' + groups.lmGhost.length + '</div></div>' +
-    '</div>';
+        html += '<tr style="' + rowBg + '">';
+        html += '<td>' + (i + 1) + '</td>';
+        html += '<td style="white-space:nowrap;">' + d.date + '</td>';
+        html += '<td><strong>' + d.plate + '</strong></td>';
+        html += '<td>' + ncc + '</td>';
+        html += '<td>' + wh + '</td>';
+        html += '<td style="text-align:center;">' + lmCount + '</td>';
+        html += '<td>' + odo + '</td>';
+        html += '<td>' + supKm + '</td>';
+        html += '<td><span class="badge" style="background:' + d.statusColor + ';color:#fff;font-size:11px;">' + d.statusText + '</span></td>';
+        html += '</tr>';
+    });
 
-    var renderTable = function(arr, title, badgeColor, badgeText) {
-        if (arr.length === 0) return '';
-        var tHtml = '<div class="ranking-card" style="margin-bottom:20px;">' +
-            '<div class="ranking-card-header"><h3 style="color:' + badgeColor + '">' + title + '</h3><span class="badge" style="background:' + badgeColor + ';color:#fff;">' + arr.length + ' xe/ng\u00E0y</span></div>' +
-            '<div class="table-scroll" style="max-height:400px;"><table class="ranking-table"><thead><tr>' +
-            '<th>#</th><th>Ng\u00E0y</th><th>Bi\u1EC3n s\u1ED1</th><th>NCC</th><th>Kho</th><th>M\u00E3 chuy\u1EBFn GHN</th><th>S\u1ED1 chuy\u1EBFn LM</th><th>NV B\u00E1o (Km)</th><th>NCC Ch\u1ED1t (Km)</th><th>Tr\u1EA1ng th\u00E1i</th>' +
-            '</tr></thead><tbody>';
-        arr.forEach(function(d, i) { tHtml += renderRow(d, i, badgeColor, badgeText); });
-        tHtml += '</tbody></table></div></div>';
-        return tHtml;
-    };
-
-    html += renderTable(groups.missingEmp, '\u26A0\uFE0F THI\u1EEAU NV B\u00C1O C\u00C1O (C\u00F3 Lastmile + NCC, kh\u00F4ng c\u00F3 NV)', '#eab308', 'Thi\u1EBFu NV');
-    html += renderTable(groups.missingSup, '\u26A0\uFE0F THI\u1EEAU NCC \u0110\u1ED0I SO\u00C1T (C\u00F3 Lastmile + NV, kh\u00F4ng c\u00F3 NCC)', '#f97316', 'Thi\u1EBFu NCC');
-    html += renderTable(groups.orphanEmp, '\uD83D\uDEA8 NV B\u00C1O C\u00C1O \u1EA2O (Kh\u00F4ng c\u00F3 tr\u00EAn Lastmile)', '#ef4444', 'NV \u1EA2o');
-    html += renderTable(groups.orphanSup, '\uD83D\uDEA8 NCC CH\u1ED0T \u1EA2O (Kh\u00F4ng c\u00F3 tr\u00EAn Lastmile)', '#ef4444', 'NCC \u1EA2o');
-    html += renderTable(groups.lmGhost, '\u2139\uFE0F CHUY\u1EAAN D\u01AF TR\u00CAN LASTMILE (Kh\u00F4ng NV/NCC n\u00E0o nh\u1EADn)', '#64748b', 'Ch\u01B0a c\u00F3 ch\u1EE7');
-    html += renderTable(groups.perfect, '\u2705 KH\u1EAEP HO\u00C0N TO\u00C0N 3 B\u00CAN', '#22c55e', 'Ho\u00E0n h\u1EA3o');
-
+    html += '</tbody></table></div>';
     container.innerHTML = html;
 };
 
 window.exportRecon3WayExcel = function() {
-    if (!window.recon3WayGroups) { showToast('\u274C', 'Kh\u00F4ng c\u00F3 d\u1EEF li\u1EC7u \u0111\u1EC3 xu\u1EA5t!'); return; }
-    var csvRows = [];
-    csvRows.push('STT,Ng\u00E0y,Bi\u1EC3n s\u1ED1,NCC,Kho,M\u00E3 chuy\u1EBFn GHN,S\u1ED1 chuy\u1EBFn LM,NV B\u00E1o C\u00E1o (Km),NCC Ch\u1ED1t (Km),Tr\u1EA1ng th\u00E1i');
+    if (!window.recon3WayData || window.recon3WayData.length === 0) { showToast('\u274C', 'Kh\u00F4ng c\u00F3 d\u1EEF li\u1EC7u!'); return; }
+    var csvRows = ['STT,Ng\u00E0y,Bi\u1EC3n s\u1ED1,NCC,Kho,S\u1ED1 chuy\u1EBFn LM,NV B\u00E1o (Km),NCC Ch\u1ED1t (Km),Tr\u1EA1ng th\u00E1i'];
     var rowNum = 1;
-    var writeRows = function(arr, statusText) {
-        arr.forEach(function(d) {
-            var ncc = (d.emp[0] ? d.emp[0].supplier : '') || (d.sup[0] ? d.sup[0].ncc : '') || '';
-            var wh = d.hub || '';
-            var tripCodes = d.tripCodes.join(' | ');
-            var odo = 0; if (d.emp.length > 0) d.emp.forEach(function(e) { odo += (e.kmEnd - e.kmStart) || 0; });
-            var supKm = 0; if (d.sup.length > 0) d.sup.forEach(function(s) { supKm += (s.km || 0); });
-            csvRows.push(rowNum++ + ',"' + d.date + '","' + d.plate + '","' + ncc + '","' + wh + '","' + tripCodes + '",' + d.lm.length + ',' + odo + ',' + supKm + ',"' + statusText + '"');
-        });
-    };
-    writeRows(window.recon3WayGroups.missingEmp, 'Thi\u1EBFu NV b\u00E1o c\u00E1o');
-    writeRows(window.recon3WayGroups.missingSup, 'Thi\u1EBFu NCC \u0111\u1ED1i so\u00E1t');
-    writeRows(window.recon3WayGroups.orphanEmp, 'NV b\u00E1o c\u00E1o \u1EA3o');
-    writeRows(window.recon3WayGroups.orphanSup, 'NCC ch\u1ED1t \u1EA3o');
-    writeRows(window.recon3WayGroups.lmGhost, 'Chuy\u1EBFn GHN d\u01B0');
-    writeRows(window.recon3WayGroups.perfect, 'Kh\u1EDBp ho\u00E0n to\u00E0n 3 b\u00EAn');
+    window.recon3WayData.forEach(function(d) {
+        var ncc = (d.emp[0] ? d.emp[0].supplier : '') || (d.sup[0] ? d.sup[0].ncc : '') || '';
+        var wh = d.hub || '';
+        var odo = 0; if (d.emp.length > 0) d.emp.forEach(function(e) { odo += (e.kmEnd - e.kmStart) || 0; });
+        var supKm = 0; if (d.sup.length > 0) d.sup.forEach(function(s) { supKm += (s.km || 0); });
+        csvRows.push(rowNum++ + ',"' + d.date + '","' + d.plate + '","' + ncc + '","' + wh + '",' + d.lm.length + ',' + odo + ',' + supKm + ',"' + d.statusText + '"');
+    });
     var BOM = '\uFEFF';
     var blob = new Blob([BOM + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     var link = document.createElement('a');
@@ -4117,6 +4113,7 @@ window.exportRecon3WayExcel = function() {
     document.body.removeChild(link);
     showToast('\u2705', '\u0110\u00E3 xu\u1EA5t file Excel!');
 };
+
 
 
 </script>

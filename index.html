@@ -1502,13 +1502,25 @@ async function loadAllData() {
             })
         );
 
-        const [empRowsArrays, supRows, masterRowsGH, masterRowsPH, tripsRows] = await Promise.all([
+        const [empRowsArrays, supRows, masterRowsGH, masterRowsPH, tripsRows, ctvRows] = await Promise.all([
             Promise.all(empPromises),
             fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID),
             fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID), // Mặc định NVGH
             fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'NVPH').catch(e => { console.warn('Không lấy được NVPH:', e); return []; }),
-            fetchSheetByNameJSONP(CONFIG.SHEET_EMPLOYEE_ID, 'Trips')
+            fetchSheetByNameJSONP(CONFIG.SHEET_EMPLOYEE_ID, 'Trips'),
+            fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'CTV').catch(e => { console.warn('Không lấy được CTV:', e); return []; })
         ]);
+        
+        const ctvCodes = new Set();
+        if (ctvRows && ctvRows.length > 0) {
+            ctvRows.forEach(r => {
+                if (r && r[0]) {
+                    const code = String(r[0]).replace(/[^0-9]/g, '').trim();
+                    if (code) ctvCodes.add(code);
+                }
+            });
+        }
+        console.log('✅ Loaded CTVs: ' + ctvCodes.size);
         const allMasterRows = [...masterRowsGH, ...masterRowsPH];
         const empRows = empRowsArrays.flat();
 
@@ -1656,6 +1668,9 @@ async function loadAllData() {
 
             // ★ Tách tên kho khỏi tên NV nếu NV ghi nhầm kho vào tên ★
             nameRaw = stripWarehouseFromName(nameRaw);
+            
+            // ★ BỎ QUA NHÂN VIÊN CTV ★
+            if (code && typeof ctvCodes !== 'undefined' && ctvCodes.has(code)) continue;
             const name = normalizeTone(nameRaw.normalize('NFC').toUpperCase());
             const area = (r[3] || '').trim();
             const dateStr = (r[4] || '').trim();

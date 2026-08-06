@@ -1853,10 +1853,8 @@ async function loadAllData() {
         }
 
         try {
-            await Promise.allSettled([
-                loadNccTripData(),
-                loadLastmileData()
-            ]);
+            await loadNccTripData();
+            await loadLastmileData();
         } catch(e) {
             console.error('Lỗi khi tải ngầm dữ liệu tab:', e);
         }

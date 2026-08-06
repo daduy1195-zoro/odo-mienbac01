@@ -3526,6 +3526,7 @@ function renderNccTrip() {
                             <th>Lộ trình</th>
                             <th>Số KM phát sinh</th>
                             <th>Giờ đi - về</th>
+                            <th>Tăng ca (h)</th>
                             <th>Mã chuyến GHN</th>
                             <th>
                                 <select onchange="document.getElementById('filterNccStatus').value = this.value; renderNccTrip();" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer; outline: none;">
@@ -3567,6 +3568,25 @@ function renderNccTrip() {
                         return (r.kmStart || '') + ' - ' + (r.kmEnd || '');
                     })()}</td>
                     <td>${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
+                    <td>${(() => {
+                        if (!r.hourEnd) return '-';
+                        const timeStr = String(r.hourEnd).replace(/h/gi, ':');
+                        const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
+                        if (!timeParts) return '-';
+                        let hours = parseInt(timeParts[1]);
+                        const mins = parseInt(timeParts[2]);
+                        if (/PM/i.test(timeStr) && hours < 12) hours += 12;
+                        if (/AM/i.test(timeStr) && hours === 12) hours = 0;
+                        const totalMinutes = hours * 60 + mins;
+                        const shiftEnd = 19 * 60; // 19:00
+                        if (totalMinutes > shiftEnd) {
+                            const otMinutes = totalMinutes - shiftEnd;
+                            const otHours = Math.floor(otMinutes / 60);
+                            const otRemainingMins = otMinutes % 60;
+                            return '<span style="color:var(--danger);font-weight:bold;">' + otHours + 'h' + (otRemainingMins > 0 ? otRemainingMins : '') + '</span>';
+                        }
+                        return '-';
+                    })()}</td>
                     <td>${ghnHtml}</td>
                     <td>${statusHtml}</td>
                 </tr>

@@ -3524,7 +3524,7 @@ function renderNccTrip() {
                             <th>NCC</th>
                             <th>Biển số xe</th>
                             <th>Lộ trình</th>
-                            <th>KM đi - về</th>
+                            <th>Số KM phát sinh</th>
                             <th>Giờ đi - về</th>
                             <th>Mã chuyến GHN</th>
                             <th>
@@ -3560,7 +3560,12 @@ function renderNccTrip() {
                     <td>${escapeHtml(r.ncc)}</td>
                     <td><strong>${escapeHtml(r.plate)}</strong></td>
                     <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
-                    <td>${escapeHtml(r.kmStart)} - ${escapeHtml(r.kmEnd)}</td>
+                    <td>${(() => {
+                        let s = parseFloat(r.kmStart);
+                        let e = parseFloat(r.kmEnd);
+                        if (!isNaN(s) && !isNaN(e) && e >= s) return (e - s).toString();
+                        return (r.kmStart || '') + ' - ' + (r.kmEnd || '');
+                    })()}</td>
                     <td>${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
                     <td>${ghnHtml}</td>
                     <td>${statusHtml}</td>

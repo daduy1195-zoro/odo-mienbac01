@@ -604,6 +604,11 @@
         <div class="section-header">
             <div class="section-title">🔗 Ghép chuyến đi NCC</div>
             <div style="display:flex;gap:8px;align-items:center;">
+                <select id="filterNccStatus" class="form-control" style="width: 150px; font-size: 13px;" onchange="renderNccTrip()">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="khop">✅ Khớp</option>
+                    <option value="thieu">⚠️ Thiếu mã</option>
+                </select>
                 <button class="btn btn-primary" onclick="exportNccTripExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
             </div>
         </div>
@@ -3456,9 +3461,15 @@ function renderNccTrip() {
     const grouped = {};
     let filteredCount = 0;
     
+    const filterStatus = document.getElementById('filterNccStatus') ? document.getElementById('filterNccStatus').value : '';
+    
     nccTripData.forEach((row, idx) => {
         if (filterWh && row.warehouse !== filterWh) return;
         if (filterNcc && row.ncc !== filterNcc) return;
+        
+        const hasMatch = !!row.ghnTripCode;
+        if (filterStatus === 'khop' && !hasMatch) return;
+        if (filterStatus === 'thieu' && hasMatch) return;
         if (filterDateFrom || filterDateTo) {
             const parts = row.dateStr ? row.dateStr.split('/') : [];
             if (parts.length === 3) {

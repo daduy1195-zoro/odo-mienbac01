@@ -3714,6 +3714,13 @@ function renderLastmile() {
     var filterDateTo = document.getElementById('filterDateTo').value;
     console.log('🔍 Filters: hub=' + filterHub + ', from=' + filterDateFrom + ', to=' + filterDateTo);
     
+    var matchedTripCodes = new Set();
+    if (typeof nccTripData !== 'undefined') {
+        for (var n = 0; n < nccTripData.length; n++) {
+            if (nccTripData[n].ghnTripCode) matchedTripCodes.add(nccTripData[n].ghnTripCode);
+        }
+    }
+    
     var filtered = [];
     for (var i = 0; i < lastmileData.length && filtered.length < 5000; i++) {
         var row = lastmileData[i];
@@ -3754,7 +3761,7 @@ function renderLastmile() {
         html += '<div class="ranking-card-header"><h3>' + hubName + '</h3><span class="badge badge-info">' + rows.length + ' chuyến</span></div>';
         html += '<div class="table-scroll" style="">';
         html += '<table class="ranking-table"><thead><tr>';
-        html += '<th style="width:40px">#</th><th style="width:100px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:140px">Bắt đầu</th><th style="width:140px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:120px">SĐT</th>';
+        html += '<th style="width:40px">#</th><th style="width:100px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:140px">Bắt đầu</th><th style="width:140px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:120px">SĐT</th><th style="width:100px">Đối soát NCC</th>';
         html += '</tr></thead><tbody>';
         for (var m = 0; m < rows.length; m++) {
             var r = rows[m];
@@ -3771,6 +3778,8 @@ function renderLastmile() {
             html += '<td style="font-weight:700; color:var(--danger); text-align:center;">' + (r.returnCount || 0) + '</td>';
             html += '<td style="font-weight:600;">' + (r.driverName || '') + '</td>';
             html += '<td style="font-family:monospace; font-weight:500;">' + (r.driverPhone || '') + '</td>';
+            var isMatched = r.tripCode && matchedTripCodes.has(r.tripCode);
+            html += '<td style="text-align:center;font-weight:bold;">' + (isMatched ? '<span style="color:var(--success);">✅ Đã ĐS</span>' : '<span style="color:var(--warning);">⚠️ Chưa ĐS</span>') + '</td>';
             html += '</tr>';
         }
         html += '</tbody></table></div></div>';

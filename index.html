@@ -4099,7 +4099,7 @@ window.renderRecon3Way = function() {
 
         // Trip codes
         var tripStr = d.tripCodes.length > 0
-            ? '<span style="font-size:10px;word-break:break-all;">' + d.tripCodes.join(', ') + '</span>'
+            ? '<span style="font-size:10px;word-break:break-all;">' + d.tripCodes.map(function(tc) { return '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + tc + '" target="_blank" style="color:var(--primary);text-decoration:underline;">' + tc + '</a>'; }).join(', ') + '</span>'
             : '<span class="text-muted">\u2014</span>';
 
         // NV km

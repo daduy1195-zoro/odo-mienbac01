@@ -420,17 +420,8 @@
     <!-- ========== HEADER ========== -->
     <header class="header" id="header">
         <div class="header-left">
-            <div class="logo">
-                <svg viewBox="0 0 120 50" xmlns="http://www.w3.org/2000/svg">
-                    <!-- G with teal arrow -->
-                    <path d="M0 8C0 3.6 3.6 0 8 0h16c2.2 0 4 1.8 4 4v0c0 2.2-1.8 4-4 4H8v30h16V28H18c-2.2 0-4-1.8-4-4v0c0-2.2 1.8-4 4-4h10c2.2 0 4 1.8 4 4v14c0 4.4-3.6 8-8 8H8c-4.4 0-8-3.6-8-8V8z" fill="#e0f2f1"/>
-                    <path d="M16 14l7-7v5h-3v9h-4V14z" fill="#14b8a6"/>
-                    <!-- H -->
-                    <path d="M38 0h4c1.1 0 2 .9 2 2v44c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2V0h0c0 0 0 0 2 0zm18 0h4c1.1 0 2 .9 2 2v44c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2V0h0c0 0 0 0 2 0zM42 19h12c1.1 0 2 .9 2 2v4c0 1.1-.9 2-2 2H42c-1.1 0-2-.9-2-2v-4c0-1.1.9-2 2-2z" fill="#e0f2f1"/>
-                    <!-- N -->
-                    <path d="M70 0h4c1.1 0 2 .9 2 2v44c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2V2c0-1.1.9-2 2-2zm28 0h4c1.1 0 2 .9 2 2v44c0 1.1-.9 2-2 2h-4c-1.1 0-2-.9-2-2V2c0-1.1.9-2 2-2z" fill="#e0f2f1"/>
-                    <path d="M74 4l26 36h-6L70 10V4h4z" fill="#e0f2f1"/>
-                </svg>
+            <div class="logo" style="font-size: 32px; font-weight: 900; color: var(--text); display: flex; align-items: center; gap: 10px; line-height: 1;">
+                🚚 <span style="font-size: 28px; letter-spacing: 1px;">GHN</span>
             </div>
             <div>
                 <h1>Dashboard Báo cáo ODO</h1>
@@ -4099,7 +4090,7 @@ window.renderRecon3Way = function() {
 
         // Trip codes
         var tripStr = d.tripCodes.length > 0
-            ? '<span style="font-size:16px;display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">' + d.tripCodes.map(function(tc) { return '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + tc + '" target="_blank" title="' + tc + '" style="text-decoration:none;">🚚</a>'; }).join('') + '</span>'
+            ? '<span style="font-size:10px;word-break:break-all;">' + d.tripCodes.map(function(tc) { return '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + tc + '" target="_blank" style="color:var(--primary);text-decoration:underline;">' + tc + '</a>'; }).join(', ') + '</span>'
             : '<span class="text-muted">\u2014</span>';
 
         // NV km

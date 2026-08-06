@@ -3757,7 +3757,7 @@ function renderLastmile() {
             html += '<tr>';
             html += '<td>' + (m+1) + '</td>';
             html += '<td>' + (r.dateStr || '') + '</td>';
-            html += '<td style="font-size:11px">' + (r.tripCode || '') + '</td>';
+            html += '<td style="font-size:11px">' + (r.tripCode ? '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + r.tripCode + '" target="_blank" style="color:var(--primary);text-decoration:underline;">' + r.tripCode + '</a>' : '') + '</td>';
             html += '<td><strong>' + (r.plate || '') + '</strong></td>';
             html += '<td style="font-size:11px">' + (r.startTime || '') + '</td>';
             html += '<td style="font-size:11px">' + (r.endTime || '') + '</td>';

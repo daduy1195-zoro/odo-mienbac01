@@ -1852,6 +1852,15 @@ async function loadAllData() {
               });
         }
 
+        try {
+            await Promise.allSettled([
+                loadNccTripData(),
+                loadLastmileData()
+            ]);
+        } catch(e) {
+            console.error('Lỗi khi tải ngầm dữ liệu tab:', e);
+        }
+
         // Cập nhật bộ lọc NV
         updateFilters();
 

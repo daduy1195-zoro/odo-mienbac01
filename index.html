@@ -3750,22 +3750,23 @@ function renderLastmile() {
         html += '<div class="ranking-card-header"><h3>' + hubName + '</h3><span class="badge badge-info">' + rows.length + ' chuyến</span></div>';
         html += '<div class="table-scroll" style="">';
         html += '<table class="ranking-table"><thead><tr>';
-        html += '<th>#</th><th>Ngày</th><th>Mã chuyến</th><th>Biển số</th><th>Bắt đầu</th><th>Kết thúc</th><th>Người tạo</th><th>Lấy</th><th>Giao</th><th>Trả</th><th>Tài xế</th>';
+        html += '<th style="width:40px">#</th><th style="width:100px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:140px">Bắt đầu</th><th style="width:140px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:120px">SĐT</th>';
         html += '</tr></thead><tbody>';
         for (var m = 0; m < rows.length; m++) {
             var r = rows[m];
             html += '<tr>';
             html += '<td>' + (m+1) + '</td>';
-            html += '<td>' + (r.dateStr || '') + '</td>';
-            html += '<td style="font-size:11px">' + (r.tripCode ? '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + r.tripCode + '" target="_blank" style="color:var(--primary);text-decoration:underline;">' + r.tripCode + '</a>' : '') + '</td>';
-            html += '<td><strong>' + (r.plate || '') + '</strong></td>';
-            html += '<td style="font-size:11px">' + (r.startTime || '') + '</td>';
-            html += '<td style="font-size:11px">' + (r.endTime || '') + '</td>';
-            html += '<td>' + (r.createdByName || '') + '</td>';
-            html += '<td>' + (r.pickCount || 0) + '</td>';
-            html += '<td>' + (r.deliverCount || 0) + '</td>';
-            html += '<td>' + (r.returnCount || 0) + '</td>';
-            html += '<td>' + (r.driverName || '') + '</td>';
+            html += '<td style="font-weight:600; white-space:nowrap;">' + (r.dateStr || '') + '</td>';
+            html += '<td style="font-family:monospace; font-size:12px;">' + (r.tripCode ? '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + r.tripCode + '" target="_blank" style="color:var(--primary);text-decoration:underline;">' + r.tripCode + '</a>' : '') + '</td>';
+            html += '<td style="font-family:monospace; font-weight:700; color:#f0ad4e;">' + (r.plate || '') + '</td>';
+            html += '<td style="font-family:monospace; font-size:12px; color:var(--text-muted);">' + (r.startTime || '') + '</td>';
+            html += '<td style="font-family:monospace; font-size:12px; color:var(--text-muted);">' + (r.endTime || '') + '</td>';
+            html += '<td style="font-weight:500;">' + (r.createdByName || '') + '</td>';
+            html += '<td style="font-weight:700; color:var(--success); text-align:center;">' + (r.pickCount || 0) + '</td>';
+            html += '<td style="font-weight:700; color:var(--primary); text-align:center;">' + (r.deliverCount || 0) + '</td>';
+            html += '<td style="font-weight:700; color:var(--danger); text-align:center;">' + (r.returnCount || 0) + '</td>';
+            html += '<td style="font-weight:600;">' + (r.driverName || '') + '</td>';
+            html += '<td style="font-family:monospace; font-weight:500;">' + (r.driverPhone || '') + '</td>';
             html += '</tr>';
         }
         html += '</tbody></table></div></div>';

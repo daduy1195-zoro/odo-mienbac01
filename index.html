@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GHN - Dashboard Báo cáo ODO Xe Tải</title>
+    <title>GHN - Dashboard Báo cáo ODO Xe Tải</title>
+    <link rel="icon" type="image/png" href="truck-image.png">
     <meta name="description" content="Hệ thống theo dõi báo cáo ODO xe tải GHN - Khu vực Miền Bắc">
     <meta http-equiv="X-Frame-Options" content="DENY">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
@@ -408,7 +409,13 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-
+
+    <!-- Màn hình chờ tải dữ liệu toàn trang -->
+    <div id="globalLoading" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b1117; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease;">
+        <img src="truck-image.png" alt="GHN Truck" style="width: 90%; max-width: 700px; border-radius: 8px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.7); margin-bottom: 25px;">
+        <div style="font-size: 22px; font-weight: bold; margin-bottom: 25px; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); color: #fff;">Khách hàng là người trả lương</div>
+        <div style="width: 35px; height: 35px; border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: #00c2a8; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+    </div>
 <div class="container">
     <!-- ========== HEADER ========== -->
     <header class="header" id="header">
@@ -3913,6 +3920,17 @@ function showLoading(show) {
     if (el) el.style.display = show ? 'flex' : 'none';
     const el2 = document.getElementById('loadingRecon');
     if (el2) el2.style.display = show ? 'flex' : 'none';
+
+    const globalLoading = document.getElementById('globalLoading');
+    if (globalLoading) {
+        if (show) {
+            globalLoading.style.display = 'flex';
+            globalLoading.style.opacity = '1';
+        } else {
+            globalLoading.style.opacity = '0';
+            setTimeout(() => { globalLoading.style.display = 'none'; }, 500);
+        }
+    }
 }
 
 function showToast(icon, msg) {

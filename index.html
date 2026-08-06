@@ -3509,7 +3509,13 @@ function renderNccTrip() {
                             <th>KM đi - về</th>
                             <th>Giờ đi - về</th>
                             <th>Mã chuyến GHN</th>
-                            <th>Trạng thái</th>
+                            <th>
+                                <select onchange="document.getElementById('filterNccStatus').value = this.value; renderNccTrip();" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer; outline: none;">
+                                    <option value="" style="color: #000;">Trạng thái (Tất cả)</option>
+                                    <option value="khop" style="color: #000;" ${document.getElementById('filterNccStatus') && document.getElementById('filterNccStatus').value === 'khop' ? 'selected' : ''}>✅ Khớp</option>
+                                    <option value="thieu" style="color: #000;" ${document.getElementById('filterNccStatus') && document.getElementById('filterNccStatus').value === 'thieu' ? 'selected' : ''}>⚠️ Thiếu</option>
+                                </select>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>

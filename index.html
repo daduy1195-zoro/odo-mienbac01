@@ -3488,9 +3488,12 @@ function renderNccTrip() {
     }
     
     const filterWh = document.getElementById('filterWarehouse').value;
-    const filterNcc = document.getElementById('filterNcc').value;
-    const filterDateFrom = document.getElementById('filterDateFrom').value;
-    const filterDateTo = document.getElementById('filterDateTo').value;
+    const filterNcc = document.getElementById('filterNcc') ? document.getElementById('filterNcc').value : '';
+    const filterDateFrom = document.getElementById('filterDateFrom') ? document.getElementById('filterDateFrom').value : '';
+    const filterDateTo = document.getElementById('filterDateTo') ? document.getElementById('filterDateTo').value : '';
+    const filterMonth = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
+    const filterPlate = document.getElementById('filterPlate') ? document.getElementById('filterPlate').value : '';
+    const filterEmp = document.getElementById('filterEmployee') ? document.getElementById('filterEmployee').value : '';
     
     // Group by warehouse
     const grouped = {};
@@ -3500,19 +3503,25 @@ function renderNccTrip() {
     
     nccTripData.forEach((row, idx) => {
         if (filterWh && row.warehouse !== filterWh) return;
-        if (filterNcc && row.ncc !== filterNcc) return;
-        
+        if (filterNcc && norm(row.ncc) !== norm(filterNcc)) return;
+        if (filterPlate && !norm(row.plate).includes(norm(filterPlate))) return;
+        if (filterEmp && (!row.fullName || !norm(row.fullName).includes(norm(filterEmp)))) return;
+
+        const parts = row.dateStr ? row.dateStr.split('/') : [];
+        if (parts.length === 3) {
+            const rowDateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            if (filterMonth && typeof isInCycle === 'function' && !isInCycle(rowDateObj, filterMonth)) return;
+            const rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+            if (filterDateFrom && rowDate < filterDateFrom) return;
+            if (filterDateTo && rowDate > filterDateTo) return;
+        } else if (filterMonth || filterDateFrom || filterDateTo) {
+            return;
+        }
+
         const hasMatch = !!row.ghnTripCode;
         if (filterStatus === 'khop' && !hasMatch) return;
         if (filterStatus === 'thieu' && hasMatch) return;
-        if (filterDateFrom || filterDateTo) {
-            const parts = row.dateStr ? row.dateStr.split('/') : [];
-            if (parts.length === 3) {
-                const rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
-                if (filterDateFrom && rowDate < filterDateFrom) return;
-                if (filterDateTo && rowDate > filterDateTo) return;
-            }
-        }
+        
         if (!grouped[row.warehouse]) grouped[row.warehouse] = [];
         grouped[row.warehouse].push({ ...row, originalIndex: idx });
         filteredCount++;
@@ -3775,14 +3784,21 @@ function renderLastmile() {
         return;
     }
     var filterHub = document.getElementById('filterWarehouse').value;
-    var filterDateFrom = document.getElementById('filterDateFrom').value;
-    var filterDateTo = document.getElementById('filterDateTo').value;
-    console.log('🔍 Filters: hub=' + filterHub + ', from=' + filterDateFrom + ', to=' + filterDateTo);
+    var filterDateFrom = document.getElementById('filterDateFrom') ? document.getElementById('filterDateFrom').value : '';
+    var filterDateTo = document.getElementById('filterDateTo') ? document.getElementById('filterDateTo').value : '';
+    var filterMonth = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
+    var filterPlate = document.getElementById('filterPlate') ? document.getElementById('filterPlate').value : '';
+    var filterEmp = document.getElementById('filterEmployee') ? document.getElementById('filterEmployee').value : '';
+    var filterNcc = document.getElementById('filterNcc') ? document.getElementById('filterNcc').value : '';
     
     var matchedTripCodes = new Set();
+    var tripNccMap = new Map();
     if (typeof nccTripData !== 'undefined') {
         for (var n = 0; n < nccTripData.length; n++) {
-            if (nccTripData[n].ghnTripCode) matchedTripCodes.add(nccTripData[n].ghnTripCode);
+            if (nccTripData[n].ghnTripCode) {
+                matchedTripCodes.add(nccTripData[n].ghnTripCode);
+                tripNccMap.set(nccTripData[n].ghnTripCode, nccTripData[n].ncc);
+            }
         }
     }
     
@@ -3790,6 +3806,13 @@ function renderLastmile() {
     for (var i = 0; i < lastmileData.length && filtered.length < 5000; i++) {
         var row = lastmileData[i];
         if (filterHub && row.hubName !== filterHub) continue;
+        if (filterPlate && !norm(row.plate).includes(norm(filterPlate))) continue;
+        if (filterEmp && !norm(row.driverName).includes(norm(filterEmp))) continue;
+        if (filterNcc) {
+            var rowNcc = tripNccMap.get(row.tripCode);
+            if (!rowNcc || norm(rowNcc) !== norm(filterNcc)) continue;
+        }
+
         var filterStatus = document.getElementById('filterLastmileStatus') ? document.getElementById('filterLastmileStatus').value : '';
         if (filterStatus) {
             var isMatched = matchedTripCodes.has(row.tripCode);

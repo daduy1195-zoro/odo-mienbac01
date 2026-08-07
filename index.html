@@ -1514,12 +1514,12 @@ async function loadAllData() {
             })
         );
 
-        const [empRowsArrays, supRows, masterRowsGH, masterRowsPH, tripsRows, ctvRows] = await Promise.all([
+        const [empRowsArrays, supRows, masterRowsGH, masterRowsPH, ctvRows] = await Promise.all([
             Promise.all(empPromises),
             fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID),
             fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID), // Mặc định NVGH
             fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'NVPH').catch(e => { console.warn('Không lấy được NVPH:', e); return []; }),
-            fetchSheetByNameJSONP(CONFIG.SHEET_EMPLOYEE_ID, 'Trips'),
+            
             fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'CTV').catch(e => { console.warn('Không lấy được CTV:', e); return []; })
         ]);
         
@@ -1537,40 +1537,8 @@ async function loadAllData() {
         const empRows = empRowsArrays.flat();
 
         // ═══════════════════════════════════════
-        // XỬ LÝ DỮ LIỆU CHUYẾN ĐI (Trips)
-        // Cột: A=tripCode, B=empCode, C=empName, D=plate, E=date
-        // ═══════════════════════════════════════
-        const archivedTrips = await fetchArchivedData('trips_data');
-        const archivedTripKeys = new Set(archivedTrips.map(t => t.tripCode));
-        const newTripsToArchive = [];
-        
-        tripsData = [...archivedTrips];
-        tripsData.forEach(t => {
-            if (t.dateStr && t.dateStr.includes('T') && t.dateStr.endsWith('Z')) {
-                const d = new Date(t.dateStr);
-                t.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-            }
-            if (t.code) t.code = String(t.code);
-            if (t.plate) t.plate = String(t.plate);
-        });
-        tripsRows.forEach(r => {
-            if (!r || r.length < 2) return;
-            const code = String(r[1] || '').replace(/[^0-9]/g, '').trim();
-            const dateStr = String(r[4] || '').trim();
-            if (!code || !dateStr) return;
-            const tripCode = String(r[0]||'').trim();
-            if (tripCode && !archivedTripKeys.has(tripCode)) {
-                const obj = { id: tripCode, tripCode, code, name: String(r[2]||'').trim(), plate: String(r[3]||'').trim(), dateStr };
-                tripsData.push(obj);
-                newTripsToArchive.push(obj);
-                archivedTripKeys.add(tripCode);
-            }
-        });
-        
-        if (newTripsToArchive.length > 0) saveToArchive('trips_data', newTripsToArchive);
-
-        // Debug log
-        console.log(`✅ Loaded: NV=${empRows.length} rows, NCC=${supRows.length} rows, Master=${allMasterRows.length} rows, Trips=${tripsData.length} rows`);
+        // Đã chuyển sang dùng trực tiếp Bao_cao_chuyen_di (lastmileData) làm dữ liệu chuyến đi. Không còn dùng tab Trips nữa.
+        console.log(`✅ Loaded: NV=${empRows.length} rows, NCC=${supRows.length} rows, Master=${allMasterRows.length} rows`);
 
         // ═══════════════════════════════════════
         // XỬ LÝ DANH SÁCH NV CHUẨN (Master)
@@ -3784,6 +3752,8 @@ async function loadLastmileData() {
             
             r.driverId = String(rRaw['Tài xế (Mã)'] || rRaw.driverId || '');
             r.driverName = String(rRaw['Tài xế (Tên)'] || rRaw.driverName || '');
+            r.code = r.driverId || r.createdById; // Backwards compatibility for tripsData
+            r.name = r.driverName || r.createdByName; // Backwards compatibility for tripsData
             r.driverPhone = String(rRaw['SĐT Tài xế'] || rRaw.driverPhone || '');
             r.servicePartner = String(rRaw['Đối tác'] || rRaw.servicePartner || '');
 
@@ -3851,6 +3821,7 @@ async function loadLastmileData() {
             lastmileData.push(r);
         }
         console.log('✅ After filter Ahamove: ' + lastmileData.length + ' records');
+        tripsData = lastmileData; // Use lastmileData directly as the source of truth for all trip matching
         lastmileData.sort(function(a, b) {
             var da = a.dateStr ? a.dateStr.split('/').reverse().join('') : '';
             var db = b.dateStr ? b.dateStr.split('/').reverse().join('') : '';

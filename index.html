@@ -3784,9 +3784,19 @@ async function loadLastmileData() {
                 try {
                     var dtstartTime = new Date(r.startTime);
                     if (!isNaN(dtstartTime.getTime())) {
-                        r.startTime = String(dtstartTime.getDate()).padStart(2,'0') + '/' + String(dtstartTime.getMonth()+1).padStart(2,'0') + '/' + dtstartTime.getFullYear() + ' ' + String(dtstartTime.getHours()).padStart(2,'0') + ':' + String(dtstartTime.getMinutes()).padStart(2,'0');
+                        var dd = String(dtstartTime.getDate()).padStart(2,'0');
+                        var mm = String(dtstartTime.getMonth()+1).padStart(2,'0');
+                        var yyyy = dtstartTime.getFullYear();
+                        r.startTime = dd + '/' + mm + '/' + yyyy + ' ' + String(dtstartTime.getHours()).padStart(2,'0') + ':' + String(dtstartTime.getMinutes()).padStart(2,'0');
+                        // Override dateStr to use Start Date instead of whatever was provided
+                        r.dateStr = dd + '/' + mm + '/' + yyyy;
                     }
                 } catch(e) {}
+            } else if (r.startTime) {
+                var parts = r.startTime.split(' ');
+                if (parts.length > 0 && parts[0].indexOf('/') > -1) {
+                    r.dateStr = parts[0];
+                }
             }
             r.endTime = String(r.endTime || '');
             if (r.endTime && r.endTime.indexOf('T') > -1) {

@@ -3743,7 +3743,7 @@ async function loadLastmileData() {
     console.log('🚀 loadLastmileData: starting...');
     container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 10px"></div>Đang tải dữ liệu Lastmile...</div>';
     try {
-        var archivedData = await fetchArchivedData('lm_trips');
+        var archivedData = await fetchArchivedData('Bao_cao_chuyen_di');
         console.log('📦 Archived Lastmile: ' + archivedData.length + ' records');
         if (archivedData.length > 0) {
             console.log('📋 Sample record keys:', Object.keys(archivedData[0]).join(', '));
@@ -3751,7 +3751,42 @@ async function loadLastmileData() {
         }
         lastmileData = [];
         for (var i = 0; i < archivedData.length; i++) {
-            var r = archivedData[i];
+            var rRaw = archivedData[i];
+            var r = { ...rRaw };
+            
+            // Map the new Vietnamese keys to the old English keys expected by the dashboard
+            r.id = String(rRaw['id'] || rRaw.id || '');
+            r.dateStr = String(rRaw['Ngày báo cáo'] || rRaw.dateStr || '');
+            
+            var hubRaw = String(rRaw['Hub'] || rRaw.hubName || '');
+            if (rRaw['Hub']) {
+                var hubParts = hubRaw.split('-');
+                r.hubId = hubParts[0] ? hubParts[0].trim() : '';
+                r.hubName = hubParts.length > 1 ? hubParts.slice(1).join('-').trim() : hubRaw;
+            } else {
+                r.hubId = String(rRaw.hubId || '');
+                r.hubName = String(rRaw.hubName || '');
+            }
+            
+            r.tripCode = String(rRaw['Mã chuyến đi'] || rRaw.tripCode || '');
+            r.plate = String(rRaw['Biển số xe'] || rRaw.plate || '');
+            r.createdTime = String(rRaw['Tạo'] || rRaw.createdTime || '');
+            r.startTime = String(rRaw['Bắt đầu'] || rRaw.startTime || '');
+            r.endTime = String(rRaw['Kết thúc'] || rRaw.endTime || '');
+            
+            r.createdById = String(rRaw['Người tạo (Mã)'] || rRaw.createdById || '');
+            r.createdByName = String(rRaw['Người tạo (Tên)'] || rRaw.createdByName || '');
+            
+            r.pickCount = parseInt(rRaw['Lấy'] !== undefined ? rRaw['Lấy'] : rRaw.pickCount) || 0;
+            r.deliverCount = parseInt(rRaw['Giao'] !== undefined ? rRaw['Giao'] : rRaw.deliverCount) || 0;
+            r.returnCount = parseInt(rRaw['Trả'] !== undefined ? rRaw['Trả'] : rRaw.returnCount) || 0;
+            r.orderCount = parseInt(rRaw['Tổng ĐH'] !== undefined ? rRaw['Tổng ĐH'] : rRaw.orderCount) || 0;
+            
+            r.driverId = String(rRaw['Tài xế (Mã)'] || rRaw.driverId || '');
+            r.driverName = String(rRaw['Tài xế (Tên)'] || rRaw.driverName || '');
+            r.driverPhone = String(rRaw['SĐT Tài xế'] || rRaw.driverPhone || '');
+            r.servicePartner = String(rRaw['Đối tác'] || rRaw.servicePartner || '');
+
             var partner = String(r.servicePartner || '').toLowerCase();
             if (String(r.id || '') === 'test001') continue;
             if (partner.indexOf('ahamove') !== -1) continue;

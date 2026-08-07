@@ -3775,14 +3775,7 @@ function renderLastmile() {
     for (var i = 0; i < lastmileData.length && filtered.length < 5000; i++) {
         var row = lastmileData[i];
         if (filterHub && row.hubName !== filterHub) continue;
-        if (filterDateFrom || filterDateTo) {
-            var parts = row.dateStr.split('/');
-            if (parts.length === 3) {
-                var rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
-                if (filterDateFrom && rowDate < filterDateFrom) continue;
-                if (filterDateTo && rowDate > filterDateTo) continue;
-            }
-        }
+        if (!isWithinFilterDate(row.dateStr)) continue;
         filtered.push(row);
     }
     console.log('📊 Filtered: ' + filtered.length + ' rows');

@@ -1400,7 +1400,7 @@ function fetchSheetJSONP(sheetId, gid) {
 
         // Tạo thẻ <script> để tải dữ liệu (bypass CORS)
         const script = document.createElement('script');
-        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&gid=${gid}&range=A1:Z&headers=1`;
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&gid=${gid}&range=A1:Z&headers=1&_cb=${Date.now()}`;
         script.onerror = () => {
             delete window[callbackName];
             clearTimeout(timer);
@@ -1451,7 +1451,7 @@ function fetchSheetByNameJSONP(sheetId, sheetName) {
             resolve([]); // Don't fail entire load if Trips sheet times out
         }, timeoutMs);
         const script = document.createElement('script');
-        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&sheet=${encodeURIComponent(sheetName)}&range=A1:Z&headers=1`;
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&sheet=${encodeURIComponent(sheetName)}&range=A1:Z&headers=1&_cb=${Date.now()}`;
         script.onerror = () => {
             delete window[callbackName];
             clearTimeout(timer);
@@ -3123,7 +3123,7 @@ async function sendWarehouseRankingTelegram(whName, evt) {
 async function fetchArchivedData(sheetName) {
     if (!CONFIG.ARCHIVE_API_URL || CONFIG.ARCHIVE_API_URL === 'YOUR_WEB_APP_URL_HERE') return [];
     try {
-        const res = await fetch(`${CONFIG.ARCHIVE_API_URL}?sheet=${sheetName}`);
+        const res = await fetch(`${CONFIG.ARCHIVE_API_URL}?sheet=${sheetName}&_cb=${Date.now()}`);
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         return Array.isArray(data) ? data : [];

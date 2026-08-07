@@ -3955,14 +3955,19 @@ function switchTab(tab, el) {
 
 
 
-    document.getElementById('tabDaily').style.display = tab === 'daily' ? '' : 'none';
-    document.getElementById('tabRanking').style.display = tab === 'ranking' ? '' : 'none';
-    document.getElementById('tabNCC').style.display = tab === 'ncc' ? '' : 'none';
-    document.getElementById('tabFraud').style.display = tab === 'fraud' ? '' : 'none';
-    document.getElementById('tabTypo').style.display = tab === 'typo' ? '' : 'none';
-    document.getElementById('tabNccTrip').style.display = tab === 'nccTrip' ? '' : 'none';
-    document.getElementById('tabLastmile').style.display = tab === 'lastmile' ? '' : 'none';
-    document.getElementById('tabRecon3Way').style.display = tab === 'recon3Way' ? '' : 'none';
+    const toggleTab = (id, isActive) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = isActive ? '' : 'none';
+    };
+
+    toggleTab('tabDaily', tab === 'daily');
+    toggleTab('tabRanking', tab === 'ranking');
+    toggleTab('tabNCC', tab === 'ncc');
+    toggleTab('tabFraud', tab === 'fraud');
+    toggleTab('tabTypo', tab === 'typo');
+    toggleTab('tabNccTrip', tab === 'nccTrip');
+    toggleTab('tabLastmile', tab === 'lastmile');
+    toggleTab('tabRecon3Way', tab === 'recon3Way');
     
     if (tab === 'nccTrip' && !isNccTripLoaded) {
         loadNccTripData();

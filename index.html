@@ -2403,19 +2403,38 @@ function renderRanking(filtered, month, whFilter) {
             // Chỉ trừ ngày nghỉ nếu NV CÓ xuất hiện trong dữ liệu chuyến đi (trips)
             // Nếu NV không có trong trips → không trừ gì (giữ nguyên daysElapsed)
             const isTrackedInTrips = e.workedDays && e.workedDays.size > 0;
+            
+            // Tìm ngày hoạt động đầu tiên (ODO hoặc Lastmile) để hỗ trợ NV mới vào
+            let firstActiveIndex = -1;
+            for (let i = 0; i < allDatesInCycle.length; i++) {
+                const d = allDatesInCycle[i];
+                if (e.days.has(d) || (e.workedDays && e.workedDays.has(d))) {
+                    firstActiveIndex = i;
+                    break;
+                }
+            }
+
             if (isTrackedInTrips) {
-                allDatesInCycle.forEach(d => {
-                    // Nếu hệ thống GHN có data của ngày này, nhưng NV không có chuyến -> NV nghỉ
+                allDatesInCycle.forEach((d, idx) => {
+                    // Nếu hệ thống có GHN trips, nhưng NV không có -> NV nghỉ
                     if (syncedDates.has(d) && !e.workedDays.has(d)) {
                         myExpectedDays--;
                     }
                 });
+            } else if (firstActiveIndex > 0) {
+                // Nếu KHÔNG có GHN trips, nhưng là NV mới (có ngày bắt đầu > 0)
+                // Trừ đi số ngày trước khi họ bắt đầu làm việc
+                myExpectedDays -= firstActiveIndex;
             }
 
             // Tính ngày CÓ ĐI LÀM nhưng KHÔNG báo cáo
-            let workedNoReport = allDatesInCycle.filter(d => {
-                if (!syncedDates.has(d)) return false; // Chưa có dữ liệu chuyến đi trên hệ thống -> bỏ qua
+            let workedNoReport = allDatesInCycle.filter((d, index) => {
+                if (!syncedDates.has(d)) return false; // Chưa có dữ liệu hệ thống -> bỏ qua
                 if (e.days.has(d)) return false; // Đã báo
+                
+                // Bỏ qua các ngày TRƯỚC khi NV bắt đầu làm việc (NV mới)
+                if (firstActiveIndex !== -1 && index < firstActiveIndex) return false;
+                
                 if (isTrackedInTrips && !e.workedDays.has(d)) return false; // NV nghỉ
                 return true; // Có đi làm nhưng không báo
             });
@@ -2427,7 +2446,7 @@ function renderRanking(filtered, month, whFilter) {
             }
 
             // Tính ngày NGHỈ (không có chuyến đi)
-            const offDays = allDatesInCycle.filter(d => {
+            const offDays = allDatesInCycle.filter((d, index) => {
                 return isTrackedInTrips && syncedDates.has(d) && !e.workedDays.has(d);
             });
 

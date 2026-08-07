@@ -3498,6 +3498,7 @@ async function loadNccTripData() {
 function updateNccTripCode(index, value) {
     if (nccTripData[index]) {
         nccTripData[index].ghnTripCode = value;
+        renderNccTrip();
     }
 }
 
@@ -3605,11 +3606,17 @@ function renderNccTrip() {
                 
             let ghnHtml = '';
             if (isOff) {
-                ghnHtml = '<span style="color:var(--text-muted); font-weight:bold;">OFF</span>';
+                ghnHtml = `<div style="display:flex; gap: 4px; align-items:center;">
+                    <span style="color:var(--text-muted); font-weight:bold; padding: 4px 8px;">OFF</span>
+                    <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; height: 26px;" onclick="updateNccTripCode(${r.originalIndex}, '')" title="Hủy đánh dấu OFF">❌</button>
+                </div>`;
             } else if (hasMatch) {
                 ghnHtml = `<a href="https://nhanh.ghn.vn/lastmile/trip-detail/${r.ghnTripCode}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${r.ghnTripCode}</strong></a>`;
             } else {
-                ghnHtml = `<input type="text" class="form-control" style="background:#fff3cd; color:#856404; width:120px;" placeholder="Nhập mã..." onchange="updateNccTripCode(${r.originalIndex}, this.value)" value="${r.ghnTripCode || ''}">`;
+                ghnHtml = `<div style="display:flex; gap: 4px; align-items:center;">
+                    <input type="text" class="form-control" style="background:#fff3cd; color:#856404; width:120px;" placeholder="Nhập mã..." onchange="updateNccTripCode(${r.originalIndex}, this.value)" value="${r.ghnTripCode || ''}">
+                    <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; height: 26px; background:#495057;" onclick="updateNccTripCode(${r.originalIndex}, 'OFF')" title="Đánh dấu xe nghỉ (OFF)">OFF</button>
+                </div>`;
             }
                 
             html += `

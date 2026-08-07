@@ -1720,7 +1720,7 @@ async function loadAllData() {
             const entry = {
                 id: `${dateStr}_${code}_${normPlate}`, // Khóa chống trùng lặp
                 name, code, area, dateStr, dateObj, plate, supplier, warehouse, shortWH,
-                kmStart, kmEnd, hourStart, hourEnd, matchKey, jsMatchKey, fullName, sheetRow, gid
+                kmStart, kmEnd, kmDiff, hourStart, hourEnd, matchKey, jsMatchKey, fullName, sheetRow, gid
             };
 
             if (code && !archivedOdoKeys.has(entry.id)) {
@@ -3203,15 +3203,17 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
     }
     
     // ★ Xác định vị trí cột KM vào/ra từ header row
-    let colKmStart = -1, colKmEnd = -1;
+    let colKmStart = -1, colKmEnd = -1, colKmDiff = -1;
     if (headerRowIdx > -1) {
         const hdr = rawData[headerRowIdx].map(c => (c || '').toString().toLowerCase().trim());
         for (let ci = 0; ci < hdr.length; ci++) {
             const h = hdr[ci];
             if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
             if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
+            if (h.includes('km phát sinh') || h.includes('tổng km') || h.includes('số km') || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
         }
     }
+    if (colKmEnd > -1 && colKmDiff === -1) colKmDiff = colKmEnd + 1;
     // Fallback: nếu không tìm được trong header, thử scan data row đầu tiên
     // để phát hiện 2 cột liên tiếp có giá trị lớn (>1000) là odometer readings
     if (colKmStart === -1 || colKmEnd === -1) {
@@ -3226,6 +3228,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
                 if (v1 > 1000 && v2 > 1000 && Math.abs(v2 - v1) < 500) {
                     colKmStart = ci;
                     colKmEnd = ci + 1;
+                    if (colKmDiff === -1) colKmDiff = colKmEnd + 1;
                     break;
                 }
             }
@@ -3235,6 +3238,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
     // Final fallback
     if (colKmStart === -1) colKmStart = 14;
     if (colKmEnd === -1) colKmEnd = 15;
+    if (colKmDiff === -1) colKmDiff = 16;
     
     const startRow = headerRowIdx > -1 ? headerRowIdx + 1 : 0;
     
@@ -3282,8 +3286,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         
         if (!warehouse) continue;
         
-        const kmStart = (row[colKmStart] || '').toString().trim();
-        const kmEnd = (row[colKmEnd] || '').toString().trim();
+        const kmStart = (colKmStart > -1 ? row[colKmStart] : '').toString().trim();
+        const kmEnd = (colKmEnd > -1 ? row[colKmEnd] : '').toString().trim();
+        const kmDiff = (colKmDiff > -1 ? row[colKmDiff] : '').toString().trim();
         
         // Ghép mã chuyến GHN
         const normPlate = normalizeStr(plate);
@@ -3296,7 +3301,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         results.push({
             ncc: nccName,
             dateStr, plate, vehicleCode, route,
-            kmStart, kmEnd, hourStart, hourEnd,
+            kmStart, kmEnd, kmDiff, hourStart, hourEnd,
             warehouse,
             ghnTripCode: matchedTripCode,
             sheetId: sheetId || '',
@@ -3573,11 +3578,16 @@ function renderNccTrip() {
                     <td>${escapeHtml(r.ncc)}</td>
                     <td><strong>${escapeHtml(r.plate)}</strong></td>
                     <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
-                    <td>${(() => {
+                    <td style="font-weight: bold;">${(() => {
+                        if (r.kmDiff) {
+                            let diffVal = parseFloat(String(r.kmDiff).replace(/[^\d.]/g, ''));
+                            if (!isNaN(diffVal)) return diffVal;
+                            return escapeHtml(r.kmDiff);
+                        }
                         let s = parseFloat(r.kmStart);
                         let e = parseFloat(r.kmEnd);
                         if (!isNaN(s) && !isNaN(e) && e >= s) return (e - s).toString();
-                        return (r.kmStart || '') + ' - ' + (r.kmEnd || '');
+                        return escapeHtml(r.kmStart || '') + (r.kmEnd ? ' - ' + escapeHtml(r.kmEnd) : '');
                     })()}</td>
                     <td>${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
                     <td>${(() => {

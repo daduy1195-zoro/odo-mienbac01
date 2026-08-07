@@ -3573,7 +3573,7 @@ function renderNccTrip() {
                     <td>${r.sheetId ? (() => {
                         let sheetUrl = 'https://docs.google.com/spreadsheets/d/' + r.sheetId + '/edit';
                         if (r.tabGid) sheetUrl += '#gid=' + r.tabGid + '&range=B' + r.sourceRow;
-                        return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
+                        return '<a href="' + sheetUrl + '" target="_blank" onclick="this.style.color=\'#666\';this.style.opacity=\'0.5\';" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
                     })() : escapeHtml(r.dateStr)}</td>
                     <td>${escapeHtml(r.ncc)}</td>
                     <td><strong>${escapeHtml(r.plate)}</strong></td>

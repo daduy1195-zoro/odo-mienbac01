@@ -631,6 +631,11 @@
         <div class="section-header">
             <div class="section-title">🚚 Báo cáo chuyến đi Lastmile</div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <select id="filterLastmileStatus" class="form-control" style="width: 150px; font-size: 13px;" onchange="if(typeof renderLastmile === 'function') renderLastmile()">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="khop">✅ Đã đối soát</option>
+                    <option value="thieu">⚠️ Chưa đối soát</option>
+                </select>
                 <button class="btn btn-primary" onclick="exportLastmileExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
             </div>
         </div>
@@ -3775,6 +3780,12 @@ function renderLastmile() {
     for (var i = 0; i < lastmileData.length && filtered.length < 5000; i++) {
         var row = lastmileData[i];
         if (filterHub && row.hubName !== filterHub) continue;
+        var filterStatus = document.getElementById('filterLastmileStatus') ? document.getElementById('filterLastmileStatus').value : '';
+        if (filterStatus) {
+            var isMatched = matchedTripCodes.has(row.tripCode);
+            if (filterStatus === 'khop' && !isMatched) continue;
+            if (filterStatus === 'thieu' && isMatched) continue;
+        }
         var filterMonth = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
         var parts = row.dateStr.split('/');
         if (parts.length === 3) {

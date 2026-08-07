@@ -3293,7 +3293,12 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         // Ghép mã chuyến GHN
         const normPlate = normalizeStr(plate);
         const matchKey = `${normPlate}_${dateStr}`;
-        const matchedTripCode = ghnTripMap.get(matchKey) || null;
+        let matchedTripCode = ghnTripMap.get(matchKey) || null;
+        
+        const routeLower = (route || '').toLowerCase();
+        if (!matchedTripCode && (routeLower.includes('off') || routeLower.includes('nghỉ') || routeLower.includes('nghi'))) {
+            matchedTripCode = 'OFF';
+        }
         
         // Tính dòng gốc trong sheet: headers=1 nên rawData[0]=sheet row 2
         const sourceRow = i + 2;
@@ -3568,13 +3573,25 @@ function renderNccTrip() {
         
         rows.forEach((r, i) => {
             const hasMatch = !!r.ghnTripCode;
-            const statusHtml = hasMatch 
-                ? '<span style="color:var(--success);">✅ Khớp</span>' 
-                : '<span style="color:var(--warning);">⚠️ Thiếu mã</span>';
+            const isOff = r.ghnTripCode === 'OFF';
+            
+            let statusHtml = '';
+            if (isOff) {
+                statusHtml = '<span style="color:var(--text-muted);">⏸️ Nghỉ</span>';
+            } else if (hasMatch) {
+                statusHtml = '<span style="color:var(--success);">✅ Khớp</span>';
+            } else {
+                statusHtml = '<span style="color:var(--warning);">⚠️ Thiếu mã</span>';
+            }
                 
-            const ghnHtml = hasMatch
-                ? `<a href="https://nhanh.ghn.vn/lastmile/trip-detail/${r.ghnTripCode}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${r.ghnTripCode}</strong></a>`
-                : `<input type="text" class="form-control" style="background:#fff3cd; color:#856404; width:120px;" placeholder="Nhập mã..." onchange="updateNccTripCode(${r.originalIndex}, this.value)" value="${r.ghnTripCode || ''}">`;
+            let ghnHtml = '';
+            if (isOff) {
+                ghnHtml = '<span style="color:var(--text-muted); font-weight:bold;">OFF</span>';
+            } else if (hasMatch) {
+                ghnHtml = `<a href="https://nhanh.ghn.vn/lastmile/trip-detail/${r.ghnTripCode}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${r.ghnTripCode}</strong></a>`;
+            } else {
+                ghnHtml = `<input type="text" class="form-control" style="background:#fff3cd; color:#856404; width:120px;" placeholder="Nhập mã..." onchange="updateNccTripCode(${r.originalIndex}, this.value)" value="${r.ghnTripCode || ''}">`;
+            }
                 
             html += `
                 <tr>

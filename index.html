@@ -3631,7 +3631,12 @@ function renderNccTrip() {
                         }
                         let s = parseFloat(r.kmStart);
                         let e = parseFloat(r.kmEnd);
-                        if (!isNaN(s) && !isNaN(e) && e >= s) return (e - s).toString();
+                        if (!isNaN(s) && !isNaN(e)) {
+                            if (s >= 1000 && e >= s) return (e - s).toString();
+                            if (s >= 1000 && e > 0 && e < 1000) return e.toString();
+                        }
+                        if (!isNaN(s) && s > 0 && s < 1000 && isNaN(e)) return s.toString();
+                        
                         return escapeHtml(r.kmStart || '') + (r.kmEnd ? ' - ' + escapeHtml(r.kmEnd) : '');
                     })()}</td>
                     <td>${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
@@ -4198,10 +4203,19 @@ window.renderRecon3Way = function() {
     var calcSupKm = function(supArr) {
         var total = 0;
         supArr.forEach(function(s) {
+            if (s.kmDiff) {
+                var d = parseFloat(String(s.kmDiff).replace(/[^\d.]/g, ''));
+                if (!isNaN(d) && d > 0) { total += d; return; }
+            }
             var ks = parseFloat(String(s.kmStart || '0').replace(/[^\d.]/g, '')) || 0;
             var ke = parseFloat(String(s.kmEnd || '0').replace(/[^\d.]/g, '')) || 0;
-            var diff = ke - ks;
-            if (diff > 0) total += diff;
+            if (ks > 0 && ke >= ks) {
+                total += (ke - ks);
+            } else if (ks > 1000 && ke > 0 && ke < 1000) {
+                total += ke;
+            } else if (ks > 0 && ks < 1000 && ke === 0) {
+                total += ks;
+            }
         });
         return total;
     };
@@ -4285,10 +4299,19 @@ window.exportRecon3WayExcel = function() {
     var calcSupKm = function(supArr) {
         var total = 0;
         supArr.forEach(function(s) {
+            if (s.kmDiff) {
+                var d = parseFloat(String(s.kmDiff).replace(/[^\d.]/g, ''));
+                if (!isNaN(d) && d > 0) { total += d; return; }
+            }
             var ks = parseFloat(String(s.kmStart || '0').replace(/[^\d.]/g, '')) || 0;
             var ke = parseFloat(String(s.kmEnd || '0').replace(/[^\d.]/g, '')) || 0;
-            var diff = ke - ks;
-            if (diff > 0) total += diff;
+            if (ks > 0 && ke >= ks) {
+                total += (ke - ks);
+            } else if (ks > 1000 && ke > 0 && ke < 1000) {
+                total += ke;
+            } else if (ks > 0 && ks < 1000 && ke === 0) {
+                total += ks;
+            }
         });
         return total;
     };

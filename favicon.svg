@@ -1,1 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#ffffff" /><path d="M8 20 h28 v24 h-28 z" fill="#004d40" /><path d="M36 28 h12 l6 8 v8 h-18 z" fill="#00bfa5" /><circle cx="18" cy="48" r="6" fill="#333333" /><circle cx="46" cy="48" r="6" fill="#333333" /><text x="22" y="36" font-family="Arial" font-size="12" font-weight="bold" fill="#ffffff" text-anchor="middle">GHN</text><path d="M38 30 h8 l3 4 h-11 z" fill="#e0f2f1" /></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+    <!-- Nền cam đặc trưng của GHN -->
+    <rect width="64" height="64" rx="16" fill="#f26522" />
+    <!-- Chữ GHN màu trắng nổi bật -->
+    <text x="32" y="42" font-family="Arial, sans-serif" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle">GHN</text>
+</svg>

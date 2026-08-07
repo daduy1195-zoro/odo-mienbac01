@@ -1720,7 +1720,7 @@ async function loadAllData() {
             const entry = {
                 id: `${dateStr}_${code}_${normPlate}`, // Khóa chống trùng lặp
                 name, code, area, dateStr, dateObj, plate, supplier, warehouse, shortWH,
-                kmStart, kmEnd, kmDiff, hourStart, hourEnd, matchKey, jsMatchKey, fullName, sheetRow, gid
+                kmStart, kmEnd, hourStart, hourEnd, matchKey, jsMatchKey, fullName, sheetRow, gid
             };
 
             if (code && !archivedOdoKeys.has(entry.id)) {

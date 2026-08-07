@@ -3875,48 +3875,47 @@ function renderLastmile() {
         return;
     }
     
-    // Group by hub
-    var grouped = {};
-    for (var j = 0; j < filtered.length; j++) {
-        var hub = filtered[j].hubName || 'Khác';
-        if (!grouped[hub]) grouped[hub] = [];
-        grouped[hub].push(filtered[j]);
-    }
+    // Sắp xếp theo ngày giảm dần
+    filtered.sort(function(a, b) {
+        var partsA = (a.dateStr || '').split('/');
+        var partsB = (b.dateStr || '').split('/');
+        if (partsA.length === 3 && partsB.length === 3) {
+            var dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0]));
+            var dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0]));
+            return dateB - dateA;
+        }
+        return 0;
+    });
     
     var html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filtered.length + '/' + lastmileData.length + ' chuyến (tối đa 5000). Dùng bộ lọc ngày để thu hẹp.</div>';
-    var hubs = Object.keys(grouped);
-    console.log('🏭 Hubs: ' + hubs.join(', '));
+    html += '<div class="ranking-card" style="margin-top: 15px;">';
+    html += '<div class="table-scroll">';
+    html += '<table class="ranking-table"><thead><tr>';
+    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:100px">SĐT</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
+    html += '</tr></thead><tbody>';
     
-    for (var k = 0; k < hubs.length; k++) {
-        var hubName = hubs[k];
-        var rows = grouped[hubName];
-        html += '<div class="ranking-card">';
-        html += '<div class="ranking-card-header"><h3>' + hubName + '</h3><span class="badge badge-info">' + rows.length + ' chuyến</span></div>';
-        html += '<div class="table-scroll" style="">';
-        html += '<table class="ranking-table"><thead><tr>';
-        html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:100px">SĐT</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
-        html += '</tr></thead><tbody>';
-        for (var m = 0; m < rows.length; m++) {
-            var r = rows[m];
-            html += '<tr>';
-            html += '<td>' + (m+1) + '</td>';
-            html += '<td style="font-weight:600; white-space:nowrap;">' + (r.dateStr || '') + '</td>';
-            html += '<td style="font-family:monospace; font-size:13px; font-weight:bold;">' + (r.tripCode ? '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + r.tripCode + '" target="_blank" style="color:var(--success);text-decoration:underline;">' + r.tripCode + '</a>' : '') + '</td>';
-            html += '<td style="font-family:monospace; font-weight:700; color:#f0ad4e;">' + (typeof formatPlate === 'function' ? formatPlate(r.plate || '') : (r.plate || '')) + '</td>';
-            html += '<td style="font-family:monospace; font-size:12px; color:var(--text-muted);">' + (r.startTime || '') + '</td>';
-            html += '<td style="font-family:monospace; font-size:12px; color:var(--text-muted);">' + (r.endTime || '') + '</td>';
-            html += '<td style="font-weight:500;">' + (r.createdByName || '') + '</td>';
-            html += '<td style="font-weight:700; color:var(--success); text-align:center;">' + (r.pickCount || 0) + '</td>';
-            html += '<td style="font-weight:700; color:var(--primary); text-align:center;">' + (r.deliverCount || 0) + '</td>';
-            html += '<td style="font-weight:700; color:var(--danger); text-align:center;">' + (r.returnCount || 0) + '</td>';
-            html += '<td style="font-weight:600;">' + (r.driverName || '') + '</td>';
-            html += '<td style="font-family:monospace; font-weight:500;">' + (r.driverPhone || '') + '</td>';
-            var isMatched = r.tripCode && matchedTripCodes.has(r.tripCode);
-            html += '<td style="text-align:center;font-weight:bold;">' + (isMatched ? '<span style="color:var(--success);">✅ Đã ĐS</span>' : '<span style="color:var(--warning);">⚠️ Chưa ĐS</span>') + '</td>';
-            html += '</tr>';
-        }
-        html += '</tbody></table></div></div>';
+    for (var m = 0; m < filtered.length; m++) {
+        var r = filtered[m];
+        var whColor = typeof warehouseColor === 'function' ? warehouseColor(r.hubName || 'Khác') : '';
+        html += '<tr>';
+        html += '<td>' + (m+1) + '</td>';
+        html += '<td style="font-weight:600; white-space:nowrap;">' + (r.dateStr || '') + '</td>';
+        html += '<td style="font-family:monospace; font-size:13px; font-weight:bold;">' + (r.tripCode ? '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + r.tripCode + '" target="_blank" style="color:var(--success);text-decoration:underline;">' + r.tripCode + '</a>' : '') + '</td>';
+        html += '<td style="font-family:monospace; font-weight:700; color:#f0ad4e;">' + (typeof formatPlate === 'function' ? formatPlate(r.plate || '') : (r.plate || '')) + '</td>';
+        html += '<td><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;' + whColor + '">' + (r.hubName || 'Khác') + '</span></td>';
+        html += '<td style="font-family:monospace; font-size:12px; color:var(--text-muted);">' + (r.startTime || '') + '</td>';
+        html += '<td style="font-family:monospace; font-size:12px; color:var(--text-muted);">' + (r.endTime || '') + '</td>';
+        html += '<td style="font-weight:500;">' + (r.createdByName || '') + '</td>';
+        html += '<td style="font-weight:700; color:var(--success); text-align:center;">' + (r.pickCount || 0) + '</td>';
+        html += '<td style="font-weight:700; color:var(--primary); text-align:center;">' + (r.deliverCount || 0) + '</td>';
+        html += '<td style="font-weight:700; color:var(--danger); text-align:center;">' + (r.returnCount || 0) + '</td>';
+        html += '<td style="font-weight:600;">' + (r.driverName || '') + '</td>';
+        html += '<td style="font-family:monospace; font-weight:500;">' + (r.driverPhone || '') + '</td>';
+        var isMatched = r.tripCode && matchedTripCodes.has(r.tripCode);
+        html += '<td style="text-align:center;font-weight:bold;">' + (isMatched ? '<span style="color:var(--success);">✅ Đã ĐS</span>' : '<span style="color:var(--warning);">⚠️ Chưa ĐS</span>') + '</td>';
+        html += '</tr>';
     }
+    html += '</tbody></table></div></div>';
     
     console.log('✅ HTML built, length=' + html.length);
     container.innerHTML = '<div class="ranking-grid" style="grid-template-columns:1fr">' + html + '</div>';

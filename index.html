@@ -3222,7 +3222,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
     }
     
     // ★ Xác định vị trí cột KM vào/ra từ header row
-    let colKmStart = -1, colKmEnd = -1, colKmDiff = -1;
+    let colKmStart = -1, colKmEnd = -1, colKmDiff = -1, colRoute = -1;
     if (headerRowIdx > -1) {
         const hdr = rawData[headerRowIdx].map(c => (c || '').toString().toLowerCase().trim());
         for (let ci = 0; ci < hdr.length; ci++) {
@@ -3230,6 +3230,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
             if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
             if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
             if (h.includes('km phát sinh') || h.includes('tổng km') || h.includes('số km') || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
+            if (h === 'lộ trình' || h === 'tuyến đường' || h.includes('điểm giao') || h === 'tuyến') colRoute = ci;
         }
     }
     if (colKmEnd > -1 && colKmDiff === -1) colKmDiff = colKmEnd + 1;
@@ -3276,7 +3277,16 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         if (stt && isNaN(stt) && !stt.match(/^\d/)) continue;
         
         const vehicleCode = (row[3] || '').toString().trim();
-        const route = (row[4] || row[5] || '').toString().trim();
+        let route = '';
+        if (colRoute > -1) {
+            route = (row[colRoute] || '').toString().trim();
+        } else {
+            route = (row[4] || row[5] || '').toString().trim();
+            // Fallback heuristics if both exist: pick the longer one usually since routes are longer than vehicle IDs
+            if (row[4] && row[5] && row[5].toString().length > row[4].toString().length) {
+                route = row[5].toString().trim();
+            }
+        }
         
         // Giờ đi/về: detect vị trí cột tự động
         let hourStart = '', hourEnd = '';

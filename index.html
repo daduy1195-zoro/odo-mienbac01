@@ -2425,6 +2425,10 @@ function renderRanking(filtered, month, whFilter) {
                 // Nếu KHÔNG có GHN trips, nhưng là NV mới (có ngày bắt đầu > 0)
                 // Trừ đi số ngày trước khi họ bắt đầu làm việc
                 myExpectedDays -= firstActiveIndex;
+            } else if (firstActiveIndex === -1) {
+                // NV chưa có chuyến đi GHN nào và chưa từng báo cáo ODO trong kỳ này
+                // Khả năng cao là NV mới vào chưa bắt đầu chạy
+                myExpectedDays = 0;
             }
 
             // Tính ngày CÓ ĐI LÀM nhưng KHÔNG báo cáo
@@ -2434,6 +2438,7 @@ function renderRanking(filtered, month, whFilter) {
                 
                 // Bỏ qua các ngày TRƯỚC khi NV bắt đầu làm việc (NV mới)
                 if (firstActiveIndex !== -1 && index < firstActiveIndex) return false;
+                if (firstActiveIndex === -1) return false; // Chưa bắt đầu làm việc ngày nào
                 
                 if (isTrackedInTrips && !e.workedDays.has(d)) return false; // NV nghỉ
                 return true; // Có đi làm nhưng không báo
@@ -2452,7 +2457,7 @@ function renderRanking(filtered, month, whFilter) {
 
             // Tính % hoàn thành = (ngày làm việc - ngày thiếu báo cáo) / ngày làm việc
             const reportedWorkDays = myExpectedDays - workedNoReport.length;
-            const rate = myExpectedDays > 0 ? Math.round((reportedWorkDays / myExpectedDays) * 100) : 0;
+            const rate = myExpectedDays > 0 ? Math.round((reportedWorkDays / myExpectedDays) * 100) : 100;
             
             const toShort = (d) => {
                 const p = d.match(/(\d{1,2})\/(\d{1,2})/);

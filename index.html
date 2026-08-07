@@ -2306,7 +2306,7 @@ function renderDailyTable(filtered) {
             <td style="font-family:monospace;">${escapeHtml(String(e.kmEnd))}</td>
             <td style="font-weight:600; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + escapeHtml(String(kmDisplay)) + ' (gõ sai!)' : escapeHtml(String(kmDisplay))}</td>
             <td>${tripHtml}</td>
-            <td><a href="${sheetUrl}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;white-space:nowrap;">Dòng ${e.sheetRow}</a></td>
+            <td><a href="${sheetUrl}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;white-space:nowrap;">Dòng ${e.sheetRow}</a></td>
         </tr>`;
     });
 
@@ -2701,7 +2701,7 @@ function renderTypoWarnings(filtered) {
                 .map(d => d.replace(/\/\d{4}$/, ''));
             const wh = t.wrong.entries[0]?.shortWH || '';
             const editLinks = t.wrong.entries.map(e =>
-                `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=C${e.sheetRow}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;" title="Mở dòng ${e.sheetRow}">Dòng ${e.sheetRow}</a>`
+                `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=C${e.sheetRow}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;" title="Mở dòng ${e.sheetRow}">Dòng ${e.sheetRow}</a>`
             ).join(', ');
 
             html += `<tr>
@@ -2740,7 +2740,7 @@ function renderTypoWarnings(filtered) {
                 .map(d => d.replace(/\/\d{4}$/, ''));
             const province = getProvinceFromPlate(t.wrongPlate);
             const editLinks = t.entries.slice(0, 5).map(e =>
-                `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=J${e.sheetRow}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`
+                `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=J${e.sheetRow}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`
             ).join(', ') + (t.entries.length > 5 ? ` +${t.entries.length - 5}` : '');
 
             html += `<tr>
@@ -2777,7 +2777,7 @@ function renderTypoWarnings(filtered) {
             const typeLabel = mm.type === 'name' ? '❌ Sai tên' : '❌ Sai mã NV';
 
             const editLinks = mm.reported.entries.slice(0, 5).map(e =>
-                `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=C${e.sheetRow}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`
+                `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=C${e.sheetRow}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`
             ).join(', ') + (mm.reported.entries.length > 5 ? ` +${mm.reported.entries.length - 5}` : '');
 
             html += `<tr>
@@ -2822,7 +2822,7 @@ function renderTypoWarnings(filtered) {
 
         odoErrors.forEach((e, i) => {
             const km = parseInt(e.kmEnd) - parseInt(e.kmStart);
-            const editLink = `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=H${e.sheetRow}" target="_blank" onclick="this.style.color='#666';this.style.opacity='0.5';" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`;
+            const editLink = `<a href="https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_EMPLOYEE_ID}/edit#gid=${e.gid}&range=H${e.sheetRow}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;">Dòng ${e.sheetRow}</a>`;
 
             html += `<tr>
                 <td>${i + 1}</td>
@@ -3573,7 +3573,7 @@ function renderNccTrip() {
                     <td>${r.sheetId ? (() => {
                         let sheetUrl = 'https://docs.google.com/spreadsheets/d/' + r.sheetId + '/edit';
                         if (r.tabGid) sheetUrl += '#gid=' + r.tabGid + '&range=B' + r.sourceRow;
-                        return '<a href="' + sheetUrl + '" target="_blank" onclick="this.style.color=\'#666\';this.style.opacity=\'0.5\';" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
+                        return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
                     })() : escapeHtml(r.dateStr)}</td>
                     <td>${escapeHtml(r.ncc)}</td>
                     <td><strong>${escapeHtml(r.plate)}</strong></td>
@@ -4259,6 +4259,16 @@ window.exportRecon3WayExcel = function() {
 
 
 
+
+
+    // Global link click handler for dimming
+    document.addEventListener('click', function(e) {
+        let target = e.target.closest('a[target="_blank"]');
+        if (target) {
+            target.style.color = '#666';
+            target.style.opacity = '0.5';
+        }
+    });
 
 </script>
 </body>

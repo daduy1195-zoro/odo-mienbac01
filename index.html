@@ -2075,7 +2075,7 @@ function renderAll() {
         if (nccFilter && norm(e.supplier) !== norm(nccFilter)) return false;
         
         if (dateFrom || dateTo) {
-            const parts = e.dateStr ? e.dateStr.split('/') : [];
+            const parts = e.dateStr ? String(e.dateStr).split('/') : [];
             if (parts.length === 3) {
                 const rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];
                 if (dateFrom && rowDate < dateFrom) return false;
@@ -3393,7 +3393,7 @@ async function loadNccTripData() {
         for (const sheet of CONFIG.NCC_TRIP_SHEETS) {
             try {
                 // ★ Bước 1: Lấy danh sách tên tab + GID
-                container.querySelector('span').textContent = `Đang quét tabs NCC: ${sheet.ncc}...`;
+                { const _s = container.querySelector('span'); if (_s) _s.textContent = `Đang quét tabs NCC: ${sheet.ncc}...`; }
                 const tabInfos = await getSheetTabNames(sheet.id);
                 console.log(`📋 ${sheet.ncc}: ${tabInfos.length} tabs → [${tabInfos.map(t=>t.name).join(', ')}]`);
                 
@@ -3413,7 +3413,7 @@ async function loadNccTripData() {
                 console.log(`🚛 ${sheet.ncc}: ${vehicleTabs.length} vehicle tabs → [${vehicleTabs.map(t=>t.name).join(', ')}]`);
                 
                 // ★ Bước 3: Fetch các tab xe (Concurrent - batch 5)
-                container.querySelector('span').textContent = `Đang quét ${vehicleTabs.length} tabs xe của ${sheet.ncc}...`;
+                { const _s = container.querySelector('span'); if (_s) _s.textContent = `Đang quét ${vehicleTabs.length} tabs xe của ${sheet.ncc}...`; }
                 
                 const batchSize = 5;
                 for (let i = 0; i < vehicleTabs.length; i += batchSize) {
@@ -3464,8 +3464,8 @@ async function loadNccTripData() {
         
         // Sắp xếp theo ngày giảm dần
         allNccData.sort((a, b) => {
-            const da = a.dateStr ? a.dateStr.split('/').reverse().join('') : '';
-            const db = b.dateStr ? b.dateStr.split('/').reverse().join('') : '';
+            const da = a.dateStr ? String(a.dateStr).split('/').reverse().join('') : '';
+            const db = b.dateStr ? String(b.dateStr).split('/').reverse().join('') : '';
             return da.localeCompare(db);
         });
         
@@ -3518,7 +3518,7 @@ function renderNccTrip() {
         if (filterPlate && !norm(row.plate).includes(norm(filterPlate))) return;
         if (filterEmp && (!row.fullName || !norm(row.fullName).includes(norm(filterEmp)))) return;
 
-        const parts = row.dateStr ? row.dateStr.split('/') : [];
+        const parts = row.dateStr ? String(row.dateStr).split('/') : [];
         if (parts.length === 3) {
             const rowDateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
             if (filterMonth && typeof isInCycle === 'function' && !isInCycle(rowDateObj, filterMonth)) return;
@@ -3811,8 +3811,8 @@ async function loadLastmileData() {
         console.log('✅ After filter Ahamove: ' + lastmileData.length + ' records');
         tripsData = lastmileData; // Use lastmileData directly as the source of truth for all trip matching
         lastmileData.sort(function(a, b) {
-            var da = a.dateStr ? a.dateStr.split('/').reverse().join('') : '';
-            var db = b.dateStr ? b.dateStr.split('/').reverse().join('') : '';
+            var da = a.dateStr ? String(a.dateStr).split('/').reverse().join('') : '';
+            var db = b.dateStr ? String(b.dateStr).split('/').reverse().join('') : '';
             return db.localeCompare(da);
         });
         console.log('✅ Sorted. First date: ' + (lastmileData[0] ? lastmileData[0].dateStr : 'N/A'));
@@ -3887,7 +3887,7 @@ function renderLastmile() {
             if (filterStatus === 'thieu' && isMatched) continue;
         }
         var filterMonth = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
-        var parts = row.dateStr.split('/');
+        var parts = String(row.dateStr || '').split('/');
         if (parts.length === 3) {
             var rowDateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
             var rowDateStrISO = parts[2] + '-' + parts[1] + '-' + parts[0];
@@ -4144,7 +4144,7 @@ window.renderRecon3Way = function() {
 
     var dateInRange = function(dateStr) {
         if (!dateStr) return false;
-        var parts = dateStr.split('/');
+        var parts = String(dateStr || '').split('/');
         if (parts.length !== 3) return false;
         if (dateFrom || dateTo) {
             var rowDate = parts[2] + '-' + parts[1] + '-' + parts[0];

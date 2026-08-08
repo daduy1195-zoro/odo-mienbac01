@@ -3760,58 +3760,38 @@ async function loadLastmileData() {
             var partner = String(r.servicePartner || '').toLowerCase();
             if (String(r.id || '') === 'test001') continue;
             if (partner.indexOf('ahamove') !== -1) continue;
-            // String-ify everything
-            r.dateStr = String(r.dateStr || '');
-            // Fix ISO dates from Google Sheets (2026-08-02T17:00:00.000Z → 02/08/2026)
-            if (r.dateStr && r.dateStr.indexOf('T') > -1) {
+            // Parse and format dates robustly
+            const parseAndFormatDate = (dateString, includeTime = false) => {
+                if (!dateString) return '';
                 try {
-                    var d = new Date(r.dateStr);
+                    const d = new Date(dateString);
                     if (!isNaN(d.getTime())) {
-                        r.dateStr = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const yyyy = d.getFullYear();
+                        if (includeTime) {
+                            const hh = String(d.getHours()).padStart(2, '0');
+                            const min = String(d.getMinutes()).padStart(2, '0');
+                            return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+                        }
+                        return `${dd}/${mm}/${yyyy}`;
                     }
                 } catch(e) {}
+                if (dateString.includes('/')) return dateString;
+                return '';
+            };
+            
+            r.createdTime = parseAndFormatDate(r.createdTime, true);
+            r.startTime = parseAndFormatDate(r.startTime, true);
+            r.endTime = parseAndFormatDate(r.endTime, true);
+            
+            // Override dateStr with the date part of startTime if available
+            if (r.startTime) {
+                r.dateStr = r.startTime.split(' ')[0];
+            } else {
+                r.dateStr = parseAndFormatDate(r.dateStr, false);
             }
-            r.tripCode = String(r.tripCode || '');
-            r.plate = String(r.plate || '');
-            r.hubName = String(r.hubName || '');
-            r.hubId = String(r.hubId || '');
-            r.createdTime = String(r.createdTime || '');
-            if (r.createdTime && r.createdTime.indexOf('T') > -1) {
-                try {
-                    var dtcreatedTime = new Date(r.createdTime);
-                    if (!isNaN(dtcreatedTime.getTime())) {
-                        r.createdTime = String(dtcreatedTime.getDate()).padStart(2,'0') + '/' + String(dtcreatedTime.getMonth()+1).padStart(2,'0') + '/' + dtcreatedTime.getFullYear() + ' ' + String(dtcreatedTime.getHours()).padStart(2,'0') + ':' + String(dtcreatedTime.getMinutes()).padStart(2,'0');
-                    }
-                } catch(e) {}
-            }
-            r.startTime = String(r.startTime || '');
-            if (r.startTime && r.startTime.indexOf('T') > -1) {
-                try {
-                    var dtstartTime = new Date(r.startTime);
-                    if (!isNaN(dtstartTime.getTime())) {
-                        var dd = String(dtstartTime.getDate()).padStart(2,'0');
-                        var mm = String(dtstartTime.getMonth()+1).padStart(2,'0');
-                        var yyyy = dtstartTime.getFullYear();
-                        r.startTime = dd + '/' + mm + '/' + yyyy + ' ' + String(dtstartTime.getHours()).padStart(2,'0') + ':' + String(dtstartTime.getMinutes()).padStart(2,'0');
-                        // Override dateStr to use Start Date instead of whatever was provided
-                        r.dateStr = dd + '/' + mm + '/' + yyyy;
-                    }
-                } catch(e) {}
-            } else if (r.startTime) {
-                var parts = r.startTime.split(' ');
-                if (parts.length > 0 && parts[0].indexOf('/') > -1) {
-                    r.dateStr = parts[0];
-                }
-            }
-            r.endTime = String(r.endTime || '');
-            if (r.endTime && r.endTime.indexOf('T') > -1) {
-                try {
-                    var dtendTime = new Date(r.endTime);
-                    if (!isNaN(dtendTime.getTime())) {
-                        r.endTime = String(dtendTime.getDate()).padStart(2,'0') + '/' + String(dtendTime.getMonth()+1).padStart(2,'0') + '/' + dtendTime.getFullYear() + ' ' + String(dtendTime.getHours()).padStart(2,'0') + ':' + String(dtendTime.getMinutes()).padStart(2,'0');
-                    }
-                } catch(e) {}
-            }
+            
             r.createdById = String(r.createdById || '');
             r.createdByName = String(r.createdByName || '');
             r.driverId = String(r.driverId || '');

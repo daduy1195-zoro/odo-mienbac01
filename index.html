@@ -1400,7 +1400,7 @@ function fetchSheetJSONP(sheetId, gid) {
 
         // Tạo thẻ <script> để tải dữ liệu (bypass CORS)
         const script = document.createElement('script');
-        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&gid=${gid}&range=A1:Z&headers=1&_cb=${Date.now()}`;
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName};reqId:${Date.now()}&gid=${gid}&range=A1:Z&headers=1&_cb=${Date.now()}`;
         script.onerror = () => {
             delete window[callbackName];
             clearTimeout(timer);
@@ -1451,7 +1451,7 @@ function fetchSheetByNameJSONP(sheetId, sheetName) {
             resolve([]); // Don't fail entire load if Trips sheet times out
         }, timeoutMs);
         const script = document.createElement('script');
-        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&sheet=${encodeURIComponent(sheetName)}&range=A1:Z&headers=1&_cb=${Date.now()}`;
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName};reqId:${Date.now()}&sheet=${encodeURIComponent(sheetName)}&range=A1:Z&headers=1&_cb=${Date.now()}`;
         script.onerror = () => {
             delete window[callbackName];
             clearTimeout(timer);

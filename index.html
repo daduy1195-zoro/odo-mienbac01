@@ -2245,6 +2245,7 @@ function renderDailyTable(filtered) {
         }
 
         let tripHtml = '<span style="color:var(--text-muted);">—</span>';
+        let routeHtml = '<span style="color:var(--text-muted);">—</span>';
         if (typeof lastmileData !== 'undefined') {
             const normPlate = e.plate ? String(e.plate).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
             const matchKey = normPlate + '_' + e.dateStr;
@@ -2254,6 +2255,7 @@ function renderDailyTable(filtered) {
             });
             if (trip && trip.tripCode) {
                 tripHtml = `<a href="https://nhanh.ghn.vn/lastmile/trip-detail/${trip.tripCode}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${trip.tripCode}</strong></a>`;
+                if (trip.route) routeHtml = escapeHtml(trip.route);
             }
         }
 
@@ -2273,6 +2275,7 @@ function renderDailyTable(filtered) {
             <td style="font-family:monospace;">${escapeHtml(String(e.kmStart))}</td>
             <td style="font-family:monospace;">${escapeHtml(String(e.kmEnd))}</td>
             <td style="font-weight:600; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + escapeHtml(String(kmDisplay)) + ' (gõ sai!)' : escapeHtml(String(kmDisplay))}</td>
+            <td style="font-size:12px; max-width: 150px; white-space: normal;">${routeHtml}</td>
             <td>${tripHtml}</td>
             <td><a href="${sheetUrl}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;white-space:nowrap;">Dòng ${e.sheetRow}</a></td>
         </tr>`;
@@ -3742,6 +3745,7 @@ async function loadLastmileData() {
             
             r.tripCode = String(rRaw['Mã chuyến đi'] || rRaw.tripCode || '');
             r.plate = String(rRaw['Biển số xe'] || rRaw.plate || '');
+            r.route = String(rRaw['Tuyến đường'] || rRaw.route || '');
             r.createdTime = String(rRaw['Tạo'] || rRaw.createdTime || '');
             r.startTime = String(rRaw['Bắt đầu'] || rRaw.startTime || '');
             r.endTime = String(rRaw['Kết thúc'] || rRaw.endTime || '');
@@ -3918,7 +3922,7 @@ function renderLastmile() {
     html += '<div class="ranking-card" style="margin-top: 15px;">';
     html += '<div class="table-scroll">';
     html += '<table class="ranking-table"><thead><tr>';
-    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:100px">SĐT</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
+    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:100px">SĐT</th><th>Tuyến đường</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
     html += '</tr></thead><tbody>';
     
     for (var m = 0; m < filtered.length; m++) {
@@ -3938,6 +3942,7 @@ function renderLastmile() {
         html += '<td style="font-weight:700; color:var(--danger); text-align:center;">' + (r.returnCount || 0) + '</td>';
         html += '<td style="font-weight:600;">' + (r.driverName || '') + '</td>';
         html += '<td style="font-family:monospace; font-weight:500;">' + (r.driverPhone || '') + '</td>';
+        html += '<td style="font-size:12px; max-width:150px; white-space:normal;">' + (r.route ? escapeHtml(r.route) : '<span style="color:var(--text-muted);">—</span>') + '</td>';
         var isMatched = r.tripCode && matchedTripCodes.has(r.tripCode);
         html += '<td style="text-align:center;font-weight:bold;">' + (isMatched ? '<span style="color:var(--success);">✅ Đã ĐS</span>' : '<span style="color:var(--warning);">⚠️ Chưa ĐS</span>') + '</td>';
         html += '</tr>';

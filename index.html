@@ -1572,7 +1572,7 @@ async function loadAllData() {
         employeeData = [...archivedOdo];
         // Phục hồi dateObj cho dữ liệu từ archive
         employeeData.forEach(e => {
-            if (e.dateStr && e.dateStr.includes('T') && e.dateStr.endsWith('Z')) {
+            if (e.dateStr && String(e.dateStr).includes('T') && String(e.dateStr).endsWith('Z')) {
                 e.dateObj = new Date(e.dateStr);
                 e.dateStr = `${String(e.dateObj.getDate()).padStart(2, '0')}/${String(e.dateObj.getMonth() + 1).padStart(2, '0')}/${e.dateObj.getFullYear()}`;
             } else if (e.dateStr && !e.dateObj) {
@@ -2316,20 +2316,6 @@ function renderRanking(filtered, month, whFilter) {
         whMap[wh][key].days.add(e.dateStr);
     });
 
-    const syncedDates = new Set();
-    console.log('🔍 tripsData.length =', tripsData.length);
-    tripsData.forEach(t => {
-        syncedDates.add(t.dateStr);
-        // Find if this driver is in whMap
-        Object.values(whMap).forEach(whGrp => {
-            const key = Object.keys(whGrp).find(k => whGrp[k].code === String(t.code));
-            if (key) {
-                whGrp[key].workedDays.add(t.dateStr);
-            }
-        });
-    });
-    console.log('🔍 syncedDates:', syncedDates.size, 'ngày:', [...syncedDates].sort().join(', '));
-
     // ★ Bổ sung NV từ master list chưa báo cáo (đảm bảo 4 kho luôn hiện)
     if (masterList.length > 0) {
         masterList.forEach(m => {
@@ -2345,6 +2331,20 @@ function renderRanking(filtered, month, whFilter) {
             }
         });
     }
+
+    const syncedDates = new Set();
+    console.log('🔍 tripsData.length =', tripsData.length);
+    tripsData.forEach(t => {
+        syncedDates.add(t.dateStr);
+        // Find if this driver is in whMap
+        Object.values(whMap).forEach(whGrp => {
+            const key = Object.keys(whGrp).find(k => whGrp[k].code === String(t.code));
+            if (key) {
+                whGrp[key].workedDays.add(t.dateStr);
+            }
+        });
+    });
+    console.log('🔍 syncedDates:', syncedDates.size, 'ngày:', [...syncedDates].sort().join(', '));
 
     // Nếu không có dữ liệu
     if (Object.keys(whMap).length === 0) {
@@ -3334,7 +3334,7 @@ async function loadNccTripData() {
         
                 let allNccData = [...archivedData];
         allNccData.forEach(r => {
-            if (r.dateStr && r.dateStr.includes('T') && r.dateStr.endsWith('Z')) {
+            if (r.dateStr && String(r.dateStr).includes('T') && String(r.dateStr).endsWith('Z')) {
                 const d = new Date(r.dateStr);
                 r.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
             }

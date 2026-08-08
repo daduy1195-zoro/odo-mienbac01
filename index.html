@@ -3724,8 +3724,12 @@ async function loadLastmileData() {
             
             // Map the new Vietnamese keys to the old English keys expected by the dashboard
             r.id = String(rRaw['id'] || rRaw.id || '');
-            r.dateStr = String(rRaw['Ngày báo cáo'] || rRaw.dateStr || '');
-            
+            var dateSrc = rRaw['Bắt đầu'] || rRaw['Ngày báo cáo'] || rRaw.dateStr || '';
+            r.dateStr = String(dateSrc);
+            if (r.dateStr.includes('T') && r.dateStr.endsWith('Z')) {
+                const d = new Date(r.dateStr);
+                r.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+            }            
             var hubRaw = String(rRaw['Hub'] || rRaw.hubName || '');
             if (rRaw['Hub']) {
                 var hubParts = hubRaw.split('-');

@@ -966,6 +966,26 @@ function detectTypos(data) {
         }
     });
 
+    // Thêm các biển số có trong dữ liệu Chuyến đi Lastmile và NCC (vì xe thực tế có chạy chuyến là xe hợp lệ)
+    if (typeof lastmileData !== 'undefined' && Array.isArray(lastmileData)) {
+        lastmileData.forEach(t => {
+            if (t.plate) {
+                const p = String(t.plate).toUpperCase().replace(/[\s\-\.]/g, '');
+                masterPlates.add(p);
+                masterPlateList.push(p);
+            }
+        });
+    }
+    if (typeof nccTripData !== 'undefined' && Array.isArray(nccTripData)) {
+        nccTripData.forEach(t => {
+            if (t.plate) {
+                const p = String(t.plate).toUpperCase().replace(/[\s\-\.]/g, '');
+                masterPlates.add(p);
+                masterPlateList.push(p);
+            }
+        });
+    }
+
     const plateTypos = [];
     const plateWrongMap = {}; // Gom các biển sai giống nhau
 

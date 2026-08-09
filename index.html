@@ -2218,6 +2218,7 @@ function renderDailyTable(filtered) {
                 <th>ODO Đi</th>
                 <th>ODO Về</th>
                 <th>Km</th>
+                <th>Tuyến đường</th>
                 <th>Mã chuyến đi</th>
                 <th style="width:60px;">Sửa</th>
             </tr>
@@ -2257,13 +2258,24 @@ function renderDailyTable(filtered) {
 
         let tripHtml = '<span style="color:var(--text-muted);">—</span>';
         let routeHtml = '<span style="color:var(--text-muted);">—</span>';
-        if (typeof lastmileData !== 'undefined') {
+        if (typeof lastmileData !== 'undefined' && lastmileData.length > 0) {
             const normPlate = e.plate ? String(e.plate).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
-            const matchKey = normPlate + '_' + e.dateStr;
-            const trip = lastmileData.find(t => {
-                const tp = t.plate ? String(t.plate).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
-                return tp + '_' + t.dateStr === matchKey;
-            });
+            const empCode = e.code ? String(e.code).trim() : '';
+            // ★ Ghép theo 3 cách: (1) biển số + ngày, (2) mã NV + ngày, (3) tên NV + ngày
+            let trip = null;
+            // Cách 1: Biển số + ngày
+            if (normPlate && e.dateStr) {
+                trip = lastmileData.find(t => {
+                    const tp = t.plate ? String(t.plate).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
+                    return tp === normPlate && t.dateStr === e.dateStr;
+                });
+            }
+            // Cách 2: Mã NV + ngày (dùng driverId từ Bao_cao_chuyen_di)
+            if (!trip && empCode && e.dateStr) {
+                trip = lastmileData.find(t => {
+                    return (String(t.driverId).trim() === empCode || String(t.code).trim() === empCode) && t.dateStr === e.dateStr;
+                });
+            }
             if (trip && trip.tripCode) {
                 tripHtml = `<a href="https://nhanh.ghn.vn/lastmile/trip-detail/${trip.tripCode}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${trip.tripCode}</strong></a>`;
                 if (trip.route) routeHtml = escapeHtml(trip.route);

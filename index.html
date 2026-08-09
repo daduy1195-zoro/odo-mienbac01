@@ -1571,59 +1571,11 @@ async function loadAllData() {
         // Chỉ lấy NV thuộc 4 kho anh quản lý
         // ═══════════════════════════════════════
         const archivedOdo = await fetchArchivedData('odo_data');
-        const archivedOdoKeys = new Set(archivedOdo.map(o => o.id));
+        const archivedOdoMap = new Map(archivedOdo.map(o => [o.id, o]));
         const newOdoToArchive = [];
         
-        employeeData = [...archivedOdo];
-        // Phục hồi dateObj cho dữ liệu từ archive
-        employeeData.forEach(e => {
-            if (e.dateStr && String(e.dateStr).includes('T') && String(e.dateStr).endsWith('Z')) {
-                e.dateObj = new Date(e.dateStr);
-                e.dateStr = `${String(e.dateObj.getDate()).padStart(2, '0')}/${String(e.dateObj.getMonth() + 1).padStart(2, '0')}/${e.dateObj.getFullYear()}`;
-            } else if (e.dateStr && !e.dateObj) {
-                const dateParts = String(e.dateStr).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-                if (dateParts) e.dateObj = new Date(parseInt(dateParts[3]), parseInt(dateParts[2]) - 1, parseInt(dateParts[1]));
-            }
-            ['hourStart', 'hourEnd'].forEach(field => {
-                if (e[field]) {
-                    const strVal = String(e[field]);
-                    if (strVal.includes('T') && strVal.endsWith('Z')) {
-                        const d = new Date(strVal);
-                        e[field] = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                    } else if (typeof e[field] === 'number') {
-                        const totalMins = Math.round(e[field] * 24 * 60);
-                        const h = Math.floor(totalMins / 60);
-                        const m = totalMins % 60;
-                        e[field] = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                    } else {
-                        e[field] = strVal;
-                    }
-                }
-            });
-            
-            // Phục hồi giờ nếu bị convert thành ISO String từ Archive
-            ['hourStart', 'hourEnd'].forEach(field => {
-                if (e[field]) {
-                    const strVal = String(e[field]);
-                    if (strVal.includes('T') && strVal.endsWith('Z')) {
-                        const d = new Date(strVal);
-                        e[field] = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                    } else if (typeof e[field] === 'number') {
-                        // Trưởng hợp Google Sheets API trả về số thập phân cho thời gian
-                        const totalMins = Math.round(e[field] * 24 * 60);
-                        const h = Math.floor(totalMins / 60);
-                        const m = totalMins % 60;
-                        e[field] = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                    } else {
-                        e[field] = strVal;
-                    }
-                }
-            });
-            
-            if (e.plate) e.plate = String(e.plate);
-            if (e.code) e.code = String(e.code);
-            if (e.name) e.name = String(e.name);
-        });
+        employeeData = []; // ★ Bắt đầu từ rỗng, ưu tiên dữ liệu fresh từ Google Sheet
+        // (Phục hồi dateObj cho archive data đã chuyển xuống sau khi load fresh data)
         
         allEmployeeNames.clear();
 
@@ -1697,20 +1649,28 @@ async function loadAllData() {
             };
 
             if (code) {
-                if (archivedOdoKeys.has(entry.id)) {
-                    // ★ Dữ liệu đã sửa trên Sheet → ghi đè bản archive cũ
-                    const idx = employeeData.findIndex(e => e.id === entry.id);
-                    if (idx !== -1) employeeData[idx] = entry;
-                } else {
-                    employeeData.push(entry);
-                    archivedOdoKeys.add(entry.id);
+                employeeData.push(entry);
+                // Lưu vào archive nếu chưa có
+                if (!archivedOdoMap.has(entry.id)) {
+                    const archiveEntry = { ...entry };
+                    delete archiveEntry.dateObj;
+                    newOdoToArchive.push(archiveEntry);
                 }
-                // Luôn cập nhật archive với bản mới nhất
-                const archiveEntry = { ...entry };
-                delete archiveEntry.dateObj;
-                newOdoToArchive.push(archiveEntry);
             }
         }
+        
+        // ★ Bổ sung dữ liệu cũ từ archive (chỉ những ngày KHÔNG có trong fresh data)
+        const freshIds = new Set(employeeData.map(e => e.id));
+        archivedOdo.forEach(arc => {
+            if (arc.id && !freshIds.has(arc.id)) {
+                // Phục hồi dateObj
+                if (arc.dateStr) {
+                    const dp = String(arc.dateStr).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+                    if (dp) arc.dateObj = new Date(parseInt(dp[3]), parseInt(dp[2]) - 1, parseInt(dp[1]));
+                }
+                employeeData.push(arc);
+            }
+        });
         
         if (newOdoToArchive.length > 0) saveToArchive('odo_data', newOdoToArchive);
 

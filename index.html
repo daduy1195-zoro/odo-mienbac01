@@ -1696,13 +1696,19 @@ async function loadAllData() {
                 kmStart, kmEnd, hourStart, hourEnd, matchKey, jsMatchKey, fullName, sheetRow, gid
             };
 
-            if (code && !archivedOdoKeys.has(entry.id)) {
-                employeeData.push(entry);
-                // Tạo một bản copy bỏ đi dateObj để lưu lên Apps Script (không support object Date)
+            if (code) {
+                if (archivedOdoKeys.has(entry.id)) {
+                    // ★ Dữ liệu đã sửa trên Sheet → ghi đè bản archive cũ
+                    const idx = employeeData.findIndex(e => e.id === entry.id);
+                    if (idx !== -1) employeeData[idx] = entry;
+                } else {
+                    employeeData.push(entry);
+                    archivedOdoKeys.add(entry.id);
+                }
+                // Luôn cập nhật archive với bản mới nhất
                 const archiveEntry = { ...entry };
                 delete archiveEntry.dateObj;
                 newOdoToArchive.push(archiveEntry);
-                archivedOdoKeys.add(entry.id);
             }
         }
         

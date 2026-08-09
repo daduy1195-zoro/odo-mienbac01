@@ -886,9 +886,14 @@ function levenshtein(a, b) {
 // Logic: nhóm các (tên+mã+biển số) giống nhau theo tần suất.
 // Tổ hợp xuất hiện nhiều nhất = "đúng". Tổ hợp tương tự nhưng ít hơn = "sai".
 function detectTypos(data) {
+    // NV đã nghỉ việc → bỏ qua, không cảnh báo gõ sai
+    const RESIGNED_EMPLOYEES = ['PHAM DINH TU'];
+    const isResigned = (name) => RESIGNED_EMPLOYEES.some(r => r === removeAccents(name || '').toUpperCase());
+
     // Bước 1: Đếm tần suất mỗi tổ hợp (tên, mã NV)
     const freqMap = {}; // key = "TÊN|MÃ" → { count, entries[] }
     data.forEach(e => {
+        if (isResigned(e.name)) return; // Bỏ qua NV đã nghỉ
         const key = removeAccents(e.name).toUpperCase() + '|' + e.code;
         if (!freqMap[key]) freqMap[key] = { name: e.name, code: e.code, count: 0, entries: [] };
         freqMap[key].count++;

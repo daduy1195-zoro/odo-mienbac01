@@ -3604,7 +3604,7 @@ function renderNccTrip() {
                 <span class="badge badge-info">${rows.length} chuyến</span>
             </div>
             <div class="table-scroll">
-                <table class="ranking-table">
+                <table style="width:100%; border-collapse:collapse;">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -3665,9 +3665,9 @@ function renderNccTrip() {
                         return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
                     })() : escapeHtml(r.dateStr)}</td>
                     <td>${escapeHtml(r.ncc)}</td>
-                    <td><strong>${escapeHtml(r.plate)}</strong></td>
+                    <td style="font-family:monospace; font-weight:700; color:#f0ad4e;">${escapeHtml(r.plate)}</td>
                     <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
-                    <td style="font-weight: bold;">${(() => {
+                    <td style="font-family:monospace; font-weight:600;">${(() => {
                         if (r.kmDiff) {
                             let diffVal = parseFloat(String(r.kmDiff).replace(/[^\d.]/g, ''));
                             if (!isNaN(diffVal)) return diffVal;
@@ -3683,7 +3683,7 @@ function renderNccTrip() {
                         
                         return escapeHtml(r.kmStart || '') + (r.kmEnd ? ' - ' + escapeHtml(r.kmEnd) : '');
                     })()}</td>
-                    <td>${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
+                    <td style="font-family:monospace; white-space:nowrap;">${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
                     <td>${(() => {
                         if (!r.hourEnd) return '-';
                         const timeStr = String(r.hourEnd).replace(/h/gi, ':');
@@ -4333,7 +4333,7 @@ window.renderRecon3Way = function() {
 
     // Single table
     html += '<div class="table-scroll">';
-    html += '<table class="ranking-table"><thead><tr>';
+    html += '<table style="width:100%; border-collapse:collapse;"><thead><tr>';
     html += '<th>#</th><th>Ng\u00E0y</th><th>Bi\u1EC3n s\u1ED1</th><th>NCC</th><th>Kho</th>';
     html += '<th>M\u00E3 chuy\u1EBFn GHN</th><th>S\u1ED1 chuy\u1EBFn LM</th><th>NV B\u00E1o (Km)</th><th>NCC Ch\u1ED1t (Km)</th><th>Tr\u1EA1ng th\u00E1i</th>';
     html += '</tr></thead><tbody>';

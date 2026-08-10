@@ -3210,7 +3210,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
             const h = hdr[ci];
             if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
             if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
-            if (h.includes('km phát sinh') || h.includes('tổng km') || h.includes('số km') || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
+            if (h.includes('km chạy') || h.includes('km phát sinh') || h.includes('tổng km') || h.includes('số km') || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
             if (h === 'lộ trình' || h === 'tuyến đường' || h.includes('điểm giao') || h === 'tuyến') colRoute = ci;
         }
     }
@@ -3315,7 +3315,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         }
         
         // Tính dòng gốc trong sheet: headers=1 nên rawData[0]=sheet row 2
-        const sourceRow = i + 2;
+        const sttNum = parseInt(stt);
+        const sourceRow = (!isNaN(sttNum) && sttNum > 0) ? (sttNum + 13) : (i + 14);
         
         results.push({
             ncc: nccName,
@@ -3702,20 +3703,19 @@ function renderNccTrip() {
                 <td><span class="badge" style="${whColor}">${escapeHtml(shortWH)}</span></td>
                 <td style="font-size:12px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
                 <td style="font-family:monospace; font-weight:600;">${(() => {
-                    if (r.kmDiff) {
+                    if (r.kmDiff !== undefined && r.kmDiff !== null && String(r.kmDiff).trim() !== '') {
                         let diffVal = parseFloat(String(r.kmDiff).replace(/[^\d.]/g, ''));
                         if (!isNaN(diffVal)) return diffVal;
                         return escapeHtml(r.kmDiff);
                     }
-                    let s = parseFloat(r.kmStart);
-                    let e = parseFloat(r.kmEnd);
-                    if (!isNaN(s) && !isNaN(e)) {
-                        if (s >= 1000 && e >= s) return (e - s).toString();
-                        if (s >= 1000 && e > 0 && e < 1000) return e.toString();
+                    let s = parseFloat(String(r.kmStart).replace(/[^\d.]/g, ''));
+                    let e = parseFloat(String(r.kmEnd).replace(/[^\d.]/g, ''));
+                    if (!isNaN(s) && !isNaN(e) && s > 1000 && e >= s) {
+                        return (e - s).toString();
                     }
-                    if (!isNaN(s) && s > 0 && s < 1000 && isNaN(e)) return s.toString();
-                    
-                    return escapeHtml(r.kmStart || '') + (r.kmEnd ? ' - ' + escapeHtml(r.kmEnd) : '');
+                    if (!isNaN(e) && e > 0 && e < 1000) return e.toString();
+                    if (!isNaN(s) && s > 0 && s < 1000) return s.toString();
+                    return '-';
                 })()}</td>
                 <td style="font-family:monospace; white-space:nowrap;">${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
                 <td>${(() => {

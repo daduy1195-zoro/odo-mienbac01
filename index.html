@@ -3339,19 +3339,15 @@ async function loadNccTripData() {
     container.innerHTML = '<div class="loading-overlay" style="position:relative;height:100px;display:flex;align-items:center;justify-content:center"><div class="spinner"></div><span style="margin-left:10px;color:var(--text-muted)">Đang tải dữ liệu lưu trữ...</span></div>';
     
     try {
+        const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
+
         // 1. Lấy dữ liệu đã archive
         const archivedData = await fetchArchivedData('ncc_trips');
         console.log(`📦 Archived NCC Trips: ${archivedData.length} records`);
         const archivedKeys = new Set(archivedData.map(r => r.id));
         
-                let allNccData = [...archivedData];
-        allNccData.forEach(r => {
-            if (r.dateStr && String(r.dateStr).includes('T') && String(r.dateStr).endsWith('Z')) {
-                const d = new Date(r.dateStr);
-                r.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-            }
-            if (r.plate) r.plate = String(r.plate);
-            
+        let allNccData = [...archivedData];
+        
         // Deduplicate archive items by keeping longest route
         const seenNccMap = new Map();
         allNccData = allNccData.filter(r => {
@@ -3367,6 +3363,13 @@ async function loadNccTripData() {
             return false;
         });
 
+        allNccData.forEach(r => {
+            if (r.dateStr && String(r.dateStr).includes('T') && String(r.dateStr).endsWith('Z')) {
+                const d = new Date(r.dateStr);
+                r.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+            }
+            if (r.plate) r.plate = String(r.plate);
+            
             // Phục hồi giờ cho NCC Trips
             ['hourStart', 'hourEnd'].forEach(field => {
                 if (r[field]) {
@@ -3387,7 +3390,6 @@ async function loadNccTripData() {
         });
         
         let newRecordsToArchive = [];
-        const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
         
         // Build GHN trips map: normalize(plate) + dateStr → tripCode
         const ghnTripMap = new Map();

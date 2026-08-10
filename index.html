@@ -217,6 +217,7 @@
         table { width: 100%; border-collapse: collapse; }
         thead th {
             padding: 14px 16px;
+            white-space: nowrap;
             text-align: left;
             font-size: 11px;
             font-weight: 700;
@@ -250,10 +251,11 @@
             font-weight: 600;
         }
         
-        .table-scroll { max-height: calc(100vh - 240px); overflow-y: auto; }
-        .table-scroll::-webkit-scrollbar { width: 6px; }
+        .table-scroll { max-height: calc(100vh - 240px); overflow: auto; width: 100%; }
+        .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-scroll::-webkit-scrollbar-track { background: var(--bg-secondary); }
-        .table-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .table-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
         /* Badges */
         .badge {
@@ -3973,10 +3975,10 @@ function renderLastmile() {
     });
     
     var html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filtered.length + '/' + lastmileData.length + ' chuyến (tối đa 5000). Dùng bộ lọc ngày để thu hẹp.</div>';
-    html += '<div class="ranking-card" style="margin-top: 15px;">';
+    html += '<div class="ranking-card" style="margin-top: 15px; padding:0; overflow:hidden;">';
     html += '<div class="table-scroll">';
-    html += '<table class="ranking-table"><thead><tr>';
-    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:100px">SĐT</th><th>Tuyến đường</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
+    html += '<table style="width:100%; border-collapse:collapse;"><thead><tr>';
+    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:100px">SĐT</th><th style="min-width:200px;">Tuyến đường</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
     html += '</tr></thead><tbody>';
     
     for (var m = 0; m < filtered.length; m++) {

@@ -3261,12 +3261,16 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         let route = '';
         if (colRoute > -1) {
             route = (row[colRoute] || '').toString().trim();
-        } else {
-            route = (row[4] || row[5] || '').toString().trim();
-            // Fallback heuristics if both exist: pick the longer one usually since routes are longer than vehicle IDs
-            if (row[4] && row[5] && row[5].toString().length > row[4].toString().length) {
-                route = row[5].toString().trim();
-            }
+        }
+        
+        // Ưu tiên chuỗi dài nhất làm Lộ trình (tránh lấy nhầm "Xe 9", "Xe 11")
+        const r4 = (row[4] || '').toString().trim();
+        const r5 = (row[5] || '').toString().trim();
+        const r6 = (row[6] || '').toString().trim();
+        const candidates = [route, r5, r4, r6].filter(Boolean);
+        candidates.sort((a, b) => b.length - a.length);
+        if (candidates.length > 0) {
+            route = candidates[0];
         }
         
         // Giờ đi/về: detect vị trí cột tự động
@@ -3348,6 +3352,21 @@ async function loadNccTripData() {
             }
             if (r.plate) r.plate = String(r.plate);
             
+        // Deduplicate archive items by keeping longest route
+        const seenNccMap = new Map();
+        allNccData = allNccData.filter(r => {
+            const key = `${normalizeStr(r.dateStr)}_${normalizeStr(r.plate)}_${normalizeStr(r.ncc)}`;
+            if (!seenNccMap.has(key)) {
+                seenNccMap.set(key, r);
+                return true;
+            }
+            const existing = seenNccMap.get(key);
+            if ((r.route || '').length > (existing.route || '').length) {
+                existing.route = r.route;
+            }
+            return false;
+        });
+
             // Phục hồi giờ cho NCC Trips
             ['hourStart', 'hourEnd'].forEach(field => {
                 if (r[field]) {

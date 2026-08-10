@@ -3542,10 +3542,7 @@ function rematchNccTrips() {
 function renderNccTrip() {
     const container = document.getElementById('nccTripContainer');
     if (!isNccTripLoaded) {
-        return;
-    }
-    if (nccTripData.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu phù hợp.</p></div>';
+        container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 10px"></div>Đang tải dữ liệu chuyến NCC...</div>';
         return;
     }
     
@@ -3556,12 +3553,9 @@ function renderNccTrip() {
     const filterMonth = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
     const filterPlate = document.getElementById('filterPlate') ? document.getElementById('filterPlate').value : '';
     const filterEmp = document.getElementById('filterEmployee') ? document.getElementById('filterEmployee').value : '';
-    
-    // Group by warehouse
-    const grouped = {};
-    let filteredCount = 0;
-    
     const filterStatus = document.getElementById('filterNccStatus') ? document.getElementById('filterNccStatus').value : '';
+    
+    const filtered = [];
     
     nccTripData.forEach((row, idx) => {
         if (filterWh && row.warehouse !== filterWh) return;
@@ -3584,140 +3578,137 @@ function renderNccTrip() {
         if (filterStatus === 'khop' && !hasMatch) return;
         if (filterStatus === 'thieu' && hasMatch) return;
         
-        if (!grouped[row.warehouse]) grouped[row.warehouse] = [];
-        grouped[row.warehouse].push({ ...row, originalIndex: idx });
-        filteredCount++;
+        filtered.push({ ...row, originalIndex: idx });
     });
     
-    if (filteredCount === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho kho này.</p></div>';
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho lọc này.</p></div>';
         return;
     }
-    
-    let html = '';
-    
-    for (const [wh, rows] of Object.entries(grouped)) {
-        html += `
-        <div class="ranking-card">
-            <div class="ranking-card-header">
-                <h3><span style="${warehouseColor(wh)}"></span> ${wh}</h3>
-                <span class="badge badge-info">${rows.length} chuyến</span>
-            </div>
-            <div class="table-scroll">
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Ngày</th>
-                            <th>NCC</th>
-                            <th>Biển số xe</th>
-                            <th>Lộ trình</th>
-                            <th>Số KM phát sinh</th>
-                            <th>Giờ đi - về</th>
-                            <th>Tăng ca (h)</th>
-                            <th>Mã chuyến GHN</th>
-                            <th>
-                                <select onchange="document.getElementById('filterNccStatus').value = this.value; renderNccTrip();" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer; outline: none;">
-                                    <option value="" style="color: #000;">Trạng thái (Tất cả)</option>
-                                    <option value="khop" style="color: #000;" ${document.getElementById('filterNccStatus') && document.getElementById('filterNccStatus').value === 'khop' ? 'selected' : ''}>✅ Khớp</option>
-                                    <option value="thieu" style="color: #000;" ${document.getElementById('filterNccStatus') && document.getElementById('filterNccStatus').value === 'thieu' ? 'selected' : ''}>⚠️ Thiếu</option>
-                                </select>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+
+    // Sort filtered rows by date descending
+    filtered.sort((a, b) => {
+        const partsA = String(a.dateStr || '').split('/');
+        const partsB = String(b.dateStr || '').split('/');
+        if (partsA.length === 3 && partsB.length === 3) {
+            const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0]));
+            const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0]));
+            return dateB - dateA;
+        }
+        return 0;
+    });
+
+    let html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filtered.length + '/' + nccTripData.length + ' chuyến đi NCC.</div>';
+    html += '<div class="ranking-card" style="margin-top:15px; padding:0; overflow:hidden;">';
+    html += '<div class="table-scroll">';
+    html += '<table style="width:100%; border-collapse:collapse;">';
+    html += '<thead><tr>';
+    html += '<th style="width:40px">#</th>';
+    html += '<th>Ngày</th>';
+    html += '<th>NCC</th>';
+    html += '<th>Biển số xe</th>';
+    html += '<th>Kho</th>';
+    html += '<th>Lộ trình</th>';
+    html += '<th>Số KM phát sinh</th>';
+    html += '<th>Giờ đi - về</th>';
+    html += '<th>Tăng ca (h)</th>';
+    html += '<th>Mã chuyến GHN</th>';
+    html += '<th>';
+    html += '<select onchange="document.getElementById(\'filterNccStatus\').value = this.value; renderNccTrip();" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer; outline: none;">';
+    html += '<option value="" style="color: #000;">Trạng thái (Tất cả)</option>';
+    html += '<option value="khop" style="color: #000;" ' + (filterStatus === 'khop' ? 'selected' : '') + '>✅ Khớp</option>';
+    html += '<option value="thieu" style="color: #000;" ' + (filterStatus === 'thieu' ? 'selected' : '') + '>⚠️ Thiếu</option>';
+    html += '</select>';
+    html += '</th>';
+    html += '</tr></thead><tbody>';
+
+    filtered.forEach((r, i) => {
+        const hasMatch = !!r.ghnTripCode;
+        const isOff = r.ghnTripCode === 'OFF';
         
-        rows.forEach((r, i) => {
-            const hasMatch = !!r.ghnTripCode;
-            const isOff = r.ghnTripCode === 'OFF';
+        let statusHtml = '';
+        if (isOff) {
+            statusHtml = '<span style="color:var(--text-muted);">⏸️ Nghỉ</span>';
+        } else if (hasMatch) {
+            statusHtml = '<span style="color:var(--success);">✅ Khớp</span>';
+        } else {
+            statusHtml = '<span style="color:var(--warning);">⚠️ Thiếu mã</span>';
+        }
             
-            let statusHtml = '';
-            if (isOff) {
-                statusHtml = '<span style="color:var(--text-muted);">⏸️ Nghỉ</span>';
-            } else if (hasMatch) {
-                statusHtml = '<span style="color:var(--success);">✅ Khớp</span>';
-            } else {
-                statusHtml = '<span style="color:var(--warning);">⚠️ Thiếu mã</span>';
-            }
-                
-            let ghnHtml = '';
-            if (isOff) {
-                ghnHtml = `<div style="display:flex; gap: 4px; align-items:center;">
-                    <span style="color:var(--text-muted); font-weight:bold; padding: 4px 8px;">OFF</span>
-                    <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; height: 26px;" onclick="updateNccTripCode(${r.originalIndex}, '')" title="Hủy đánh dấu OFF">❌</button>
-                </div>`;
-            } else if (hasMatch) {
-                ghnHtml = `<a href="https://nhanh.ghn.vn/lastmile/trip-detail/${r.ghnTripCode}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${r.ghnTripCode}</strong></a>`;
-            } else {
-                ghnHtml = `<div style="display:flex; gap: 4px; align-items:center;">
-                    <input type="text" class="form-control" style="background:#fff3cd; color:#856404; width:120px;" placeholder="Nhập mã..." onchange="updateNccTripCode(${r.originalIndex}, this.value)" value="${r.ghnTripCode || ''}">
-                    <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; height: 26px; background:#495057;" onclick="updateNccTripCode(${r.originalIndex}, 'OFF')" title="Đánh dấu xe nghỉ (OFF)">OFF</button>
-                </div>`;
-            }
-                
-            html += `
-                <tr>
-                    <td>${i + 1}</td>
-                    <td>${r.sheetId ? (() => {
-                        let sheetUrl = 'https://docs.google.com/spreadsheets/d/' + r.sheetId + '/edit';
-                        if (r.tabGid) sheetUrl += '#gid=' + r.tabGid + '&range=B' + r.sourceRow;
-                        return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
-                    })() : escapeHtml(r.dateStr)}</td>
-                    <td>${escapeHtml(r.ncc)}</td>
-                    <td style="font-family:monospace; font-weight:700; color:#f0ad4e;">${escapeHtml(r.plate)}</td>
-                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
-                    <td style="font-family:monospace; font-weight:600;">${(() => {
-                        if (r.kmDiff) {
-                            let diffVal = parseFloat(String(r.kmDiff).replace(/[^\d.]/g, ''));
-                            if (!isNaN(diffVal)) return diffVal;
-                            return escapeHtml(r.kmDiff);
-                        }
-                        let s = parseFloat(r.kmStart);
-                        let e = parseFloat(r.kmEnd);
-                        if (!isNaN(s) && !isNaN(e)) {
-                            if (s >= 1000 && e >= s) return (e - s).toString();
-                            if (s >= 1000 && e > 0 && e < 1000) return e.toString();
-                        }
-                        if (!isNaN(s) && s > 0 && s < 1000 && isNaN(e)) return s.toString();
-                        
-                        return escapeHtml(r.kmStart || '') + (r.kmEnd ? ' - ' + escapeHtml(r.kmEnd) : '');
-                    })()}</td>
-                    <td style="font-family:monospace; white-space:nowrap;">${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
-                    <td>${(() => {
-                        if (!r.hourEnd) return '-';
-                        const timeStr = String(r.hourEnd).replace(/h/gi, ':');
-                        const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
-                        if (!timeParts) return '-';
-                        let hours = parseInt(timeParts[1]);
-                        const mins = parseInt(timeParts[2]);
-                        if (/PM/i.test(timeStr) && hours < 12) hours += 12;
-                        if (/AM/i.test(timeStr) && hours === 12) hours = 0;
-                        const totalMinutes = hours * 60 + mins;
-                        const shiftEnd = 19 * 60; // 19:00
-                        if (totalMinutes > shiftEnd) {
-                            const otMinutes = totalMinutes - shiftEnd;
-                            const otHours = Math.floor(otMinutes / 60);
-                            const otRemainingMins = otMinutes % 60;
-                            return '<span style="color:var(--danger);font-weight:bold;">' + otHours + 'h' + (otRemainingMins > 0 ? otRemainingMins : '') + '</span>';
-                        }
-                        return '-';
-                    })()}</td>
-                    <td>${ghnHtml}</td>
-                    <td>${statusHtml}</td>
-                </tr>
-            `;
-        });
-        
+        let ghnHtml = '';
+        if (isOff) {
+            ghnHtml = `<div style="display:flex; gap: 4px; align-items:center;">
+                <span style="color:var(--text-muted); font-weight:bold; padding: 4px 8px;">OFF</span>
+                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; height: 26px;" onclick="updateNccTripCode(${r.originalIndex}, '')" title="Hủy đánh dấu OFF">❌</button>
+            </div>`;
+        } else if (hasMatch) {
+            ghnHtml = `<a href="https://nhanh.ghn.vn/lastmile/trip-detail/${r.ghnTripCode}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${r.ghnTripCode}</strong></a>`;
+        } else {
+            ghnHtml = `<div style="display:flex; gap: 4px; align-items:center;">
+                <input type="text" class="form-control" style="background:#fff3cd; color:#856404; width:120px;" placeholder="Nhập mã..." onchange="updateNccTripCode(${r.originalIndex}, this.value)" value="${r.ghnTripCode || ''}">
+                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; height: 26px; background:#495057;" onclick="updateNccTripCode(${r.originalIndex}, 'OFF')" title="Đánh dấu xe nghỉ (OFF)">OFF</button>
+            </div>`;
+        }
+
+        const shortWH = typeof shortWarehouse === 'function' ? shortWarehouse(r.warehouse) : (r.warehouse || '');
+        const whColor = typeof warehouseColor === 'function' ? warehouseColor(r.warehouse || '') : '';
+            
         html += `
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            <tr>
+                <td>${i + 1}</td>
+                <td style="font-weight:600; white-space:nowrap;">${r.sheetId ? (() => {
+                    let sheetUrl = 'https://docs.google.com/spreadsheets/d/' + r.sheetId + '/edit';
+                    if (r.tabGid) sheetUrl += '#gid=' + r.tabGid + '&range=B' + r.sourceRow;
+                    return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
+                })() : escapeHtml(r.dateStr)}</td>
+                <td>${escapeHtml(r.ncc)}</td>
+                <td style="font-family:monospace; font-weight:700; color:#f0ad4e;">${escapeHtml(r.plate)}</td>
+                <td><span class="badge" style="${whColor}">${escapeHtml(shortWH)}</span></td>
+                <td style="font-size:12px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
+                <td style="font-family:monospace; font-weight:600;">${(() => {
+                    if (r.kmDiff) {
+                        let diffVal = parseFloat(String(r.kmDiff).replace(/[^\d.]/g, ''));
+                        if (!isNaN(diffVal)) return diffVal;
+                        return escapeHtml(r.kmDiff);
+                    }
+                    let s = parseFloat(r.kmStart);
+                    let e = parseFloat(r.kmEnd);
+                    if (!isNaN(s) && !isNaN(e)) {
+                        if (s >= 1000 && e >= s) return (e - s).toString();
+                        if (s >= 1000 && e > 0 && e < 1000) return e.toString();
+                    }
+                    if (!isNaN(s) && s > 0 && s < 1000 && isNaN(e)) return s.toString();
+                    
+                    return escapeHtml(r.kmStart || '') + (r.kmEnd ? ' - ' + escapeHtml(r.kmEnd) : '');
+                })()}</td>
+                <td style="font-family:monospace; white-space:nowrap;">${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
+                <td>${(() => {
+                    if (!r.hourEnd) return '-';
+                    const timeStr = String(r.hourEnd).replace(/h/gi, ':');
+                    const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
+                    if (!timeParts) return '-';
+                    let hours = parseInt(timeParts[1]);
+                    const mins = parseInt(timeParts[2]);
+                    if (/PM/i.test(timeStr) && hours < 12) hours += 12;
+                    if (/AM/i.test(timeStr) && hours === 12) hours = 0;
+                    const totalMinutes = hours * 60 + mins;
+                    const shiftEnd = 19 * 60; // 19:00
+                    if (totalMinutes > shiftEnd) {
+                        const otMinutes = totalMinutes - shiftEnd;
+                        const otHours = Math.floor(otMinutes / 60);
+                        const otRemainingMins = otMinutes % 60;
+                        return '<span style="color:var(--danger);font-weight:bold;">' + otHours + 'h' + (otRemainingMins > 0 ? otRemainingMins : '') + '</span>';
+                    }
+                    return '-';
+                })()}</td>
+                <td>${ghnHtml}</td>
+                <td style="font-weight:bold;">${statusHtml}</td>
+            </tr>
         `;
-    }
+    });
     
-    container.innerHTML = `<div class="ranking-grid" style="grid-template-columns: 1fr;">${html}</div>`;
+    html += '</tbody></table></div></div>';
+    container.innerHTML = html;
 }
 
 function exportNccTripExcel() {

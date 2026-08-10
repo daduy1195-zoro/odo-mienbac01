@@ -1831,8 +1831,8 @@ async function loadAllData() {
         }
 
         try {
-            await loadNccTripData();
             await loadLastmileData();
+            await loadNccTripData();
         } catch(e) {
             console.error('Lỗi khi tải ngầm dữ liệu tab:', e);
         }
@@ -3474,6 +3474,7 @@ async function loadNccTripData() {
         
         nccTripData = allNccData;
         isNccTripLoaded = true;
+        rematchNccTrips();
         renderNccTrip();
         if (isLastmileLoaded && typeof renderRecon3Way === 'function') renderRecon3Way();
         showToast('✅', `Đã tải ${totalRows} chuyến live + ${archivedData.length} chuyến lưu trữ!`);
@@ -3489,6 +3490,51 @@ function updateNccTripCode(index, value) {
         nccTripData[index].ghnTripCode = value;
         renderNccTrip();
     }
+}
+
+
+function rematchNccTrips() {
+    if (typeof nccTripData === 'undefined' || !Array.isArray(nccTripData) || nccTripData.length === 0) return;
+    if (typeof tripsData === 'undefined' || !Array.isArray(tripsData) || tripsData.length === 0) return;
+    
+    const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
+    
+    const ghnTripMap = new Map();
+    const ghnDriverMap = new Map();
+    
+    tripsData.forEach(trip => {
+        if (!trip.tripCode || !trip.dateStr) return;
+        if (trip.plate) {
+            const normPlate = normalizeStr(trip.plate);
+            const key = `${normPlate}_${trip.dateStr}`;
+            if (!ghnTripMap.has(key)) ghnTripMap.set(key, trip.tripCode);
+        }
+        if (trip.driverId) {
+            const driverKey = `${String(trip.driverId).trim()}_${trip.dateStr}`;
+            if (!ghnDriverMap.has(driverKey)) ghnDriverMap.set(driverKey, trip.tripCode);
+        }
+    });
+    
+    let matched = 0;
+    nccTripData.forEach(r => {
+        const routeLower = String(r.route || '').toLowerCase();
+        if (routeLower.includes('off') || routeLower.includes('nghỉ') || routeLower.includes('nghi')) {
+            r.ghnTripCode = 'OFF';
+            return;
+        }
+        const normPlate = normalizeStr(r.plate);
+        const matchKey = `${normPlate}_${r.dateStr}`;
+        let code = ghnTripMap.get(matchKey);
+        if (!code && r.driverId) {
+            const driverKey = `${String(r.driverId).trim()}_${r.dateStr}`;
+            code = ghnDriverMap.get(driverKey);
+        }
+        if (code) {
+            r.ghnTripCode = code;
+            matched++;
+        }
+    });
+    console.log(`🔄 rematchNccTrips: ${matched}/${nccTripData.length} trips matched with GHN Lastmile`);
 }
 
 function renderNccTrip() {
@@ -3823,7 +3869,9 @@ async function loadLastmileData() {
         });
         console.log('✅ Sorted. First date: ' + (lastmileData[0] ? lastmileData[0].dateStr : 'N/A'));
         isLastmileLoaded = true;
+        rematchNccTrips();
         if (isNccTripLoaded && typeof renderRecon3Way === 'function') renderRecon3Way();
+        if (typeof renderNccTrip === 'function') renderNccTrip();
         // Set default date = kỳ đối soát
         try {
             var dateRangeEl = document.getElementById('dateRange');

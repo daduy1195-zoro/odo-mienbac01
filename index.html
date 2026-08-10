@@ -3461,12 +3461,27 @@ async function loadNccTripData() {
                             const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, tab.name, tab.gid);
                             if (parsed.length > 0) {
                                 for (const record of parsed) {
-                                    record.id = `${normalizeStr(record.dateStr)}_${normalizeStr(record.plate)}_${normalizeStr(record.ncc)}_${normalizeStr(record.route)}`;
-                                    if (!archivedKeys.has(record.id)) {
+                                    record.id = `${normalizeStr(record.dateStr)}_${normalizeStr(record.plate)}_${normalizeStr(record.ncc)}`;
+                                    const normDate = normalizeStr(record.dateStr);
+                                    const normNcc = normalizeStr(record.ncc);
+                                    const normTab = normalizeStr(record.tabName || record.vehicleCode || '');
+                                    const normPlate = normalizeStr(record.plate);
+
+                                    // Tìm bản ghi lưu trữ tương ứng để ghi đè (khớp date+ncc+tab hoặc date+ncc+plate)
+                                    const existingIdx = allNccData.findIndex(r => {
+                                        if (normalizeStr(r.ncc) !== normNcc || normalizeStr(r.dateStr) !== normDate) return false;
+                                        const rTab = normalizeStr(r.tabName || r.vehicleCode || '');
+                                        if (normTab && rTab && (normTab === rTab || normTab.includes(rTab) || rTab.includes(normTab))) return true;
+                                        if (normalizeStr(r.plate) === normPlate) return true;
+                                        return false;
+                                    });
+
+                                    if (existingIdx !== -1) {
+                                        allNccData[existingIdx] = record; // ★ Ghi đè bản ghi cũ bằng bản ghi tươi từ Sheet!
+                                    } else {
                                         allNccData.push(record);
-                                        newRecordsToArchive.push(record);
-                                        archivedKeys.add(record.id);
                                     }
+                                    newRecordsToArchive.push(record);
                                 }
                                 totalTabs++;
                                 totalRows += parsed.length;

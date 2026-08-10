@@ -3955,12 +3955,30 @@ function renderLastmile() {
     var filtered = [];
     for (var i = 0; i < lastmileData.length && filtered.length < 5000; i++) {
         var row = lastmileData[i];
-        if (filterHub && row.hubName !== filterHub) continue;
-        if (filterPlate && !norm(row.plate).includes(norm(filterPlate))) continue;
-        if (filterEmp && !norm(row.driverName).includes(norm(filterEmp))) continue;
+        // 1. Lọc Kho
+        if (filterHub) {
+            var rowHubShort = typeof shortWarehouse === 'function' ? shortWarehouse(row.hubName) : (row.hubName || '');
+            if (rowHubShort !== filterHub && row.hubName !== filterHub && !norm(row.hubName || '').includes(norm(filterHub))) continue;
+        }
+        
+        // 2. Lọc Biển số
+        if (filterPlate && !norm(row.plate || '').includes(norm(filterPlate))) continue;
+        
+        // 3. Lọc Nhân viên (khớp Tên, Mã NV, Tên + Mã NV hoặc Người tạo)
+        if (filterEmp) {
+            var targetEmp = norm(filterEmp);
+            var empSearch = norm((row.driverName || '') + ' ' + (row.driverId || '') + ' ' + (row.name || '') + ' ' + (row.code || '') + ' ' + (row.createdByName || '') + ' ' + (row.createdById || ''));
+            var hasNameMatch = (row.driverName && targetEmp.includes(norm(row.driverName))) || (row.createdByName && targetEmp.includes(norm(row.createdByName)));
+            var hasIdMatch = (row.driverId && targetEmp.includes(norm(row.driverId))) || (row.createdById && targetEmp.includes(norm(row.createdById)));
+            var hasSearchMatch = empSearch.includes(targetEmp);
+
+            if (!hasSearchMatch && !hasNameMatch && !hasIdMatch) continue;
+        }
+        
+        // 4. Lọc Nhà cung cấp (NCC)
         if (filterNcc) {
-            var rowNcc = tripNccMap.get(row.tripCode);
-            if (!rowNcc || norm(rowNcc) !== norm(filterNcc)) continue;
+            var rowNcc = tripNccMap.get(row.tripCode) || row.servicePartner || row.supplier || '';
+            if (!rowNcc || !norm(rowNcc).includes(norm(filterNcc))) continue;
         }
 
         var filterStatus = document.getElementById('filterLastmileStatus') ? document.getElementById('filterLastmileStatus').value : '';
@@ -4079,11 +4097,13 @@ function switchTab(tab, el) {
     toggleTab('tabLastmile', tab === 'lastmile');
     toggleTab('tabRecon3Way', tab === 'recon3Way');
     
-    if (tab === 'nccTrip' && !isNccTripLoaded) {
-        loadNccTripData();
+    if (tab === 'nccTrip') {
+        if (!isNccTripLoaded) loadNccTripData();
+        else if (typeof renderNccTrip === 'function') renderNccTrip();
     }
-    if (tab === 'lastmile' && !isLastmileLoaded) {
-        loadLastmileData();
+    if (tab === 'lastmile') {
+        if (!isLastmileLoaded) loadLastmileData();
+        else if (typeof renderLastmile === 'function') renderLastmile();
     }
     if (tab === 'recon3Way' && (!isNccTripLoaded || !isLastmileLoaded)) {
         if (!isNccTripLoaded) loadNccTripData();

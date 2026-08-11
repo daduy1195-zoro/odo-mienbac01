@@ -707,6 +707,14 @@ const CONFIG = {
     // Google Apps Script Web App URL (Archive Database)
     // Thay thế URL này sau khi deploy Apps Script
     ARCHIVE_API_URL: 'https://script.google.com/macros/s/AKfycbwKxxC1P5vVCLTAHSyIg-tYoYHOkB8-eDeoQlxhohgLMr25GGsBLNwV7INrftDxN7Ud/exec',
+    
+    // Direct Google Sheet Archive ID & Tab GIDs (Fallback khi API chậm hoặc bị lỗi)
+    ARCHIVE_SHEET_ID: '174ZaGkN2_oTrDmNfY9Tr99zHxdvjX4lOVCMwlEcyvLU',
+    ARCHIVE_GIDS: {
+        'odo_data': '517652990',
+        'ncc_trips': '0',
+        'Bao_cao_chuyen_di': '461028690'
+    }
 };
 Object.freeze(CONFIG);
 
@@ -3102,16 +3110,48 @@ async function sendWarehouseRankingTelegram(whName, evt) {
 
 // ====== LƯU TRỮ VĨNH VIỄN (ARCHIVE) ======
 async function fetchArchivedData(sheetName) {
-    if (!CONFIG.ARCHIVE_API_URL || CONFIG.ARCHIVE_API_URL === 'YOUR_WEB_APP_URL_HERE') return [];
-    try {
-        const res = await fetch(`${CONFIG.ARCHIVE_API_URL}?sheet=${sheetName}&_cb=${Date.now()}`);
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        const data = await res.json();
-        return Array.isArray(data) ? data : [];
-    } catch (e) {
-        console.warn(`Lỗi fetch archived data (${sheetName}):`, e);
-        return [];
+    if (CONFIG.ARCHIVE_API_URL && CONFIG.ARCHIVE_API_URL !== 'YOUR_WEB_APP_URL_HERE') {
+        try {
+            const res = await fetch(`${CONFIG.ARCHIVE_API_URL}?sheet=${sheetName}&_cb=${Date.now()}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) return data;
+            }
+        } catch (e) {
+            console.warn(`Lỗi fetch archived data qua API (${sheetName}):`, e);
+        }
     }
+    
+    // Fallback trực tiếp tới Google Sheet Archive (Sheet ID: 174ZaGkN2_oTrDmNfY9Tr99zHxdvjX4lOVCMwlEcyvLU)
+    if (CONFIG.ARCHIVE_SHEET_ID && CONFIG.ARCHIVE_GIDS && CONFIG.ARCHIVE_GIDS[sheetName]) {
+        try {
+            console.log(`📡 Fetching direct fallback from Archive Sheet (${sheetName}, gid=${CONFIG.ARCHIVE_GIDS[sheetName]})...`);
+            const gid = CONFIG.ARCHIVE_GIDS[sheetName];
+            const url = `https://docs.google.com/spreadsheets/d/${CONFIG.ARCHIVE_SHEET_ID}/gviz/tq?tqx=out:json&gid=${gid}&headers=1&_cb=${Date.now()}`;
+            const res = await fetch(url);
+            const txt = await res.text();
+            const json = JSON.parse(txt.substring(47, txt.length - 2));
+            const table = json.table;
+            const headers = table.cols ? table.cols.map(c => c ? (c.label || '') : '') : [];
+            const objects = [];
+            if (table.rows) {
+                table.rows.forEach(r => {
+                    const obj = {};
+                    headers.forEach((h, idx) => {
+                        if (!h) return;
+                        const cell = r.c ? r.c[idx] : null;
+                        obj[h] = cell ? (cell.f || String(cell.v || '')) : '';
+                    });
+                    objects.push(obj);
+                });
+            }
+            console.log(`✅ Direct Archive Fallback (${sheetName}): Loaded ${objects.length} records`);
+            return objects;
+        } catch(err) {
+            console.error(`❌ Lỗi direct archive fetch (${sheetName}):`, err);
+        }
+    }
+    return [];
 }
 
 async function saveToArchive(sheetName, newRecords) {

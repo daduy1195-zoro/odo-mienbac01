@@ -1178,7 +1178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterEmployee').addEventListener('input', applyFilters);
     document.getElementById('filterPlate').addEventListener('input', applyFilters);
 
-    // ★ TẢI BỘ NHỚ ĐỆM TỨC THÌ (< 0.05s) ★
+    // Phục hồi dữ liệu lưu trữ từ phiên trước (nếu có)
     try {
         const cachedRaw = localStorage.getItem('GHN_DASHBOARD_CACHE_V2');
         if (cachedRaw) {
@@ -1200,12 +1200,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (parts.length === 3) s.dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
                     }
                 });
-                
-                updateFilters();
-                renderAll();
-                loadNccData();
-                showLoading(false);
-                console.log('⚡ Rendered UI instantly from local cache!');
             }
         }
     } catch(e) {}
@@ -1933,9 +1927,12 @@ async function loadAllData() {
         // Cập nhật bộ lọc NV
         updateFilters();
 
-        // Vẽ giao diện
+        // Vẽ toàn bộ giao diện tất cả các tab
         renderAll();
         loadNccData();
+        if (typeof renderNccTrip === 'function') renderNccTrip();
+        if (typeof renderLastmile === 'function') renderLastmile();
+        if (typeof renderRecon3Way === 'function') renderRecon3Way();
 
         // Cập nhật thời gian refresh
         const now = new Date();
@@ -1951,8 +1948,10 @@ async function loadAllData() {
                 masterList: masterList
             }));
         } catch(e) {}
-        
-        showToast('✅', `Đã tải ${employeeData.length} bản ghi NV + ${supplierData.length} chuyến NCC`);
+
+        // TẢI HOÀN TẤT 100% MỚI TẮT SPINNER LOADING (ĐẢM BẢO KHÔNG BỊ RÁC / THIẾU DỮ LIỆU)
+        showLoading(false);
+        showToast('✅', `Đã tải & đối soát hoàn tất 100% (${employeeData.length} bản ghi NV + ${supplierData.length} chuyến NCC)`);
 
     } catch (err) {
         console.error('Lỗi tải dữ liệu:', err);
@@ -3479,10 +3478,21 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         const sttNum = parseInt(stt);
         const sourceRow = (!isNaN(sttNum) && sttNum > 0) ? (sttNum + 13) : (i + 14);
         
+        const finalKey = `${nccName}_${plate}_${dateStr}_${sourceRow}`;
+        try {
+            const overrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
+            if (overrides[finalKey] !== undefined) {
+                matchedTripCode = overrides[finalKey];
+            }
+        } catch(e) {}
+
         results.push({
             ncc: nccName,
             dateStr, plate, vehicleCode, route,
             kmStart, kmEnd, kmDiff, hourStart, hourEnd,
+            otHours, otRate, otFee,
+            kmOverFee, monthlyRate, dailyRate,
+            tollFee, holidayFee, totalCost,
             warehouse,
             ghnTripCode: matchedTripCode,
             sheetId: sheetId || '',
@@ -3688,6 +3698,20 @@ async function loadNccTripData() {
 function updateNccTripCode(index, value) {
     if (nccTripData[index]) {
         nccTripData[index].ghnTripCode = value;
+        
+        // Lưu trữ lâu dài thao tác chốt chuyến/OFF/Phạt vào localStorage
+        try {
+            const overrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
+            const r = nccTripData[index];
+            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.sourceRow}`;
+            if (value) {
+                overrides[key] = value;
+            } else {
+                delete overrides[key];
+            }
+            localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(overrides));
+        } catch(e) {}
+
         renderNccTrip();
     }
 }

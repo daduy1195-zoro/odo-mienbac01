@@ -1178,6 +1178,38 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterEmployee').addEventListener('input', applyFilters);
     document.getElementById('filterPlate').addEventListener('input', applyFilters);
 
+    // ★ TẢI BỘ NHỚ ĐỆM TỨC THÌ (< 0.05s) ★
+    try {
+        const cachedRaw = localStorage.getItem('GHN_DASHBOARD_CACHE_V2');
+        if (cachedRaw) {
+            const cacheObj = JSON.parse(cachedRaw);
+            if (cacheObj.employeeData && cacheObj.employeeData.length > 0) {
+                employeeData = cacheObj.employeeData;
+                supplierData = cacheObj.supplierData || [];
+                masterList = cacheObj.masterList || [];
+                
+                employeeData.forEach(e => {
+                    if (e.dateStr) {
+                        const parts = String(e.dateStr).split('/');
+                        if (parts.length === 3) e.dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    }
+                });
+                supplierData.forEach(s => {
+                    if (s.dateStr) {
+                        const parts = String(s.dateStr).split('/');
+                        if (parts.length === 3) s.dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    }
+                });
+                
+                updateFilters();
+                renderAll();
+                loadNccData();
+                showLoading(false);
+                console.log('⚡ Rendered UI instantly from local cache!');
+            }
+        }
+    } catch(e) {}
+
     // Tải dữ liệu lần đầu
     loadAllData();
 
@@ -1564,70 +1596,48 @@ async function loadAllData() {
     try {
         let empRowsArrays, supRows, masterRowsGH, masterRowsPH, ctvRows;
         
-        try {
-            // ★ Thử đọc trực tiếp từ Google Sheet (nhanh nhất)
-            const empPromises = CONFIG.SHEET_EMPLOYEE_GIDS.map(gid =>
-                fetchSheetJSONP(CONFIG.SHEET_EMPLOYEE_ID, gid).then(rows => {
-                    rows.forEach((r, idx) => {
-                        if (r) {
-                            r._gid = gid;
-                            r._sheetRow = idx + 2;
-                        }
-                    });
-                    return rows;
-                })
-            );
-
-            [empRowsArrays, supRows, masterRowsGH, masterRowsPH, ctvRows] = await Promise.all([
-                Promise.all(empPromises),
-                fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID),
-                fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID),
-                fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'NVPH').catch(e => { console.warn('Không lấy được NVPH:', e); return []; }),
-                fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'CTV').catch(e => { console.warn('Không lấy được CTV:', e); return []; })
+        if (CONFIG.PROXY_API_URL) {
+            // ★ Đọc thẳng qua Proxy API (Bỏ qua 30s timeout do direct Google Sheet bị GHN ACCESS_DENIED)
+            console.log('📡 Fetching via Proxy API...');
+            const [empResult, supResult, masterResult] = await Promise.all([
+                fetchViaProxy('employee'),
+                fetchViaProxy('supplier'),
+                fetchViaProxy('master')
             ]);
-            console.log('✅ Direct Google Sheet access OK');
-        } catch (directErr) {
-            console.warn('⚠️ Lỗi tải dữ liệu:', directErr.message);
             
-            if (CONFIG.PROXY_API_URL) {
-                // ★ Fallback: Đọc qua Proxy Apps Script (khi GHN chặn Gmail cá nhân)
-                console.log('📡 Switching to Proxy API...');
-                showToast('📡', 'Đang đọc qua proxy (sheet bị chặn trực tiếp)...');
-                
-                const [empResult, supResult, masterResult, nvphResult, ctvResult] = await Promise.all([
-                    fetchViaProxy('employee'),
-                    fetchViaProxy('supplier'),
-                    fetchViaProxy('master'),
-                    fetchViaProxy('master_nvph').catch(e => { console.warn('Proxy NVPH:', e); return { rows: [] }; }),
-                    fetchViaProxy('master_ctv').catch(e => { console.warn('Proxy CTV:', e); return { rows: [] }; })
+            empRowsArrays = [[]];
+            if (empResult.rows) {
+                empResult.rows.forEach(row => {
+                    const metaCount = empResult.metaCols ? empResult.metaCols.length : 2;
+                    const dataRow = row.slice(0, row.length - metaCount);
+                    dataRow._gid = row[row.length - 2] || '';
+                    dataRow._sheetRow = parseInt(row[row.length - 1]) || 2;
+                    empRowsArrays[0].push(dataRow);
+                });
+            }
+            
+            supRows = supResult.rows || [];
+            masterRowsGH = masterResult.rows || [];
+            masterRowsPH = [];
+            ctvRows = [];
+            console.log('✅ Proxy fetch OK: emp=' + empRowsArrays[0].length + ', sup=' + supRows.length + ', master=' + masterRowsGH.length);
+        } else {
+            try {
+                const empPromises = CONFIG.SHEET_EMPLOYEE_GIDS.map(gid =>
+                    fetchSheetJSONP(CONFIG.SHEET_EMPLOYEE_ID, gid).then(rows => {
+                        rows.forEach((r, idx) => { if (r) { r._gid = gid; r._sheetRow = idx + 2; } });
+                        return rows;
+                    })
+                );
+                [empRowsArrays, supRows, masterRowsGH, masterRowsPH, ctvRows] = await Promise.all([
+                    Promise.all(empPromises),
+                    fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID),
+                    fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID),
+                    fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'NVPH').catch(e => []),
+                    fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'CTV').catch(e => [])
                 ]);
-                
-                // Employee data: proxy trả về rows với 2 cột cuối là _gid và _sheetRow
-                empRowsArrays = [[]];
-                if (empResult.rows) {
-                    empResult.rows.forEach(row => {
-                        const metaCount = empResult.metaCols ? empResult.metaCols.length : 2;
-                        const dataRow = row.slice(0, row.length - metaCount);
-                        dataRow._gid = row[row.length - 2] || '';
-                        dataRow._sheetRow = parseInt(row[row.length - 1]) || 2;
-                        empRowsArrays[0].push(dataRow);
-                    });
-                }
-                
-                supRows = supResult.rows || [];
-                masterRowsGH = masterResult.rows || [];
-                masterRowsPH = nvphResult.rows || [];
-                ctvRows = ctvResult.rows || [];
-                console.log('✅ Proxy fetch OK: emp=' + empRowsArrays[0].length + ', sup=' + supRows.length + ', master=' + masterRowsGH.length);
-            } else {
-                // ★ Fallback cuối: Chỉ dùng dữ liệu archive
-                console.warn('🔴 No proxy configured. Loading archive-only data...');
-                showToast('⚠️', 'Sheet bị chặn & chưa cấu hình proxy. Chỉ hiện dữ liệu lưu trữ cũ.');
-                empRowsArrays = [[]];
-                supRows = [];
-                masterRowsGH = [];
-                masterRowsPH = [];
-                ctvRows = [];
+            } catch (directErr) {
+                empRowsArrays = [[]]; supRows = []; masterRowsGH = []; masterRowsPH = []; ctvRows = [];
             }
         }
         
@@ -1932,6 +1942,16 @@ async function loadAllData() {
         document.getElementById('lastRefresh').textContent =
             `Cập nhật: ${now.toLocaleTimeString('vi-VN')}`;
 
+        // Lưu bộ nhớ đệm cho lần truy cập tới
+        try {
+            localStorage.setItem('GHN_DASHBOARD_CACHE_V2', JSON.stringify({
+                time: Date.now(),
+                employeeData: employeeData.map(e => ({ ...e, dateObj: null })),
+                supplierData: supplierData.map(s => ({ ...s, dateObj: null })),
+                masterList: masterList
+            }));
+        } catch(e) {}
+        
         showToast('✅', `Đã tải ${employeeData.length} bản ghi NV + ${supplierData.length} chuyến NCC`);
 
     } catch (err) {

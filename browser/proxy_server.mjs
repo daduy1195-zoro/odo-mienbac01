@@ -44,8 +44,30 @@ const SHEETS = {
 };
 
 // Cache dữ liệu (tránh scrape lại mỗi request)
+import fs from 'fs';
+
 const cache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 phút
+const CACHE_TTL = 30 * 60 * 1000; // 30 phút cache
+const CACHE_FILE = path.join(__dirname, 'cache_data.json');
+
+// Load cache từ đĩa khi khởi động server
+try {
+    if (fs.existsSync(CACHE_FILE)) {
+        const diskCache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
+        for (const [k, v] of Object.entries(diskCache)) {
+            cache.set(k, v);
+        }
+        console.log(`💾 Loaded ${cache.size} items from disk cache.`);
+    }
+} catch(e) { console.warn('⚠️ Disk cache load error:', e.message); }
+
+function saveCacheToDisk() {
+    try {
+        const obj = {};
+        for (const [k, v] of cache.entries()) { obj[k] = v; }
+        fs.writeFileSync(CACHE_FILE, JSON.stringify(obj), 'utf8');
+    } catch(e) {}
+}
 
 let browser = null;
 let page = null;
@@ -94,7 +116,7 @@ async function scrapeSheet(sheetId, gid) {
     console.log(`📋 Opening sheet: ${sheetId} gid=${gid}`);
     
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
-    await new Promise(r => setTimeout(r, 3000)); // Chờ sheet render
+    await new Promise(r => setTimeout(r, 1500));
     
     // Ctrl+Home → về A1
     await page.keyboard.down('Control');
@@ -106,13 +128,13 @@ async function scrapeSheet(sheetId, gid) {
     await page.keyboard.down('Control');
     await page.keyboard.press('KeyA');
     await page.keyboard.up('Control');
-    await new Promise(r => setTimeout(r, 1500));
+    await new Promise(r => setTimeout(r, 600));
     
     // Ctrl+C → Copy
     await page.keyboard.down('Control');
     await page.keyboard.press('KeyC');
     await page.keyboard.up('Control');
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 800));
     
     // Đọc clipboard
     const clipboardData = await page.evaluate(async () => {
@@ -137,7 +159,7 @@ async function scrapeSheet(sheetId, gid) {
     console.log(`✅ Scraped ${rows.length} data rows from gid=${gid} (total ${allRows.length} including header)`);
     
     // Lưu cache
-    cache.set(cacheKey, { rows, time: Date.now() });
+    cache.set(cacheKey, { rows, time: Date.now() }); saveCacheToDisk();
     
     return rows;
 }
@@ -251,23 +273,11 @@ const server = http.createServer(async (req, res) => {
                 break;
             }
             case 'master_nvph': {
-                // NVPH tab - scrape by navigating to the named tab
-                // For now, try the master sheet with NVPH tab URL
-                try {
-                    const rows = await scrapeSheetByTabName(SHEETS.master.id, 'NVPH');
-                    result = { status: 'ok', count: rows.length, rows };
-                } catch(e) {
-                    result = { status: 'ok', count: 0, rows: [] };
-                }
+                result = { status: 'ok', count: 0, rows: [] };
                 break;
             }
             case 'master_ctv': {
-                try {
-                    const rows = await scrapeSheetByTabName(SHEETS.master.id, 'CTV');
-                    result = { status: 'ok', count: rows.length, rows };
-                } catch(e) {
-                    result = { status: 'ok', count: 0, rows: [] };
-                }
+                result = { status: 'ok', count: 0, rows: [] };
                 break;
             }
             case 'clear_cache': {

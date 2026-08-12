@@ -714,7 +714,11 @@ const CONFIG = {
         'odo_data': '517652990',
         'ncc_trips': '0',
         'Bao_cao_chuyen_di': '461028690'
-    }
+    },
+    
+    // Google Apps Script Proxy URL (đọc sheet GHN khi bị chặn Gmail cá nhân)
+    // Deploy file proxy_apps_script.js từ tài khoản GHN, dán URL vào đây
+    PROXY_API_URL: ''
 };
 Object.freeze(CONFIG);
 
@@ -1380,6 +1384,22 @@ function renderNcc(pivotData) {
     document.getElementById('nccTotalCost').innerText = Math.round(grandTotalCost).toLocaleString('vi-VN') + ' đ';
 }
 
+// ═══════════════════════════════════════
+// PROXY FETCH - Đọc sheet qua Google Apps Script proxy khi bị ACCESS_DENIED
+// ═══════════════════════════════════════
+async function fetchViaProxy(action, extraParams) {
+    if (!CONFIG.PROXY_API_URL) throw new Error('PROXY_API_URL chưa được cấu hình');
+    const params = new URLSearchParams({ action, ...(extraParams || {}) });
+    const url = CONFIG.PROXY_API_URL + '?' + params.toString() + '&_cb=' + Date.now();
+    console.log('📡 Proxy fetch:', action, url);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Proxy HTTP error: ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error('Proxy error: ' + data.error);
+    if (data.status !== 'ok' && !data.rows) throw new Error('Proxy response invalid');
+    return data;
+}
+
 function fetchSheetJSONP(sheetId, gid) {
     return new Promise((resolve, reject) => {
         const callbackName = '_sheetCB_' + (++_jsonpCounter) + '_' + Date.now();
@@ -1537,26 +1557,74 @@ function normalizeSupplierName(name) {
 async function loadAllData() {
     showLoading(true);
     try {
-        const empPromises = CONFIG.SHEET_EMPLOYEE_GIDS.map(gid =>
-            fetchSheetJSONP(CONFIG.SHEET_EMPLOYEE_ID, gid).then(rows => {
-                rows.forEach((r, idx) => {
-                    if (r) {
-                        r._gid = gid;
-                        r._sheetRow = idx + 2;
-                    }
-                });
-                return rows;
-            })
-        );
+        let empRowsArrays, supRows, masterRowsGH, masterRowsPH, ctvRows;
+        
+        try {
+            // ★ Thử đọc trực tiếp từ Google Sheet (nhanh nhất)
+            const empPromises = CONFIG.SHEET_EMPLOYEE_GIDS.map(gid =>
+                fetchSheetJSONP(CONFIG.SHEET_EMPLOYEE_ID, gid).then(rows => {
+                    rows.forEach((r, idx) => {
+                        if (r) {
+                            r._gid = gid;
+                            r._sheetRow = idx + 2;
+                        }
+                    });
+                    return rows;
+                })
+            );
 
-        const [empRowsArrays, supRows, masterRowsGH, masterRowsPH, ctvRows] = await Promise.all([
-            Promise.all(empPromises),
-            fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID),
-            fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID), // Mặc định NVGH
-            fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'NVPH').catch(e => { console.warn('Không lấy được NVPH:', e); return []; }),
+            [empRowsArrays, supRows, masterRowsGH, masterRowsPH, ctvRows] = await Promise.all([
+                Promise.all(empPromises),
+                fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID),
+                fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID),
+                fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'NVPH').catch(e => { console.warn('Không lấy được NVPH:', e); return []; }),
+                fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'CTV').catch(e => { console.warn('Không lấy được CTV:', e); return []; })
+            ]);
+            console.log('✅ Direct Google Sheet access OK');
+        } catch (directErr) {
+            console.warn('⚠️ Lỗi tải dữ liệu:', directErr.message);
             
-            fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'CTV').catch(e => { console.warn('Không lấy được CTV:', e); return []; })
-        ]);
+            if (CONFIG.PROXY_API_URL) {
+                // ★ Fallback: Đọc qua Proxy Apps Script (khi GHN chặn Gmail cá nhân)
+                console.log('📡 Switching to Proxy API...');
+                showToast('📡', 'Đang đọc qua proxy (sheet bị chặn trực tiếp)...');
+                
+                const [empResult, supResult, masterResult, nvphResult, ctvResult] = await Promise.all([
+                    fetchViaProxy('employee'),
+                    fetchViaProxy('supplier'),
+                    fetchViaProxy('master'),
+                    fetchViaProxy('master_nvph').catch(e => { console.warn('Proxy NVPH:', e); return { rows: [] }; }),
+                    fetchViaProxy('master_ctv').catch(e => { console.warn('Proxy CTV:', e); return { rows: [] }; })
+                ]);
+                
+                // Employee data: proxy trả về rows với 2 cột cuối là _gid và _sheetRow
+                empRowsArrays = [[]];
+                if (empResult.rows) {
+                    empResult.rows.forEach(row => {
+                        const metaCount = empResult.metaCols ? empResult.metaCols.length : 2;
+                        const dataRow = row.slice(0, row.length - metaCount);
+                        dataRow._gid = row[row.length - 2] || '';
+                        dataRow._sheetRow = parseInt(row[row.length - 1]) || 2;
+                        empRowsArrays[0].push(dataRow);
+                    });
+                }
+                
+                supRows = supResult.rows || [];
+                masterRowsGH = masterResult.rows || [];
+                masterRowsPH = nvphResult.rows || [];
+                ctvRows = ctvResult.rows || [];
+                console.log('✅ Proxy fetch OK: emp=' + empRowsArrays[0].length + ', sup=' + supRows.length + ', master=' + masterRowsGH.length);
+            } else {
+                // ★ Fallback cuối: Chỉ dùng dữ liệu archive
+                console.warn('🔴 No proxy configured. Loading archive-only data...');
+                showToast('⚠️', 'Sheet bị chặn & chưa cấu hình proxy. Chỉ hiện dữ liệu lưu trữ cũ.');
+                empRowsArrays = [[]];
+                supRows = [];
+                masterRowsGH = [];
+                masterRowsPH = [];
+                ctvRows = [];
+            }
+        }
         
         const ctvCodes = new Set();
         if (ctvRows && ctvRows.length > 0) {

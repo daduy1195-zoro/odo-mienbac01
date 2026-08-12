@@ -2571,14 +2571,28 @@ function renderRanking(filtered, month, whFilter) {
                 </tr></thead>
                 <tbody>
                     ${empList.map((e, i) => {
-                        const pct = Math.min(e.rate, 100);
-                        const color = pct >= 80 ? 'var(--success)' : pct >= 50 ? '#f0ad4e' : 'var(--danger)';
-                        const missingHtml = e.missingDates.length > 0
-                            ? `<span style="color:var(--danger);font-size:12px;">${e.missingDates.join(', ')}</span>`
-                            : '<span style="color:var(--success);font-size:12px;">✅ Đủ</span>';
+                        const isZeroDays = e.myExpectedDays === 0;
+                        const pct = isZeroDays ? 0 : Math.min(e.rate, 100);
+                        const color = isZeroDays ? 'var(--text-muted)' : (pct >= 80 ? 'var(--success)' : pct >= 50 ? '#f0ad4e' : 'var(--danger)');
+                        
+                        let missingHtml = '<span style="color:var(--success);font-size:12px;">✅ Đủ</span>';
+                        if (isZeroDays) {
+                            missingHtml = '<span style="color:var(--text-muted);font-size:12px;">—</span>';
+                        } else if (e.missingDates.length > 0) {
+                            missingHtml = `<span style="color:var(--danger);font-size:12px;">${e.missingDates.join(', ')}</span>`;
+                        }
+
                         const offDaysHtml = e.offDays && e.offDays.length > 0
                             ? `<span style="color:#ffffff;font-size:12px;">${e.offDays.join(', ')}</span>`
                             : '<span style="color:var(--text-muted);font-size:12px;">—</span>';
+
+                        let noteHtml = '<span style="color:var(--text-muted);font-size:12px;">—</span>';
+                        if (e.isResigned) {
+                            noteHtml = '<span class="badge" style="background:#b91c1c;color:#fee2e2;">Đã nghỉ việc</span>';
+                        } else if (isZeroDays) {
+                            noteHtml = '<span style="color:var(--text-muted);font-size:12px;">Chưa phát sinh chuyến</span>';
+                        }
+
                         return `<tr>
                             <td>${i + 1}</td>
                             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
@@ -3478,6 +3492,16 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         const sttNum = parseInt(stt);
         const sourceRow = (!isNaN(sttNum) && sttNum > 0) ? (sttNum + 13) : (i + 14);
         
+        const otHours = (colOtHours > -1 ? row[colOtHours] : '').toString().trim();
+        const otRate = (colOtRate > -1 ? row[colOtRate] : '').toString().trim();
+        const otFee = (colOtFee > -1 ? row[colOtFee] : '').toString().trim();
+        const kmOverFee = (colKmOverFee > -1 ? row[colKmOverFee] : '').toString().trim();
+        const monthlyRate = (colMonthlyRate > -1 ? row[colMonthlyRate] : '').toString().trim();
+        const dailyRate = (colDailyRate > -1 ? row[colDailyRate] : '').toString().trim();
+        const tollFee = (colTollFee > -1 ? row[colTollFee] : '').toString().trim();
+        const holidayFee = (colHolidayFee > -1 ? row[colHolidayFee] : '').toString().trim();
+        const totalCost = (colTotalCost > -1 ? row[colTotalCost] : '').toString().trim();
+
         const finalKey = `${nccName}_${plate}_${dateStr}_${sourceRow}`;
         try {
             const overrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');

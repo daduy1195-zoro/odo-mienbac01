@@ -2534,7 +2534,7 @@ function renderRanking(filtered, month, whFilter) {
 
             // Tính % hoàn thành = (ngày làm việc - ngày thiếu báo cáo) / ngày làm việc
             const reportedWorkDays = myExpectedDays - workedNoReport.length;
-            const rate = myExpectedDays > 0 ? Math.round((reportedWorkDays / myExpectedDays) * 100) : 100;
+            const rate = myExpectedDays > 0 ? Math.round((reportedWorkDays / myExpectedDays) * 100) : 0;
             
             const toShort = (d) => {
                 const p = d.match(/(\d{1,2})\/(\d{1,2})/);
@@ -2591,12 +2591,12 @@ function renderRanking(filtered, month, whFilter) {
                                     <div class="progress-bar-container" style="flex:1;margin:0;">
                                         <div class="progress-bar-fill" style="width:${pct}%;background:${color};"></div>
                                     </div>
-                                    <span style="font-weight:700;color:${color};min-width:42px;text-align:right;">${pct}%</span>
+                                    <span style="font-weight:700;color:${color};min-width:42px;text-align:right;">${isZeroDays ? '0%' : pct + '%'}</span>
                                 </div>
                             </td>
                             <td>${missingHtml}</td>
                             <td>${offDaysHtml}</td>
-                            <td>${e.isResigned ? '<span class="badge" style="background:#b91c1c;color:#fee2e2;">Đã nghỉ việc</span>' : '<span style="color:var(--text-muted);font-size:12px;">—</span>'}</td>
+                            <td>${noteHtml}</td>
                         </tr>`;
                     }).join('')}
                 </tbody>

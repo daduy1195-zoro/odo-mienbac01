@@ -3821,7 +3821,7 @@ function renderNccTrip() {
     html += '<th>NCC</th>';
     html += '<th>Biển số xe</th>';
     html += '<th>Kho</th>';
-    html += '<th>Lộ trình</th>';
+    html += '<th style="max-width:120px; width:120px;">Lộ trình</th>';
     html += '<th style="text-align:right">KM phát sinh</th>';
     html += '<th>Giờ đi - về</th>';
     html += '<th>TG Tăng ca</th>';
@@ -3917,7 +3917,7 @@ function renderNccTrip() {
                 <td>${escapeHtml(r.ncc)}</td>
                 <td style="font-family:monospace; font-weight:700; color:#f0ad4e;">${escapeHtml(r.plate)}</td>
                 <td><span class="badge" style="${whColor}">${escapeHtml(shortWH)}</span></td>
-                <td style="font-size:12px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
+                <td style="font-size:11px; max-width:120px; width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
                 <td style="font-family:monospace; font-weight:600;">${(() => {
                     if (r.kmDiff !== undefined && r.kmDiff !== null && String(r.kmDiff).trim() !== '') {
                         let diffVal = parseFloat(String(r.kmDiff).replace(/[^\d.]/g, ''));

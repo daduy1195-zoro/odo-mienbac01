@@ -50,6 +50,14 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 phút
 let browser = null;
 let page = null;
 
+// Mutex: chỉ cho phép 1 scrape chạy tại 1 thời điểm
+let scrapeQueue = Promise.resolve();
+function withMutex(fn) {
+    const p = scrapeQueue.then(fn, fn); // chạy kể cả khi task trước lỗi
+    scrapeQueue = p.catch(() => {}); // reset queue nếu lỗi
+    return p;
+}
+
 async function initBrowser() {
     if (browser && page) return;
     console.log('🚀 Khởi động trình duyệt headless...');
@@ -72,7 +80,7 @@ async function initBrowser() {
  * Mở sheet → Ctrl+A → Ctrl+C → Đọc clipboard → Parse TSV
  */
 async function scrapeSheet(sheetId, gid) {
-    // Check cache
+    // Check cache trước (không cần mutex)
     const cacheKey = `${sheetId}_${gid}`;
     const cached = cache.get(cacheKey);
     if (cached && (Date.now() - cached.time < CACHE_TTL)) {
@@ -206,6 +214,8 @@ const server = http.createServer(async (req, res) => {
     const parsed = new URL(req.url, 'http://localhost');
     const action = parsed.searchParams.get('action') || 'ping';
     
+    // Mutex ở cấp HTTP request: chỉ 1 request xử lý tại 1 thời điểm
+    const handler = async () => {
     try {
         let result;
         
@@ -281,6 +291,10 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(500);
         res.end(JSON.stringify({ error: err.message }));
     }
+    }; // end handler
+    
+    // Xếp hàng qua mutex
+    withMutex(handler);
 });
 
 /**

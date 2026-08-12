@@ -3321,6 +3321,15 @@ function isVehicleTab(tabName) {
 }
 
 // Hàm parse dữ liệu từ 1 tab NCC
+function formatMoneyCell(val) {
+    if (val === undefined || val === null || val === '') return '-';
+    const s = String(val).trim();
+    if (!s || s === '-') return '-';
+    const num = parseFloat(s.replace(/[^\d.-]/g, ''));
+    if (isNaN(num) || num === 0) return '-';
+    return Math.round(num).toLocaleString('vi-VN') + ' đ';
+}
+
 function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid) {
     const results = [];
     const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
@@ -3800,9 +3809,17 @@ function renderNccTrip() {
     html += '<th>Biển số xe</th>';
     html += '<th>Kho</th>';
     html += '<th>Lộ trình</th>';
-    html += '<th>Số KM phát sinh</th>';
+    html += '<th style="text-align:right">KM phát sinh</th>';
     html += '<th>Giờ đi - về</th>';
-    html += '<th>Tăng ca (h)</th>';
+    html += '<th>TG Tăng ca</th>';
+    html += '<th style="text-align:right">Giá tăng ca</th>';
+    html += '<th style="text-align:right">Phí tăng ca</th>';
+    html += '<th style="text-align:right">Phí vượt KM</th>';
+    html += '<th style="text-align:right">Đơn giá/tháng</th>';
+    html += '<th style="text-align:right">Đơn giá ngày</th>';
+    html += '<th style="text-align:right">Phí cầu đường</th>';
+    html += '<th style="text-align:right">Phí ngày lễ</th>';
+    html += '<th style="text-align:right; color:#fbbf24;">Tổng chi phí</th>';
     html += '<th>Mã chuyến GHN</th>';
     html += '<th>';
     html += '<select onchange="document.getElementById(\'filterNccStatus\').value = this.value; renderNccTrip();" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer; outline: none;">';
@@ -3904,7 +3921,7 @@ function renderNccTrip() {
                     return '-';
                 })()}</td>
                 <td style="font-family:monospace; white-space:nowrap;">${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
-                <td>${(() => {
+                <td style="font-family:monospace;">${r.otHours && r.otHours !== '0' && r.otHours !== '0.00' ? r.otHours : (() => {
                     if (!r.hourEnd) return '-';
                     const timeStr = String(r.hourEnd).replace(/h/gi, ':');
                     const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
@@ -3917,12 +3934,20 @@ function renderNccTrip() {
                     const shiftEnd = 19 * 60; // 19:00
                     if (totalMinutes > shiftEnd) {
                         const otMinutes = totalMinutes - shiftEnd;
-                        const otHours = Math.floor(otMinutes / 60);
-                        const otRemainingMins = otMinutes % 60;
-                        return '<span style="color:var(--danger);font-weight:bold;">' + otHours + 'h' + (otRemainingMins > 0 ? otRemainingMins : '') + '</span>';
+                        const otH = Math.floor(otMinutes / 60);
+                        const otM = otMinutes % 60;
+                        return '<span style="color:var(--danger);font-weight:bold;">' + otH + 'h' + (otM > 0 ? otM : '') + '</span>';
                     }
                     return '-';
                 })()}</td>
+                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.otRate)}</td>
+                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.otFee)}</td>
+                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.kmOverFee)}</td>
+                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.monthlyRate)}</td>
+                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.dailyRate)}</td>
+                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.tollFee)}</td>
+                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.holidayFee)}</td>
+                <td style="text-align:right; font-family:monospace; font-weight:bold; color:#fbbf24;">${formatMoneyCell(r.totalCost)}</td>
                 <td>${ghnHtml}</td>
                 <td style="font-weight:bold;">${statusHtml}</td>
             </tr>

@@ -3321,6 +3321,19 @@ function isVehicleTab(tabName) {
 }
 
 // Hàm parse dữ liệu từ 1 tab NCC
+function formatTimeHM(str) {
+    if (!str) return '';
+    let s = String(str).trim();
+    if (!s || s === '—' || s === '-') return '';
+    const match = s.match(/(\d{1,2}):(\d{2})/);
+    if (match) {
+        const hh = String(parseInt(match[1])).padStart(2, '0');
+        const mm = match[2];
+        return `${hh}:${mm}`;
+    }
+    return s;
+}
+
 function formatMoneyCell(val) {
     if (val === undefined || val === null || val === '') return '-';
     const s = String(val).trim();
@@ -3920,7 +3933,12 @@ function renderNccTrip() {
                     if (!isNaN(s) && s > 0 && s < 1000) return s.toString();
                     return '-';
                 })()}</td>
-                <td style="font-family:monospace; white-space:nowrap;">${escapeHtml(r.hourStart)} - ${escapeHtml(r.hourEnd)}</td>
+                <td style="font-family:monospace; white-space:nowrap;">${(() => {
+                    const hs = formatTimeHM(r.hourStart);
+                    const he = formatTimeHM(r.hourEnd);
+                    if (!hs && !he) return '-';
+                    return (hs || '-') + ' - ' + (he || '-');
+                })()}</td>
                 <td style="font-family:monospace;">${r.otHours && r.otHours !== '0' && r.otHours !== '0.00' ? r.otHours : (() => {
                     if (!r.hourEnd) return '-';
                     const timeStr = String(r.hourEnd).replace(/h/gi, ':');

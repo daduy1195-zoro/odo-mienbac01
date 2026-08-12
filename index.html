@@ -613,10 +613,12 @@
         <div class="section-header">
             <div class="section-title">🔗 Ghép chuyến đi NCC</div>
             <div style="display:flex;gap:8px;align-items:center;">
-                <select id="filterNccStatus" class="form-control" style="width: 150px; font-size: 13px;" onchange="renderNccTrip()">
+                <select id="filterNccStatus" class="form-control" style="width: 160px; font-size: 13px;" onchange="renderNccTrip()">
                     <option value="">Tất cả trạng thái</option>
                     <option value="khop">✅ Khớp</option>
                     <option value="thieu">⚠️ Thiếu mã</option>
+                    <option value="ghn_off">⏸️ GHN OFF</option>
+                    <option value="ncc_off">⏸️ NCC OFF</option>
                 </select>
                 <button class="btn btn-primary" onclick="exportNccTripExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
             </div>
@@ -3420,8 +3422,12 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         let matchedTripCode = ghnTripMap.get(matchKey) || null;
         
         const routeLower = (route || '').toLowerCase();
-        if (!matchedTripCode && (routeLower.includes('off') || routeLower.includes('nghỉ') || routeLower.includes('nghi'))) {
-            matchedTripCode = 'OFF';
+        if (!matchedTripCode) {
+            if (routeLower.includes('ghn off')) {
+                matchedTripCode = 'GHN OFF';
+            } else if (routeLower.includes('ncc off') || routeLower.includes('off') || routeLower.includes('nghỉ') || routeLower.includes('nghi')) {
+                matchedTripCode = 'NCC OFF';
+            }
         }
         
         // Tính dòng gốc trong sheet: headers=1 nên rawData[0]=sheet row 2
@@ -3667,8 +3673,11 @@ function rematchNccTrips() {
     let matched = 0;
     nccTripData.forEach(r => {
         const routeLower = String(r.route || '').toLowerCase();
-        if (routeLower.includes('off') || routeLower.includes('nghỉ') || routeLower.includes('nghi')) {
-            r.ghnTripCode = 'OFF';
+        if (routeLower.includes('ghn off')) {
+            r.ghnTripCode = 'GHN OFF';
+            return;
+        } else if (routeLower.includes('ncc off') || routeLower.includes('off') || routeLower.includes('nghỉ') || routeLower.includes('nghi')) {
+            r.ghnTripCode = 'NCC OFF';
             return;
         }
         const normPlate = normalizeStr(r.plate);
@@ -3721,9 +3730,16 @@ function renderNccTrip() {
             return;
         }
 
+        const codeUpper = String(row.ghnTripCode || '').toUpperCase().trim();
+        const isGhnOff = codeUpper === 'GHN OFF' || codeUpper === 'GHN_OFF';
+        const isNccOff = codeUpper === 'NCC OFF' || codeUpper === 'NCC_OFF' || codeUpper === 'OFF';
+        const isAnyOff = isGhnOff || isNccOff;
         const hasMatch = !!row.ghnTripCode;
-        if (filterStatus === 'khop' && !hasMatch) return;
+        
+        if (filterStatus === 'khop' && (!hasMatch || isAnyOff)) return;
         if (filterStatus === 'thieu' && hasMatch) return;
+        if (filterStatus === 'ghn_off' && !isGhnOff) return;
+        if (filterStatus === 'ncc_off' && !isNccOff) return;
         
         filtered.push({ ...row, originalIndex: idx });
     });
@@ -3765,35 +3781,48 @@ function renderNccTrip() {
     html += '<option value="" style="color: #000;">Trạng thái (Tất cả)</option>';
     html += '<option value="khop" style="color: #000;" ' + (filterStatus === 'khop' ? 'selected' : '') + '>✅ Khớp</option>';
     html += '<option value="thieu" style="color: #000;" ' + (filterStatus === 'thieu' ? 'selected' : '') + '>⚠️ Thiếu</option>';
+    html += '<option value="ghn_off" style="color: #000;" ' + (filterStatus === 'ghn_off' ? 'selected' : '') + '>⏸️ GHN OFF</option>';
+    html += '<option value="ncc_off" style="color: #000;" ' + (filterStatus === 'ncc_off' ? 'selected' : '') + '>⏸️ NCC OFF</option>';
     html += '</select>';
     html += '</th>';
     html += '</tr></thead><tbody>';
 
     filtered.forEach((r, i) => {
-        const hasMatch = !!r.ghnTripCode;
-        const isOff = r.ghnTripCode === 'OFF';
+        const codeUpper = String(r.ghnTripCode || '').toUpperCase().trim();
+        const isGhnOff = codeUpper === 'GHN OFF' || codeUpper === 'GHN_OFF';
+        const isNccOff = codeUpper === 'NCC OFF' || codeUpper === 'NCC_OFF' || codeUpper === 'OFF';
+        const isAnyOff = isGhnOff || isNccOff;
+        const hasMatch = !!r.ghnTripCode && !isAnyOff;
         
         let statusHtml = '';
-        if (isOff) {
-            statusHtml = '<span style="color:var(--text-muted);">⏸️ Nghỉ</span>';
+        if (isGhnOff) {
+            statusHtml = '<span style="color:#a78bfa; font-weight:700;">⏸️ GHN OFF</span>';
+        } else if (isNccOff) {
+            statusHtml = '<span style="color:#94a3b8; font-weight:700;">⏸️ NCC OFF</span>';
         } else if (hasMatch) {
-            statusHtml = '<span style="color:var(--success);">✅ Khớp</span>';
+            statusHtml = '<span style="color:var(--success); font-weight:700;">✅ Khớp</span>';
         } else {
-            statusHtml = '<span style="color:var(--warning);">⚠️ Thiếu mã</span>';
+            statusHtml = '<span style="color:var(--warning); font-weight:700;">⚠️ Thiếu mã</span>';
         }
             
         let ghnHtml = '';
-        if (isOff) {
+        if (isAnyOff) {
+            const labelText = isGhnOff ? 'GHN OFF' : (r.ghnTripCode === 'OFF' ? 'OFF' : 'NCC OFF');
+            const badgeBg = isGhnOff ? 'rgba(167, 139, 250, 0.15)' : 'rgba(148, 163, 184, 0.15)';
+            const badgeColor = isGhnOff ? '#a78bfa' : '#94a3b8';
+            const badgeBorder = isGhnOff ? 'rgba(167, 139, 250, 0.3)' : 'rgba(148, 163, 184, 0.3)';
+            
             ghnHtml = `<div style="display:flex; gap: 4px; align-items:center;">
-                <span style="color:var(--text-muted); font-weight:bold; padding: 4px 8px;">OFF</span>
-                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; height: 26px;" onclick="updateNccTripCode(${r.originalIndex}, '')" title="Hủy đánh dấu OFF">❌</button>
+                <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder}; font-weight:bold; padding: 3px 8px; font-size: 11px;">${labelText}</span>
+                <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 11px; height: 26px;" onclick="updateNccTripCode(${r.originalIndex}, '')" title="Hủy đánh dấu OFF">❌</button>
             </div>`;
         } else if (hasMatch) {
             ghnHtml = `<a href="https://nhanh.ghn.vn/lastmile/trip-detail/${r.ghnTripCode}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${r.ghnTripCode}</strong></a>`;
         } else {
             ghnHtml = `<div style="display:flex; gap: 4px; align-items:center;">
-                <input type="text" class="form-control" style="background:#fff3cd; color:#856404; width:120px;" placeholder="Nhập mã..." onchange="updateNccTripCode(${r.originalIndex}, this.value)" value="${r.ghnTripCode || ''}">
-                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; height: 26px; background:#495057;" onclick="updateNccTripCode(${r.originalIndex}, 'OFF')" title="Đánh dấu xe nghỉ (OFF)">OFF</button>
+                <input type="text" class="form-control" style="background:#fff3cd; color:#856404; width:95px; font-size:12px; padding: 2px 6px; height: 26px;" placeholder="Nhập mã..." onchange="updateNccTripCode(${r.originalIndex}, this.value)" value="${r.ghnTripCode || ''}">
+                <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 11px; height: 26px; background:#6366f1; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="updateNccTripCode(${r.originalIndex}, 'GHN OFF')" title="Đánh dấu GHN OFF">GHN OFF</button>
+                <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 11px; height: 26px; background:#475569; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="updateNccTripCode(${r.originalIndex}, 'NCC OFF')" title="Đánh dấu NCC OFF">NCC OFF</button>
             </div>`;
         }
 
@@ -3881,7 +3910,7 @@ function exportNccTripExcel() {
             'Giờ đi': r.hourStart,
             'Giờ về': r.hourEnd,
             'Mã chuyến đi GHN': r.ghnTripCode || '',
-            'Trạng thái': r.ghnTripCode ? 'Đã khớp' : 'Thiếu mã'
+            'Trạng thái': r.ghnTripCode === 'GHN OFF' ? 'GHN OFF' : (r.ghnTripCode === 'NCC OFF' || r.ghnTripCode === 'OFF' ? 'NCC OFF' : (r.ghnTripCode ? 'Đã khớp' : 'Thiếu mã'))
         }));
         
     const ws = XLSX.utils.json_to_sheet(exportData);

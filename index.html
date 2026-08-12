@@ -6,7 +6,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GHN - Dashboard Báo cáo ODO Xe Tải</title>
+    <title>GHN - Dashboard Báo cáo ODO Xe Tải</title>
     <link rel="icon" type="image/png" href="truck-logo.png">
     <meta name="description" content="Hệ thống theo dõi báo cáo ODO xe tải GHN - Khu vực Miền Bắc">
     <meta http-equiv="X-Frame-Options" content="DENY">
@@ -418,7 +418,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-
+
     <!-- Màn hình chờ tải dữ liệu toàn trang -->
     <div id="globalLoading" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b1117; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease;">
         <img src="truck-image.png" alt="GHN Truck" style="width: 90%; max-width: 700px; border-radius: 8px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.7); margin-bottom: 25px;">
@@ -3408,6 +3408,16 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
     if (colKmStart === -1) colKmStart = 14;
     if (colKmEnd === -1) colKmEnd = 15;
     if (colKmDiff === -1) colKmDiff = 16;
+
+    if (colOtHours === -1) colOtHours = 9;
+    if (colOtRate === -1) colOtRate = 10;
+    if (colOtFee === -1) colOtFee = 11;
+    if (colKmOverFee === -1) colKmOverFee = 18;
+    if (colMonthlyRate === -1) colMonthlyRate = 19;
+    if (colDailyRate === -1) colDailyRate = 20;
+    if (colTollFee === -1) colTollFee = 21;
+    if (colHolidayFee === -1) colHolidayFee = 22;
+    if (colTotalCost === -1) colTotalCost = 23;
     
     const startRow = headerRowIdx > -1 ? headerRowIdx + 1 : 0;
     
@@ -3424,6 +3434,15 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         if (plate.toUpperCase().includes('OFF')) continue;
         if (!dateStr.match(/\d{2}\/\d{2}\/\d{4}/)) continue;
         if (stt && isNaN(stt) && !stt.match(/^\d/)) continue;
+
+        // Bỏ qua các ngày tương lai chưa phát sinh chuyến đi
+        const dateParts = dateStr.split('/');
+        if (dateParts.length === 3) {
+            const rowDate = new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
+            const today = new Date();
+            today.setHours(23, 59, 59, 999);
+            if (rowDate > today) continue;
+        }
         
         const vehicleCode = (row[3] || '').toString().trim();
         let route = '';
@@ -3871,11 +3890,11 @@ function renderNccTrip() {
     html += '<th>Kho</th>';
     html += '<th style="max-width:120px; width:120px;">Lộ trình</th>';
     html += '<th style="text-align:right">KM phát sinh</th>';
+    html += '<th style="text-align:right">Phí vượt KM</th>';
     html += '<th>Giờ đi - về</th>';
     html += '<th>TG Tăng ca</th>';
     html += '<th style="text-align:right">Giá tăng ca</th>';
     html += '<th style="text-align:right">Phí tăng ca</th>';
-    html += '<th style="text-align:right">Phí vượt KM</th>';
     html += '<th style="text-align:right">Đơn giá/tháng</th>';
     html += '<th style="text-align:right">Đơn giá ngày</th>';
     html += '<th style="text-align:right">Phí cầu đường</th>';
@@ -3981,6 +4000,7 @@ function renderNccTrip() {
                     if (!isNaN(s) && s > 0 && s < 1000) return s.toString();
                     return '-';
                 })()}</td>
+                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.kmOverFee)}</td>
                 <td style="font-family:monospace; white-space:nowrap;">${(() => {
                     const hs = formatTimeHM(r.hourStart);
                     const he = formatTimeHM(r.hourEnd);
@@ -4008,7 +4028,6 @@ function renderNccTrip() {
                 })()}</td>
                 <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.otRate)}</td>
                 <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.otFee)}</td>
-                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.kmOverFee)}</td>
                 <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.monthlyRate)}</td>
                 <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.dailyRate)}</td>
                 <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.tollFee)}</td>
@@ -4043,10 +4062,18 @@ function exportNccTripExcel() {
             'Biển số xe': r.plate,
             'Kho': r.warehouse,
             'Lộ trình': r.route,
-            'KM đi': r.kmStart,
-            'KM về': r.kmEnd,
-            'Giờ đi': r.hourStart,
-            'Giờ về': r.hourEnd,
+            'KM phát sinh': r.kmDiff || '',
+            'Phí vượt KM': r.kmOverFee || '',
+            'Giờ đi': formatTimeHM(r.hourStart) || r.hourStart || '',
+            'Giờ về': formatTimeHM(r.hourEnd) || r.hourEnd || '',
+            'TG Tăng ca (h)': r.otHours || '',
+            'Giá tăng ca': r.otRate || '',
+            'Phí tăng ca': r.otFee || '',
+            'Đơn giá/tháng': r.monthlyRate || '',
+            'Đơn giá ngày': r.dailyRate || '',
+            'Phí cầu đường': r.tollFee || '',
+            'Phí ngày lễ': r.holidayFee || '',
+            'Tổng chi phí': r.totalCost || '',
             'Mã chuyến đi GHN': r.ghnTripCode || '',
             'Trạng thái': (r.ghnTripCode === 'GHN OFF' || r.ghnTripCode === 'GHN_OFF') ? 'GHN OFF' : ((r.ghnTripCode === 'Phạt' || r.ghnTripCode === 'PHẠT') ? 'Phạt' : ((r.ghnTripCode === 'NCC OFF' || r.ghnTripCode === 'NCC_OFF' || r.ghnTripCode === 'OFF') ? 'NCC OFF' : (r.ghnTripCode ? 'Đã khớp' : 'Thiếu mã')))
         }));

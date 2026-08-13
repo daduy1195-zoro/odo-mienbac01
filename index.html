@@ -3572,7 +3572,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         const c21Val = parseVietnameseNumber(row[21]);
         if ((dVal === 0 || dVal < 300000) && c21Val > 300000 && c21Val < 5000000) {
             dailyRate = row[21];
-            tollFee = row[22] || '';
+            tollFee = (row[22] && row[22] !== row[21]) ? row[22] : '';
         }
 
         // 2. Nếu dailyRate chứa số tiền tháng (> 5M) và monthlyRate rỗng/bé, đảo lại đúng vị trí
@@ -3583,7 +3583,20 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
             dailyRate = row[21] || '';
         }
 
-        // 3. Lọc bỏ đơn giá tăng ca (35k/h) và đơn giá KM (4k/km) bị nhận nhầm làm tổng phí
+        // 3. Xóa bỏ trùng lặp Phí cầu đường (nếu bằng Đơn giá ngày hoặc Tổng chi phí)
+        const tVal = parseVietnameseNumber(tollFee);
+        const curDVal = parseVietnameseNumber(dailyRate);
+        const totVal = parseVietnameseNumber(totalCost);
+        if (tVal > 0 && (tVal === curDVal || (tVal > 300000 && tVal === totVal))) {
+            tollFee = '';
+        }
+
+        // 4. Lọc bỏ chuỗi thời gian (như 19:00:00) nhầm làm số giờ tăng ca
+        if (otHours && (otHours.includes(':') || otHours === '0' || otHours === '0.00')) {
+            otHours = '';
+        }
+
+        // 5. Lọc bỏ đơn giá tăng ca (35k/h) và đơn giá KM (4k/km) bị nhận nhầm làm tổng phí
         const otFeeNum = parseVietnameseNumber(otFee);
         if (otFeeNum > 0 && otFeeNum <= 100000) otFee = '';
 

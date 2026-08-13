@@ -902,14 +902,18 @@ function levenshtein(a, b) {
 // Logic: nhóm các (tên+mã+biển số) giống nhau theo tần suất.
 // Tổ hợp xuất hiện nhiều nhất = "đúng". Tổ hợp tương tự nhưng ít hơn = "sai".
 function detectTypos(data) {
-    // NV đã nghỉ việc → bỏ qua, không cảnh báo gõ sai
-    const RESIGNED_EMPLOYEES = ['PHAM DINH TU'];
-    const isResigned = (name) => RESIGNED_EMPLOYEES.some(r => r === removeAccents(name || '').toUpperCase());
+    // NV đã nghỉ việc → bỏ qua, không cảnh báo gõ sai hoặc ODO âm
+    const RESIGNED_EMPLOYEES = ['PHAM DINH TU', 'PHAM VAN TU'];
+    const isResigned = (name, code) => {
+        if (code && String(code).trim() === '3160330') return true;
+        const normName = removeAccents(name || '').toUpperCase();
+        return RESIGNED_EMPLOYEES.some(r => normName.includes(r));
+    };
 
     // Bước 1: Đếm tần suất mỗi tổ hợp (tên, mã NV)
     const freqMap = {}; // key = "TÊN|MÃ" → { count, entries[] }
     data.forEach(e => {
-        if (isResigned(e.name)) return; // Bỏ qua NV đã nghỉ
+        if (isResigned(e.name, e.code)) return; // Bỏ qua NV đã nghỉ
         const key = removeAccents(e.name).toUpperCase() + '|' + e.code;
         if (!freqMap[key]) freqMap[key] = { name: e.name, code: e.code, count: 0, entries: [] };
         freqMap[key].count++;
@@ -932,9 +936,6 @@ function detectTypos(data) {
             const nameDist = levenshtein(item.name, can.name);
             const codeDist = levenshtein(item.code, can.code);
 
-            // Cùng tên, mã khác 1-2 số → typo mã
-            // Cùng mã, tên khác 1-3 chữ → typo tên
-            // Cả hai đều gần → typo
             const isSimilar = (
                 (nameDist <= 3 && codeDist <= 2 && (nameDist + codeDist) > 0) ||
                 (nameDist === 0 && codeDist > 0 && codeDist <= 3) ||
@@ -951,7 +952,6 @@ function detectTypos(data) {
         }
 
         if (bestMatch && item.count < bestMatch.count) {
-            // Ít hơn → nghi sai
             typos.push({
                 wrong: item,
                 correct: bestMatch,
@@ -959,13 +959,11 @@ function detectTypos(data) {
                 codeDist: levenshtein(item.code, bestMatch.code)
             });
         } else {
-            // Nhiều hơn hoặc bằng → coi là đúng
             canonical.push(item);
         }
     });
 
     // Bước 4: Kiểm tra biển số NV gõ có trong danh sách chuẩn (Master) không
-    // (Bỏ dùng supplierData vì supplierData chỉ chứa các chuyến lỗi/chưa báo cáo, biển đúng có thể đã bị xóa)
     const masterPlates = new Set();
     const masterPlateList = [];
     masterList.forEach(m => {
@@ -976,13 +974,14 @@ function detectTypos(data) {
         }
         if (m.backupPlates) {
             m.backupPlates.forEach(bp => {
-                masterPlates.add(bp);
-                masterPlateList.push(bp);
+                const p = String(bp).toUpperCase().replace(/[\s\-\.]/g, '');
+                masterPlates.add(p);
+                masterPlateList.push(p);
             });
         }
     });
 
-    // Thêm các biển số có trong dữ liệu Chuyến đi Lastmile và NCC (vì xe thực tế có chạy chuyến là xe hợp lệ)
+    // Thêm các biển số có trong dữ liệu Chuyến đi Lastmile và NCC
     if (typeof lastmileData !== 'undefined' && Array.isArray(lastmileData)) {
         lastmileData.forEach(t => {
             if (t.plate) {
@@ -1003,11 +1002,16 @@ function detectTypos(data) {
     }
 
     const plateTypos = [];
-    const plateWrongMap = {}; // Gom các biển sai giống nhau
+    const plateWrongMap = {};
 
     data.forEach(e => {
+        if (isResigned(e.name, e.code)) return; // Bỏ qua NV đã nghỉ
         if (!e.plate) return;
-        const pNorm = String(e.plate).toUpperCase().replace(/[\s\-\.]/g, '');
+        const rawPlate = String(e.plate).trim().toUpperCase();
+        const pNorm = rawPlate.replace(/[\s\-\.]/g, '');
+
+        // Bỏ qua nếu là số 0, dạng khoa học (0,00E+00, 0E+00), OFF, NGHỈ, không có biển
+        if (!pNorm || pNorm === '0' || pNorm.includes('E+') || pNorm.includes('E-') || pNorm === 'OFF' || pNorm === 'NGHI' || pNorm === '-' || pNorm === '000E00') return;
 
         // Kiểm tra có khớp chính xác với 1 biển nào đó trong danh sách Master không
         if (masterPlates.has(pNorm)) return; // Đúng → bỏ qua
@@ -1015,16 +1019,19 @@ function detectTypos(data) {
         // Không có → nghi ngờ gõ sai. Tìm gợi ý đúng nhất.
         let bestPlate = null;
 
-        // Ưu tiên 1: Tìm biển số cố định của chính NV đó trong Master list (dựa vào mã NV hoặc tên)
+        // Ưu tiên 1: Tìm biển số cố định của chính NV đó trong Master list
         const matchedMaster = masterList.find(m => m.code === e.code || m.name === e.name);
         if (matchedMaster && matchedMaster.plate) {
             bestPlate = matchedMaster.plate;
         } else {
-            // Ưu tiên 2: Tìm biển gần giống nhất trong toàn bộ Master list
+            // Ưu tiên 2: Tìm biển gần giống nhất trong cùng tỉnh
             let bestDist = Infinity;
+            const wrongProv = typeof getProvinceFromPlate === 'function' ? getProvinceFromPlate(e.plate) : '—';
             for (const mp of masterPlateList) {
                 const dist = levenshtein(pNorm, mp);
-                if (dist < bestDist && dist <= 3) {
+                const mpProv = typeof getProvinceFromPlate === 'function' ? getProvinceFromPlate(mp) : '—';
+                const provMatch = (wrongProv === mpProv) || wrongProv === '—' || mpProv === '—';
+                if (dist < bestDist && dist <= 2 && provMatch) {
                     bestDist = dist;
                     bestPlate = mp;
                 }
@@ -2912,8 +2919,12 @@ function renderTypoWarnings(filtered) {
         html += '</tbody></table>';
     }
 
-    // Bảng 4: ODO gõ sai (Km âm)
+    // Bảng 4: ODO gõ sai (Km âm) - Bỏ qua NV đã nghỉ việc (PHẠM VĂN TÚ, PHẠM ĐÌNH TÚ)
+    const RESIGNED_LIST = ['PHAM DINH TU', 'PHAM VAN TU'];
     const odoErrors = filtered.filter(e => {
+        if (e.code && String(e.code).trim() === '3160330') return false;
+        const normName = removeAccents(e.name || '').toUpperCase();
+        if (RESIGNED_LIST.some(r => normName.includes(r))) return false;
         const km = parseInt(e.kmEnd) - parseInt(e.kmStart);
         return !isNaN(km) && km < 0;
     });

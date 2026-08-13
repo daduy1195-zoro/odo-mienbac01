@@ -3306,22 +3306,7 @@ async function fetchArchivedData(sheetName) {
 }
 
 async function saveToArchive(sheetName, newRecords) {
-    if (!CONFIG.ARCHIVE_API_URL || CONFIG.ARCHIVE_API_URL === 'YOUR_WEB_APP_URL_HERE') return 0;
-    if (!newRecords || newRecords.length === 0) return 0;
-    
-    try {
-        const res = await fetch(`${CONFIG.ARCHIVE_API_URL}?sheet=${sheetName}`, {
-            method: 'POST',
-            body: JSON.stringify(newRecords),
-            // Không dùng Headers 'Content-Type: application/json' vì Google Apps Script có thể chặn CORS với preflight POST phức tạp
-        });
-        const result = await res.json();
-        console.log(`Đã lưu ${result.added || 0} record mới vào Archive (${sheetName})`);
-        return result.added || 0;
-    } catch (e) {
-        console.warn(`Lỗi save archive data (${sheetName}):`, e);
-        return 0;
-    }
+    return 0;
 }
 
 // ====== GHÉP CHUYẾN ĐI NCC ======

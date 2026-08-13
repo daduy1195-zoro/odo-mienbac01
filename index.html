@@ -3538,9 +3538,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
             }
         }
         
-        // Tính dòng gốc trong sheet: headers=1 nên rawData[0]=sheet row 2
-        const sttNum = parseInt(stt);
-        const sourceRow = (!isNaN(sttNum) && sttNum > 0) ? (sttNum + 13) : (i + 14);
+        // Tính dòng gốc thực tế trong Google Sheet: rawData[i] tương ứng dòng (i + 1)
+        const sourceRow = i + 1;
         
         const otHours = (colOtHours > -1 ? row[colOtHours] : '').toString().trim();
         const otRate = (colOtRate > -1 ? row[colOtRate] : '').toString().trim();

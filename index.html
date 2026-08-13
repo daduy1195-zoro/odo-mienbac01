@@ -2483,16 +2483,36 @@ function renderRanking(filtered, month, whFilter) {
 
     const syncedDates = new Set();
     console.log('🔍 tripsData.length =', tripsData.length);
-    tripsData.forEach(t => {
-        syncedDates.add(t.dateStr);
-        // Find if this driver is in whMap
-        Object.values(whMap).forEach(whGrp => {
-            const key = Object.keys(whGrp).find(k => whGrp[k].code === String(t.code));
-            if (key) {
-                whGrp[key].workedDays.add(t.dateStr);
-            }
+    if (typeof tripsData !== 'undefined' && Array.isArray(tripsData)) {
+        tripsData.forEach(t => {
+            if (!t.dateStr) return;
+            const cleanDate = normalizeToDDMMYYYY(t.dateStr);
+            if (!cleanDate) return;
+            syncedDates.add(cleanDate);
+
+            const tCode = String(t.driverId || t.code || t.createdById || '').trim();
+            const tPlate = t.plate ? String(t.plate).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
+            const tName = t.driverName || t.name || t.createdByName || '';
+            const normTName = tName ? removeAccents(tName).toUpperCase().replace(/[^A-Z]/g, '') : '';
+
+            Object.values(whMap).forEach(whGrp => {
+                Object.keys(whGrp).forEach(k => {
+                    const emp = whGrp[k];
+                    const empCode = String(emp.code || '').trim();
+                    const empPlate = emp.plate ? String(emp.plate).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
+                    const empName = emp.name ? removeAccents(emp.name).toUpperCase().replace(/[^A-Z]/g, '') : '';
+
+                    const isCodeMatch = tCode && empCode && (tCode === empCode || tCode.includes(empCode) || empCode.includes(tCode));
+                    const isPlateMatch = tPlate && empPlate && (tPlate === empPlate || tPlate.includes(empPlate) || empPlate.includes(tPlate));
+                    const isNameMatch = normTName && empName && (normTName === empName || normTName.includes(empName) || empName.includes(normTName));
+
+                    if (isCodeMatch || isPlateMatch || isNameMatch) {
+                        emp.workedDays.add(cleanDate);
+                    }
+                });
+            });
         });
-    });
+    }
     console.log('🔍 syncedDates:', syncedDates.size, 'ngày:', [...syncedDates].sort().join(', '));
 
     // Nếu không có dữ liệu
@@ -3377,6 +3397,27 @@ function formatTimeHM(str) {
     return s;
 }
 
+function normalizeToDDMMYYYY(dateStr) {
+    if (!dateStr) return '';
+    let str = String(dateStr).trim();
+    if (str.includes(' ')) str = str.split(' ')[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        const parts = str.split('-');
+        return parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+        const parts = str.split('/');
+        return String(parts[0]).padStart(2, '0') + '/' + String(parts[1]).padStart(2, '0') + '/' + parts[2];
+    }
+    if (str.includes('T')) {
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+        }
+    }
+    return str;
+}
+
 function parseVietnameseNumber(str) {
     if (!str) return 0;
     let s = String(str).trim().replace(/\s*đ$/i, '').trim();
@@ -4197,15 +4238,8 @@ async function loadLastmileData() {
             
             // Map the new Vietnamese keys to the old English keys expected by the dashboard
             r.id = String(rRaw['id'] || rRaw.id || '');
-            var dateSrc = rRaw['Bắt đầu'] || rRaw['Ngày báo cáo'] || rRaw.dateStr || '';
-            r.dateStr = String(dateSrc);
-            if (r.dateStr.includes('T') && r.dateStr.endsWith('Z')) {
-                const d = new Date(r.dateStr);
-                r.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-            } else if (r.dateStr.includes('/') && r.dateStr.includes(' ')) {
-                // Format "07/08/2026 09:10:49" → strip time part → "07/08/2026"
-                r.dateStr = r.dateStr.split(' ')[0];
-            }            
+            var dateSrc = rRaw['Bắt đầu'] || rRaw['Ngày báo cáo'] || rRaw['Tạo'] || rRaw.dateStr || '';
+            r.dateStr = normalizeToDDMMYYYY(dateSrc);
             var hubRaw = String(rRaw['Hub'] || rRaw.hubName || '');
             if (rRaw['Hub']) {
                 var hubParts = hubRaw.split('-');

@@ -1491,8 +1491,10 @@ function fetchSheetJSONP(sheetId, gid) {
                     const r = row.c.map(cell => {
                         if (!cell) return '';
                         const sv = cell.v !== null && cell.v !== undefined ? String(cell.v).normalize('NFC') : '';
+                        // Kiểm tra Date(yyyy,m,d) từ Google Viz - chỉ parse nếu là ngày thực (năm >= 1900)
+                        // Ô giờ (time-only) trả về Date(1899,11,30,H,M,S) → bỏ qua, dùng cell.f
                         const dateMatch = sv.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-                        if (dateMatch) {
+                        if (dateMatch && parseInt(dateMatch[1]) >= 1900) {
                             const dd = String(parseInt(dateMatch[3])).padStart(2, '0');
                             const mm = String(parseInt(dateMatch[2]) + 1).padStart(2, '0');
                             return dd + '/' + mm + '/' + dateMatch[1];
@@ -1547,7 +1549,7 @@ function fetchSheetByNameJSONP(sheetId, sheetName) {
                         if (!cell) return '';
                         const sv = cell.v !== null && cell.v !== undefined ? String(cell.v).normalize('NFC') : '';
                         const dateMatch = sv.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-                        if (dateMatch) {
+                        if (dateMatch && parseInt(dateMatch[1]) >= 1900) {
                             const dd = String(parseInt(dateMatch[3])).padStart(2, '0');
                             const mm = String(parseInt(dateMatch[2]) + 1).padStart(2, '0');
                             return dd + '/' + mm + '/' + dateMatch[1];

@@ -1518,7 +1518,7 @@ function fetchSheetJSONP(sheetId, gid) {
 
         // Tạo thẻ <script> để tải dữ liệu (bypass CORS)
         const script = document.createElement('script');
-        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName};reqId:${Date.now()}&gid=${gid}&range=A1:Z&headers=1&_cb=${Date.now()}`;
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName};reqId:${Date.now()}&gid=${gid}&range=A1:AH&headers=1&_cb=${Date.now()}`;
         script.onerror = () => {
             delete window[callbackName];
             clearTimeout(timer);
@@ -1568,7 +1568,7 @@ function fetchSheetByNameJSONP(sheetId, sheetName) {
             resolve([]); // Don't fail entire load if Trips sheet times out
         }, timeoutMs);
         const script = document.createElement('script');
-        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName};reqId:${Date.now()}&sheet=${encodeURIComponent(sheetName)}&range=A1:Z&headers=1&_cb=${Date.now()}`;
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName};reqId:${Date.now()}&sheet=${encodeURIComponent(sheetName)}&range=A1:AH&headers=1&_cb=${Date.now()}`;
         script.onerror = () => {
             delete window[callbackName];
             clearTimeout(timer);
@@ -3481,21 +3481,29 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
     let colKmStart = -1, colKmEnd = -1, colKmDiff = -1, colRoute = -1;
     let colOtHours = -1, colOtRate = -1, colOtFee = -1, colKmOverFee = -1, colMonthlyRate = -1, colDailyRate = -1, colTollFee = -1, colHolidayFee = -1, colTotalCost = -1;
     if (headerRowIdx > -1) {
-        const hdr = rawData[headerRowIdx].map(c => (c || '').toString().toLowerCase().trim());
-        for (let ci = 0; ci < hdr.length; ci++) {
-            const h = hdr[ci];
-            // KM columns
-            if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
-            if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
-            if (h.includes('km chạy') || h.includes('km phát sinh') || h.includes('tổng km') || h.includes('số km') || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
-            if (h === 'lộ trình' || h === 'tuyến đường' || h.includes('điểm giao') || h === 'tuyến') colRoute = ci;
-            // Financial columns
-            if ((h.includes('tổng chi phí') || h.includes('tổng tiền') || (h.includes('tổng') && h.includes('phí')) || h === 'tổng') && !h.includes('km')) colTotalCost = ci;
-            if ((h.includes('đơn giá') && (h.includes('tháng') || h.includes('thang'))) || h.includes('giá tháng')) colMonthlyRate = ci;
-            if ((h.includes('đơn giá') && (h.includes('ngày') || h.includes('ngay'))) || h.includes('giá ngày')) colDailyRate = ci;
-            if (h.includes('cầu đường') || h.includes('giá cầu') || h.includes('phí cầu')) colTollFee = ci;
-            if (h.includes('ngày lễ') || h.includes('ngay le') || h.includes('lễ tết')) colHolidayFee = ci;
-            if (h.includes('vượt km') || h.includes('phí vượt') || h.includes('vuot km')) colKmOverFee = ci;
+        // Scan nhiều dòng header (multi-row merged headers) cho cột tài chính
+        const scanStart = Math.max(0, headerRowIdx - 3);
+        const scanEnd = Math.min(rawData.length - 1, headerRowIdx + 1);
+        for (let ri = scanStart; ri <= scanEnd; ri++) {
+            const hdr = rawData[ri].map(c => (c || '').toString().toLowerCase().trim());
+            for (let ci = 0; ci < hdr.length; ci++) {
+                const h = hdr[ci];
+                if (!h) continue;
+                // KM columns (chỉ scan dòng header chính)
+                if (ri === headerRowIdx) {
+                    if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
+                    if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
+                    if (h.includes('km chạy') || h.includes('km phát sinh') || h.includes('tổng km') || h.includes('số km') || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
+                    if (h === 'lộ trình' || h === 'tuyến đường' || h.includes('điểm giao') || h === 'tuyến') colRoute = ci;
+                }
+                // Financial columns (scan tất cả dòng header)
+                if ((h.includes('tổng chi phí') || h.includes('tổng tiền') || h.includes('tong chi phi') || (h.includes('tổng') && h.includes('phí')) || h === 'tổng') && !h.includes('km')) colTotalCost = ci;
+                if ((h.includes('đơn giá') && (h.includes('tháng') || h.includes('thang'))) || h.includes('giá tháng') || h.includes('thuê/tháng') || h.includes('thue/thang')) colMonthlyRate = ci;
+                if ((h.includes('đơn giá') && (h.includes('ngày') || h.includes('ngay'))) || h.includes('giá ngày') || h.includes('thuê/ngày') || h.includes('thue/ngay')) colDailyRate = ci;
+                if (h.includes('cầu đường') || h.includes('giá cầu') || h.includes('phí cầu') || h.includes('cau duong')) colTollFee = ci;
+                if (h.includes('ngày lễ') || h.includes('ngay le') || h.includes('lễ tết')) colHolidayFee = ci;
+                if (h.includes('vượt km') || h.includes('phí vượt') || h.includes('vuot km')) colKmOverFee = ci;
+            }
         }
     }
     if (colKmEnd > -1 && colKmDiff === -1) colKmDiff = colKmEnd + 1;
@@ -3588,7 +3596,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         
         // Xác định kho/tỉnh từ route + column Kho
         let searchStr = route.toLowerCase();
-        for (let ci = 25; ci <= 28; ci++) {
+        for (let ci = 25; ci <= 33; ci++) {
             if (row[ci]) searchStr += ' ' + row[ci].toString().toLowerCase();
         }
         

@@ -3380,10 +3380,13 @@ function formatTimeHM(str) {
 function formatMoneyCell(val) {
     if (val === undefined || val === null || val === '') return '-';
     const s = String(val).trim();
-    if (!s || s === '-') return '-';
-    const num = parseFloat(s.replace(/[^\d.-]/g, ''));
+    if (!s || s === '-' || s === '—') return '-';
+    let num = parseFloat(s.replace(/[^\d.-]/g, ''));
     if (isNaN(num) || num === 0) return '-';
-    return Math.round(num).toLocaleString('vi-VN') + ' đ';
+    if (num > 0 && num < 1000) {
+        num = num * 1000000;
+    }
+    return Math.round(num).toLocaleString('en-US') + ' đ';
 }
 
 function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid) {
@@ -3919,7 +3922,6 @@ function renderNccTrip() {
     html += '<th style="text-align:right">Phí vượt KM</th>';
     html += '<th>Giờ đi - về</th>';
     html += '<th>TG Tăng ca</th>';
-    html += '<th style="text-align:right">Giá tăng ca</th>';
     html += '<th style="text-align:right">Phí tăng ca</th>';
     html += '<th style="text-align:right">Đơn giá/tháng</th>';
     html += '<th style="text-align:right">Đơn giá ngày</th>';
@@ -4052,7 +4054,6 @@ function renderNccTrip() {
                     }
                     return '-';
                 })()}</td>
-                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.otRate)}</td>
                 <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.otFee)}</td>
                 <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.monthlyRate)}</td>
                 <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.dailyRate)}</td>
@@ -4093,7 +4094,6 @@ function exportNccTripExcel() {
             'Giờ đi': formatTimeHM(r.hourStart) || r.hourStart || '',
             'Giờ về': formatTimeHM(r.hourEnd) || r.hourEnd || '',
             'TG Tăng ca (h)': r.otHours || '',
-            'Giá tăng ca': r.otRate || '',
             'Phí tăng ca': r.otFee || '',
             'Đơn giá/tháng': r.monthlyRate || '',
             'Đơn giá ngày': r.dailyRate || '',

@@ -3567,15 +3567,28 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         let holidayFee = (colHolidayFee > -1 ? row[colHolidayFee] : '').toString().trim();
         let totalCost = (colTotalCost > -1 ? row[colTotalCost] : '').toString().trim();
 
-        // Tự động căn chỉnh chuẩn nếu giá trị Đơn giá/tháng & Đơn giá/ngày bị nhận nhầm cột
-        const mVal = parseVietnameseNumber(monthlyRate);
+        // 1. Nếu dailyRate rỗng nhưng col 21 chứa Đơn giá ngày (300k - 5M), chuyển sang dailyRate
         const dVal = parseVietnameseNumber(dailyRate);
-
-        if (dVal > 5000000 && (mVal === 0 || mVal < 2000000)) {
-            const temp = monthlyRate;
-            monthlyRate = dailyRate;
-            dailyRate = temp;
+        const c21Val = parseVietnameseNumber(row[21]);
+        if ((dVal === 0 || dVal < 300000) && c21Val > 300000 && c21Val < 5000000) {
+            dailyRate = row[21];
+            tollFee = row[22] || '';
         }
+
+        // 2. Nếu dailyRate chứa số tiền tháng (> 5M) và monthlyRate rỗng/bé, đảo lại đúng vị trí
+        const mVal = parseVietnameseNumber(monthlyRate);
+        const dValCheck = parseVietnameseNumber(dailyRate);
+        if (dValCheck > 5000000 && (mVal === 0 || mVal < 2000000)) {
+            monthlyRate = dailyRate;
+            dailyRate = row[21] || '';
+        }
+
+        // 3. Lọc bỏ đơn giá tăng ca (35k/h) và đơn giá KM (4k/km) bị nhận nhầm làm tổng phí
+        const otFeeNum = parseVietnameseNumber(otFee);
+        if (otFeeNum > 0 && otFeeNum <= 100000) otFee = '';
+
+        const kmOverNum = parseVietnameseNumber(kmOverFee);
+        if (kmOverNum > 0 && kmOverNum <= 10000) kmOverFee = '';
 
         const finalKey = `${nccName}_${plate}_${dateStr}_${sourceRow}`;
         try {

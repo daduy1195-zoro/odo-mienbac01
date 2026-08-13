@@ -1720,16 +1720,13 @@ async function loadAllData() {
                 console.warn('⚠️ Archive ODO fallback lỗi:', archErr.message);
             }
 
-            // Master list từ archive
+            // Master list từ archive (dùng tên tab vì GID tạo động)
             if (masterRowsGH.length === 0) {
                 try {
-                    const archiveMasterGid = CONFIG.ARCHIVE_GIDS['master_data'];
-                    if (archiveMasterGid) {
-                        const archiveMaster = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, archiveMasterGid);
-                        if (archiveMaster.length > 1) {
-                            masterRowsGH = archiveMaster.slice(1); // Skip header
-                            console.log(`✅ Archive Master: ${masterRowsGH.length} rows`);
-                        }
+                    const archiveMaster = await fetchSheetByNameJSONP(CONFIG.ARCHIVE_SHEET_ID, 'master_data');
+                    if (archiveMaster.length > 1) {
+                        masterRowsGH = archiveMaster.slice(1); // Skip header
+                        console.log(`✅ Archive Master: ${masterRowsGH.length} rows`);
                     }
                 } catch(e) { console.warn('⚠️ Archive Master fallback lỗi:', e.message); }
             }
@@ -1737,13 +1734,10 @@ async function loadAllData() {
             // Supplier từ archive
             if (supRows.length === 0) {
                 try {
-                    const archiveSupGid = CONFIG.ARCHIVE_GIDS['supplier_data'];
-                    if (archiveSupGid) {
-                        const archiveSup = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, archiveSupGid);
-                        if (archiveSup.length > 1) {
-                            supRows = archiveSup.slice(1);
-                            console.log(`✅ Archive Supplier: ${supRows.length} rows`);
-                        }
+                    const archiveSup = await fetchSheetByNameJSONP(CONFIG.ARCHIVE_SHEET_ID, 'supplier_data');
+                    if (archiveSup.length > 1) {
+                        supRows = archiveSup.slice(1);
+                        console.log(`✅ Archive Supplier: ${supRows.length} rows`);
                     }
                 } catch(e) { console.warn('⚠️ Archive Supplier fallback lỗi:', e.message); }
             }

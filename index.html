@@ -1729,26 +1729,51 @@ async function loadAllData() {
 
         for (let i = 0; i < empRows.length; i++) {
             const r = empRows[i];
-            if (!r || r.length < 10) continue;
+            if (!r || r.length < 5) continue;
 
             const fullName = (r[2] || '').trim();
             if (!fullName) continue;
 
-            const warehouse = (r[6] || '').trim();
+            let warehouse = (r[6] || '').trim();
+            const plate = (r[9] || '').trim();
+            const normPlate = plate ? String(plate).toUpperCase().replace(/[\s\-\.]/g, '') : '';
+
+            // 1. Tự động bổ sung kho từ Master List nếu kho rỗng hoặc không khớp 4 kho
+            if (!isMyWarehouse(warehouse) && masterList && masterList.length > 0) {
+                const normFullName = removeDiacritics(fullName).toUpperCase();
+                const mMatch = masterList.find(m =>
+                    (m.code && fullName.includes(m.code)) ||
+                    (m.name && normFullName.includes(removeDiacritics(m.name).toUpperCase())) ||
+                    (normPlate && m.plate && normPlate === m.plate)
+                );
+                if (mMatch && mMatch.warehouse && isMyWarehouse(mMatch.warehouse)) {
+                    warehouse = mMatch.warehouse;
+                }
+            }
 
             // ★ CHỈ LẤY NV THUỘC 4 KHO CỦA MÌNH ★
             if (!isMyWarehouse(warehouse)) continue;
 
-            // Tách tên và mã NV (tìm 5-8 chữ số ở cuối chuỗi)
+            // 2. Tách tên và mã NV (tìm 5-8 chữ số ở cuối chuỗi)
             let nameRaw = fullName;
             let code = '';
             const codeMatch = fullName.match(/(\d{5,8})[^\w\d]*$/);
             if (codeMatch) {
                 code = codeMatch[1];
-                // Cắt phần tên (tất cả những gì trước đoạn code)
                 nameRaw = fullName.substring(0, codeMatch.index).trim();
-                // Bỏ các ký tự đặc biệt dư thừa nối giữa tên và mã (VD: '-', '_', '(')
                 nameRaw = String(nameRaw).replace(/[\s\-_\(\[\]\,]+$/, '');
+            }
+
+            // 3. Tự động tìm lại mã NV từ Master List nếu NV gõ thiếu mã
+            if (!code && masterList && masterList.length > 0) {
+                const normNameOnly = removeDiacritics(nameRaw).toUpperCase();
+                const mMatch = masterList.find(m =>
+                    (m.name && (normNameOnly.includes(removeDiacritics(m.name).toUpperCase()) || removeDiacritics(m.name).toUpperCase().includes(normNameOnly))) ||
+                    (normPlate && m.plate && normPlate === m.plate)
+                );
+                if (mMatch && mMatch.code) {
+                    code = mMatch.code;
+                }
             }
 
             // ★ Tách tên kho khỏi tên NV nếu NV ghi nhầm kho vào tên ★
@@ -1758,8 +1783,8 @@ async function loadAllData() {
             if (code && typeof ctvCodes !== 'undefined' && ctvCodes.has(code)) continue;
             const name = normalizeTone(nameRaw.normalize('NFC').toUpperCase());
             const area = (r[3] || '').trim();
-            const dateStr = (r[4] || '').trim();
-            const plate = (r[9] || '').trim();
+            const rawDate = (r[4] || '').trim();
+            const dateStr = normalizeToDDMMYYYY(rawDate);
             const supplier = normalizeSupplierName(r[5]);
             const kmStart = (r[7] || '').trim();
             const kmEnd = (r[12] || '').trim();
@@ -1767,7 +1792,6 @@ async function loadAllData() {
             const hourEnd = (r[13] || '').trim();
 
             const gid = r._gid || CONFIG.SHEET_EMPLOYEE_GIDS[0];
-            const normPlate = plate ? String(plate).toUpperCase().replace(/[\s\-\.]/g, '') : '';
             const jsMatchKey = dateStr && normPlate ? `${dateStr}_${normPlate}` : '';
             let matchKey = '';
             if (gid === '1274066622') {
@@ -1791,19 +1815,17 @@ async function loadAllData() {
             const sheetRow = r._sheetRow || (i + 2);
 
             const entry = {
-                id: `${dateStr}_${code}_${normPlate}`, // Khóa chống trùng lặp
+                id: `${dateStr}_${code || name}_${normPlate}`, // Khóa chống trùng lặp
                 name, code, area, dateStr, dateObj, plate, supplier, warehouse, shortWH,
                 kmStart, kmEnd, hourStart, hourEnd, matchKey, jsMatchKey, fullName, sheetRow, gid
             };
 
-            if (code) {
-                employeeData.push(entry);
-                // Lưu vào archive nếu chưa có
-                if (!archivedOdoMap.has(entry.id)) {
-                    const archiveEntry = { ...entry };
-                    delete archiveEntry.dateObj;
-                    newOdoToArchive.push(archiveEntry);
-                }
+            // Luôn lưu dữ liệu đã làm ODO (kể cả chưa tự động ghép được mã NV)
+            employeeData.push(entry);
+            if (!archivedOdoMap.has(entry.id)) {
+                const archiveEntry = { ...entry };
+                delete archiveEntry.dateObj;
+                newOdoToArchive.push(archiveEntry);
             }
         }
         

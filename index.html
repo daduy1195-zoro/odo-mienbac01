@@ -3572,12 +3572,8 @@ async function loadNccTripData() {
     try {
         const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
 
-        // 1. Lấy dữ liệu đã archive
-        const archivedData = await fetchArchivedData('ncc_trips');
-        console.log(`📦 Archived NCC Trips: ${archivedData.length} records`);
-        const archivedKeys = new Set(archivedData.map(r => r.id));
-        
-        let allNccData = [...archivedData];
+        // Chỉ lấy dữ liệu tươi từ các link NCC active hiện tại (loại bỏ hoàn toàn các file cũ đã xóa/thùng rác)
+        let allNccData = [];
         
         // Deduplicate archive items by keeping longest route
         const seenNccMap = new Map();

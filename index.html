@@ -2982,9 +2982,14 @@ function renderTypoWarnings(filtered) {
         html += '</tbody></table>';
     }
 
-    // Bảng 2: Sai biển số (so với danh sách NCC)
-    if (plateTypos.length > 0) {
-        html += `<h4 style="margin:0 0 8px;color:#f0ad4e;">🚛 Biển số không có trong NCC (${plateTypos.length} lỗi)</h4>`;
+    // Bảng 2: Sai biển số (so với danh sách NCC) — CHỈ hiện 4 tỉnh quản lý
+    const MY_PROVINCES = ['Hải Dương', 'Hải Phòng', 'Hưng Yên', 'Thái Bình'];
+    const filteredPlateTypos = plateTypos.filter(t => {
+        const prov = getProvinceFromPlate(t.wrongPlate);
+        return MY_PROVINCES.some(p => prov.includes(p));
+    });
+    if (filteredPlateTypos.length > 0) {
+        html += `<h4 style="margin:0 0 8px;color:#f0ad4e;">🚛 Biển số không có trong NCC (${filteredPlateTypos.length} lỗi)</h4>`;
         html += `<p style="color:var(--text-muted);font-size:12px;margin-bottom:8px;">Danh sách NCC là chuẩn. Biển số NV gõ không khớp bất kỳ biển nào trong NCC → nghi gõ sai.</p>`;
         html += `<table style="margin-bottom:24px;"><thead><tr>
             <th style="width:40px;">#</th>
@@ -2997,7 +3002,7 @@ function renderTypoWarnings(filtered) {
             <th style="width:80px;">Sửa</th>
         </tr></thead><tbody>`;
 
-        plateTypos.forEach((t, i) => {
+        filteredPlateTypos.forEach((t, i) => {
             const empNames = [...new Set(t.entries.map(e => e.name + (e.code ? ' ' + e.code : '')))];
             const dates = [...new Set(t.entries.map(e => e.dateStr))].filter(Boolean)
                 .map(d => d.replace(/\/\d{4}$/, ''));

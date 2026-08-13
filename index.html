@@ -3790,8 +3790,43 @@ async function loadNccTripData() {
     try {
         const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
 
-        // Chỉ lấy dữ liệu tươi từ các link NCC active hiện tại (loại bỏ hoàn toàn các file cũ đã xóa/thùng rác)
+        // ★ Bước 0: Load NCC trip raw data từ Archive Sheet (fallback khi live sheets bị chặn)
         let allNccData = [];
+        try {
+            const archiveNccRaw = await fetchSheetByNameJSONP(CONFIG.ARCHIVE_SHEET_ID, 'ncc_trips_raw');
+            if (archiveNccRaw.length > 0) {
+                console.log(`📦 Archive NCC Trips raw: ${archiveNccRaw.length} rows`);
+                // Nhóm data theo _ncc + _tab_name (2 cột cuối)
+                const tabGroups = {};
+                archiveNccRaw.forEach(r => {
+                    const ncc = (r[r.length - 3] || '').toString().trim();
+                    const tabName = (r[r.length - 2] || '').toString().trim();
+                    const tabGid = (r[r.length - 1] || '').toString().trim();
+                    if (!ncc) return;
+                    const key = ncc + '|' + tabName;
+                    if (!tabGroups[key]) tabGroups[key] = { ncc, tabName, tabGid, rows: [] };
+                    // Bỏ 3 cột metadata cuối, giữ raw data
+                    tabGroups[key].rows.push(r.slice(0, r.length - 3));
+                });
+                // Parse mỗi tab group
+                const ghnTripMapEmpty = new Map(); // Sẽ fill sau
+                for (const key in tabGroups) {
+                    const g = tabGroups[key];
+                    try {
+                        const parsed = parseNccTabData(g.rows, g.ncc, ghnTripMapEmpty, '', g.tabName, g.tabGid);
+                        if (parsed.length > 0) {
+                            for (const record of parsed) {
+                                record.id = `${normalizeStr(record.dateStr)}_${normalizeStr(record.plate)}_${normalizeStr(record.ncc)}`;
+                                allNccData.push(record);
+                            }
+                        }
+                    } catch(e) {}
+                }
+                console.log(`✅ Archive NCC Trips parsed: ${allNccData.length} chuyến`);
+            }
+        } catch(e) {
+            console.warn('⚠️ Archive NCC Trips load failed:', e.message);
+        }
         
         // Deduplicate archive items by keeping longest route
         const seenNccMap = new Map();

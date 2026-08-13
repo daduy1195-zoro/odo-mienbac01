@@ -3544,15 +3544,26 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         // Tính dòng gốc thực tế trong Google Sheet: rawData[i] tương ứng dòng (i + 1)
         const sourceRow = i + 1;
         
-        const otHours = (colOtHours > -1 ? row[colOtHours] : '').toString().trim();
-        const otRate = (colOtRate > -1 ? row[colOtRate] : '').toString().trim();
-        const otFee = (colOtFee > -1 ? row[colOtFee] : '').toString().trim();
-        const kmOverFee = (colKmOverFee > -1 ? row[colKmOverFee] : '').toString().trim();
-        const monthlyRate = (colMonthlyRate > -1 ? row[colMonthlyRate] : '').toString().trim();
-        const dailyRate = (colDailyRate > -1 ? row[colDailyRate] : '').toString().trim();
-        const tollFee = (colTollFee > -1 ? row[colTollFee] : '').toString().trim();
-        const holidayFee = (colHolidayFee > -1 ? row[colHolidayFee] : '').toString().trim();
-        const totalCost = (colTotalCost > -1 ? row[colTotalCost] : '').toString().trim();
+        let otHours = (colOtHours > -1 ? row[colOtHours] : '').toString().trim();
+        let otRate = (colOtRate > -1 ? row[colOtRate] : '').toString().trim();
+        let otFee = (colOtFee > -1 ? row[colOtFee] : '').toString().trim();
+        let kmOverFee = (colKmOverFee > -1 ? row[colKmOverFee] : '').toString().trim();
+        let monthlyRate = (colMonthlyRate > -1 ? row[colMonthlyRate] : '').toString().trim();
+        let dailyRate = (colDailyRate > -1 ? row[colDailyRate] : '').toString().trim();
+        let tollFee = (colTollFee > -1 ? row[colTollFee] : '').toString().trim();
+        let holidayFee = (colHolidayFee > -1 ? row[colHolidayFee] : '').toString().trim();
+        let totalCost = (colTotalCost > -1 ? row[colTotalCost] : '').toString().trim();
+
+        // Tự động căn chỉnh lệch cột (nếu col 20 chứa Đơn giá/tháng > 5M và col 19 không phải Đơn giá/tháng)
+        const n19 = parseFloat(String(row[19] || '').replace(/[^\d.]/g, ''));
+        const n20 = parseFloat(String(row[20] || '').replace(/[^\d.]/g, ''));
+        if (n20 > 5000000 && (isNaN(n19) || n19 < 5000000)) {
+            monthlyRate = (row[20] || '').toString().trim();
+            dailyRate = (row[21] || '').toString().trim();
+            tollFee = (row[22] || '').toString().trim();
+            holidayFee = (row[23] || '').toString().trim();
+            totalCost = (row[24] || row[23] || '').toString().trim();
+        }
 
         const finalKey = `${nccName}_${plate}_${dateStr}_${sourceRow}`;
         try {

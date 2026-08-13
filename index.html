@@ -3388,6 +3388,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
     
     // ★ Xác định vị trí cột KM vào/ra từ header row
     let colKmStart = -1, colKmEnd = -1, colKmDiff = -1, colRoute = -1;
+    let colOtHours = -1, colOtRate = -1, colOtFee = -1, colKmOverFee = -1, colMonthlyRate = -1, colDailyRate = -1, colTollFee = -1, colHolidayFee = -1, colTotalCost = -1;
     if (headerRowIdx > -1) {
         const hdr = rawData[headerRowIdx].map(c => (c || '').toString().toLowerCase().trim());
         for (let ci = 0; ci < hdr.length; ci++) {
@@ -3742,7 +3743,7 @@ async function loadNccTripData() {
         rematchNccTrips();
         renderNccTrip();
         if (isLastmileLoaded && typeof renderRecon3Way === 'function') renderRecon3Way();
-        showToast('✅', `Đã tải ${totalRows} chuyến live + ${archivedData.length} chuyến lưu trữ!`);
+        showToast('✅', `Đã tải ${totalRows} chuyến live từ ${totalTabs} tabs NCC!`);
         console.log(`🏁 Tổng: ${totalRows} chuyến từ ${totalTabs} tabs`);
     } catch (err) {
         console.error('Error in loadNccTripData:', err);

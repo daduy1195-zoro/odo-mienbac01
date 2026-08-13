@@ -3667,22 +3667,28 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
             if (v.includes(':') && hourStart && !hourEnd) { hourEnd = v; break; }
         }
         
-        // Xác định kho/tỉnh từ route + column Kho
-        let searchStr = route.toLowerCase();
+        // Xác định kho/tỉnh — ƯU TIÊN cột Kho/Ghi chú (cols 25-33) trước, route sau
+        let khoStr = '';
         for (let ci = 25; ci <= 33; ci++) {
-            if (row[ci]) searchStr += ' ' + row[ci].toString().toLowerCase();
+            if (row[ci]) khoStr += ' ' + row[ci].toString().toLowerCase();
         }
+        let searchStr = khoStr + ' ' + route.toLowerCase();
         
-        // ★ Quy tắc KV: KV2/KV3 = Hải Dương (dù route ghi "Hải Phòng")
+        // ★ Ưu tiên cột Kho (chính xác hơn route)
         let warehouse = '';
-        const hasKV2 = /kv2|kv3/i.test(searchStr);
-        const hasKV1 = /kv1/i.test(searchStr);
+        const detectWH = (str) => {
+            if (str.includes('thái bình')) return 'Thái Bình';
+            if (str.includes('hải dương')) return 'Hải Dương';
+            if (str.includes('hải phòng') && /kv2|kv3/i.test(str)) return 'Hải Dương';
+            if (str.includes('hải phòng')) return 'Hải Phòng';
+            if (str.includes('hưng yên')) return 'Hưng Yên';
+            return '';
+        };
         
-        if (searchStr.includes('hải dương')) warehouse = 'Hải Dương';
-        else if (searchStr.includes('hải phòng') && hasKV2) warehouse = 'Hải Dương'; // KV2/KV3 thuộc Hải Dương
-        else if (searchStr.includes('hải phòng')) warehouse = 'Hải Phòng';
-        else if (searchStr.includes('hưng yên')) warehouse = 'Hưng Yên';
-        else if (searchStr.includes('thái bình')) warehouse = 'Thái Bình';
+        // Check Kho column first (most authoritative)
+        warehouse = detectWH(khoStr);
+        // Fallback: check route + Kho combined
+        if (!warehouse) warehouse = detectWH(searchStr);
         
         if (!warehouse) continue;
         

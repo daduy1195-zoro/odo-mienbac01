@@ -1656,10 +1656,28 @@ async function loadAllData() {
         
         if (!proxySuccess) {
             try {
-                const empPromises = CONFIG.SHEET_EMPLOYEE_GIDS.map(gid =>
+                // ★ Tự động khám phá tất cả tab Form_Responses trong Employee Sheet
+                let empGids = [...CONFIG.SHEET_EMPLOYEE_GIDS]; // Fallback GIDs
+                try {
+                    const empTabs = await getSheetTabNames(CONFIG.SHEET_EMPLOYEE_ID);
+                    if (empTabs.length > 0) {
+                        const formTabs = empTabs.filter(t => /form|response|câu trả lời/i.test(t.name));
+                        if (formTabs.length > 0) {
+                            empGids = formTabs.map(t => t.gid);
+                            console.log(`📋 Auto-discovered ${formTabs.length} Form tabs: ${formTabs.map(t => t.name + '(gid=' + t.gid + ')').join(', ')}`);
+                        }
+                    }
+                } catch(tabErr) {
+                    console.warn('⚠️ Không thể scan tab Employee Sheet, dùng GID mặc định:', tabErr.message);
+                }
+
+                const empPromises = empGids.map(gid =>
                     fetchSheetJSONP(CONFIG.SHEET_EMPLOYEE_ID, gid).then(rows => {
                         rows.forEach((r, idx) => { if (r) { r._gid = gid; r._sheetRow = idx + 2; } });
                         return rows;
+                    }).catch(err => {
+                        console.warn(`⚠️ Không tải được tab gid=${gid}:`, err.message);
+                        return [];
                     })
                 );
                 [empRowsArrays, supRows, masterRowsGH, masterRowsPH, ctvRows] = await Promise.all([

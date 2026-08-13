@@ -4133,9 +4133,22 @@ function exportNccTripExcel() {
     XLSX.writeFile(wb, `Ghep_Chuyen_NCC_${filterWh || 'Tat_Ca'}.xlsx`);
 }
 
-// ====== CHUYỂN TAB ======
+// ====== CHUYỂN TAB & MẬT KHẨU ======
 let _nccUnlocked = false;
+let _phoneUnlocked = false;
 const _NCC_PASS = 'admin123';
+
+function unlockPhoneColumn() {
+    if (_phoneUnlocked) return;
+    const pw = prompt('🔒 Nhập mật khẩu để xem Số Điện Thoại:');
+    if (pw === _NCC_PASS) {
+        _phoneUnlocked = true;
+        showToast('✅', 'Đã mở khóa hiển thị cột SĐT!');
+        if (typeof renderLastmile === 'function') renderLastmile();
+    } else if (pw !== null) {
+        showToast('❌', 'Mật khẩu không đúng!');
+    }
+}
 
 
 // ====== LASTMILE REPORT ======
@@ -4409,7 +4422,11 @@ function renderLastmile() {
     html += '<div class="ranking-card" style="margin-top: 15px; padding:0; overflow:hidden;">';
     html += '<div class="table-scroll">';
     html += '<table style="width:100%; border-collapse:collapse;"><thead><tr>';
-    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:100px">SĐT</th><th style="min-width:200px;">Tuyến đường</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
+    const sdtHeader = _phoneUnlocked 
+        ? 'SĐT <span style="font-size:11px; color:var(--success);" title="Đã mở khóa">🔓</span>' 
+        : 'SĐT <span onclick="unlockPhoneColumn()" style="cursor:pointer; font-size:11px; color:#fbbf24;" title="Nhấn để nhập mật khẩu xem SĐT">🔒</span>';
+
+    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:110px">' + sdtHeader + '</th><th style="min-width:200px;">Tuyến đường</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
     html += '</tr></thead><tbody>';
     
     for (var m = 0; m < filtered.length; m++) {
@@ -4428,7 +4445,12 @@ function renderLastmile() {
         html += '<td style="font-weight:700; color:var(--primary); text-align:center;">' + (r.deliverCount || 0) + '</td>';
         html += '<td style="font-weight:700; color:var(--danger); text-align:center;">' + (r.returnCount || 0) + '</td>';
         html += '<td style="font-weight:600;">' + (r.driverName || '') + '</td>';
-        html += '<td style="font-family:monospace; font-weight:500;">' + (r.driverPhone || '') + '</td>';
+        
+        if (_phoneUnlocked) {
+            html += '<td style="font-family:monospace; font-weight:500;">' + (r.driverPhone || '') + '</td>';
+        } else {
+            html += '<td style="font-family:monospace; font-weight:500; cursor:pointer;" onclick="unlockPhoneColumn()" title="Nhấn để nhập mật khẩu xem SĐT"><span style="color:#94a3b8; font-size:11px;">🔒 ******</span></td>';
+        }
         html += '<td style="font-size:12px; max-width:150px; white-space:normal;">' + (r.route ? escapeHtml(r.route) : '<span style="color:var(--text-muted);">—</span>') + '</td>';
         var isMatched = r.tripCode && matchedTripCodes.has(r.tripCode);
         html += '<td style="text-align:center;font-weight:bold;">' + (isMatched ? '<span style="color:var(--success);">✅ Đã ĐS</span>' : '<span style="color:var(--warning);">⚠️ Chưa ĐS</span>') + '</td>';
@@ -4443,7 +4465,7 @@ function renderLastmile() {
 function exportLastmileExcel() {
     if (!lastmileData || lastmileData.length === 0) { showToast('❌', 'Chưa có dữ liệu!'); return; }
     if (typeof XLSX === 'undefined') { showToast('❌', 'Thư viện Excel chưa tải!'); return; }
-    var rows = lastmileData.map(function(r,i) { return [i+1, r.dateStr, r.hubName, r.tripCode, r.plate, r.createdTime, r.startTime, r.endTime, r.createdById, r.createdByName, r.pickCount||0, r.deliverCount||0, r.returnCount||0, r.orderCount||0, r.driverId, r.driverName, r.driverPhone, r.servicePartner]; });
+    var rows = lastmileData.map(function(r,i) { return [i+1, r.dateStr, r.hubName, r.tripCode, r.plate, r.createdTime, r.startTime, r.endTime, r.createdById, r.createdByName, r.pickCount||0, r.deliverCount||0, r.returnCount||0, r.orderCount||0, r.driverId, r.driverName, _phoneUnlocked ? (r.driverPhone || '') : '******', r.servicePartner]; });
     rows.unshift(['STT','Ngày','Hub','Mã chuyến đi','Biển số xe','Tạo','Bắt đầu','Kết thúc','Người tạo (Mã)','Người tạo (Tên)','Lấy','Giao','Trả','Tổng ĐH','Tài xế (Mã)','Tài xế (Tên)','SĐT','Đối tác']);
     var ws = XLSX.utils.aoa_to_sheet(rows);
     var wb = XLSX.utils.book_new();

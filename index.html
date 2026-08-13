@@ -716,7 +716,9 @@ const CONFIG = {
     ARCHIVE_GIDS: {
         'odo_data': '517652990',
         'ncc_trips': '0',
-        'Bao_cao_chuyen_di': '461028690'
+        'Bao_cao_chuyen_di': '461028690',
+        'master_data': '',   // Sẽ được tạo bởi sync script
+        'supplier_data': ''  // Sẽ được tạo bởi sync script
     },
     
     // Google Apps Script Proxy URL (đọc sheet GHN khi bị chặn Gmail cá nhân - 24/7)
@@ -1689,6 +1691,61 @@ async function loadAllData() {
                 ]);
             } catch (directErr) {
                 empRowsArrays = [[]]; supRows = []; masterRowsGH = []; masterRowsPH = []; ctvRows = [];
+            }
+        }
+
+        // ★ FALLBACK 3: Nếu cả proxy + direct đều fail → đọc từ Archive Sheet (public)
+        const empRows0 = empRowsArrays.flat();
+        if (empRows0.length === 0 && CONFIG.ARCHIVE_SHEET_ID) {
+            console.log('📡 Proxy + Direct đều fail → Đọc từ Archive Sheet (public)...');
+            try {
+                const archiveOdoGid = CONFIG.ARCHIVE_GIDS['odo_data'];
+                if (archiveOdoGid) {
+                    const archiveEmpRows = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, archiveOdoGid);
+                    if (archiveEmpRows.length > 1) {
+                        // Skip header row (row 0 = headers from sync script)
+                        const dataRows = archiveEmpRows.slice(1);
+                        dataRows.forEach((r, idx) => {
+                            if (r) {
+                                // _gid và _sheetRow nằm ở 2 cột cuối (do sync script thêm vào)
+                                r._gid = (r[r.length - 2] || '').toString();
+                                r._sheetRow = parseInt(r[r.length - 1]) || (idx + 2);
+                            }
+                        });
+                        empRowsArrays = [dataRows];
+                        console.log(`✅ Archive ODO: ${dataRows.length} rows`);
+                    }
+                }
+            } catch(archErr) {
+                console.warn('⚠️ Archive ODO fallback lỗi:', archErr.message);
+            }
+
+            // Master list từ archive
+            if (masterRowsGH.length === 0) {
+                try {
+                    const archiveMasterGid = CONFIG.ARCHIVE_GIDS['master_data'];
+                    if (archiveMasterGid) {
+                        const archiveMaster = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, archiveMasterGid);
+                        if (archiveMaster.length > 1) {
+                            masterRowsGH = archiveMaster.slice(1); // Skip header
+                            console.log(`✅ Archive Master: ${masterRowsGH.length} rows`);
+                        }
+                    }
+                } catch(e) { console.warn('⚠️ Archive Master fallback lỗi:', e.message); }
+            }
+
+            // Supplier từ archive
+            if (supRows.length === 0) {
+                try {
+                    const archiveSupGid = CONFIG.ARCHIVE_GIDS['supplier_data'];
+                    if (archiveSupGid) {
+                        const archiveSup = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, archiveSupGid);
+                        if (archiveSup.length > 1) {
+                            supRows = archiveSup.slice(1);
+                            console.log(`✅ Archive Supplier: ${supRows.length} rows`);
+                        }
+                    }
+                } catch(e) { console.warn('⚠️ Archive Supplier fallback lỗi:', e.message); }
             }
         }
         

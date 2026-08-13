@@ -3652,8 +3652,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
             tollFee = '';
         }
 
-        // 4. Lọc bỏ chuỗi thời gian (như 19:00:00) nhầm làm số giờ tăng ca
-        if (otHours && (otHours.includes(':') || otHours === '0' || otHours === '0.00')) {
+        // 4. Lọc bỏ chuỗi thời gian (như 19:00:00) và giá trị zero nhầm làm số giờ tăng ca
+        if (otHours && (otHours.includes(':') || otHours === '0' || otHours === '0.00' || otHours === '0,00')) {
             otHours = '';
         }
 
@@ -4145,7 +4145,12 @@ function renderNccTrip() {
                     if (!hs && !he) return '-';
                     return (hs || '-') + ' - ' + (he || '-');
                 })()}</td>
-                <td style="font-family:monospace;">${r.otHours && r.otHours !== '0' && r.otHours !== '0.00' ? r.otHours : (() => {
+                <td style="font-family:monospace;">${(() => {
+                    // Kiểm tra otHours có giá trị thực không (loại bỏ 0, 0.00, 0,00)
+                    const otVal = r.otHours ? String(r.otHours).trim() : '';
+                    const otNum = otVal ? parseFloat(otVal.replace(',', '.')) : 0;
+                    if (otVal && otNum > 0) return otVal;
+                    // Tính từ giờ về nếu > 19:00
                     if (!r.hourEnd) return '-';
                     const timeStr = String(r.hourEnd).replace(/h/gi, ':');
                     const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);

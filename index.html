@@ -4179,24 +4179,54 @@ async function loadLastmileData() {
             var partner = String(r.servicePartner || '').toLowerCase();
             if (String(r.id || '') === 'test001') continue;
             if (partner.indexOf('ahamove') !== -1) continue;
-            // Parse and format dates robustly
+            // Parse and format dates robustly (avoiding JS Date MM/DD/YYYY mismatch)
             const parseAndFormatDate = (dateString, includeTime = false) => {
                 if (!dateString) return '';
-                try {
-                    const d = new Date(dateString);
-                    if (!isNaN(d.getTime())) {
-                        const dd = String(d.getDate()).padStart(2, '0');
-                        const mm = String(d.getMonth() + 1).padStart(2, '0');
-                        const yyyy = d.getFullYear();
-                        if (includeTime) {
-                            const hh = String(d.getHours()).padStart(2, '0');
-                            const min = String(d.getMinutes()).padStart(2, '0');
-                            return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-                        }
-                        return `${dd}/${mm}/${yyyy}`;
+                const str = String(dateString).trim();
+                
+                // Parse Google Viz Date(yyyy, m, d, hh, mm)
+                const gvizMatch = str.match(/Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d+)\s*,\s*(\d+))?/i);
+                if (gvizMatch) {
+                    const yyyy = gvizMatch[1];
+                    const mm = String(parseInt(gvizMatch[2]) + 1).padStart(2, '0');
+                    const dd = String(parseInt(gvizMatch[3])).padStart(2, '0');
+                    if (includeTime && gvizMatch[4] !== undefined && gvizMatch[5] !== undefined) {
+                        const hh = String(parseInt(gvizMatch[4])).padStart(2, '0');
+                        const min = String(parseInt(gvizMatch[5])).padStart(2, '0');
+                        return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
                     }
-                } catch(e) {}
-                if (dateString.includes('/')) return dateString;
+                    return `${dd}/${mm}/${yyyy}`;
+                }
+
+                // Parse DD/MM/YYYY
+                const match = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+                if (match) {
+                    const dd = String(parseInt(match[1])).padStart(2, '0');
+                    const mm = String(parseInt(match[2])).padStart(2, '0');
+                    const yyyy = match[3];
+                    if (includeTime && match[4] && match[5]) {
+                        const hh = String(parseInt(match[4])).padStart(2, '0');
+                        const min = String(parseInt(match[5])).padStart(2, '0');
+                        return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+                    }
+                    return `${dd}/${mm}/${yyyy}`;
+                }
+
+                // Parse YYYY-MM-DD
+                const isoMatch = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?:\s+T?(\d{1,2}):(\d{2}))?/);
+                if (isoMatch) {
+                    const yyyy = isoMatch[1];
+                    const mm = String(parseInt(isoMatch[2])).padStart(2, '0');
+                    const dd = String(parseInt(isoMatch[3])).padStart(2, '0');
+                    if (includeTime && isoMatch[4] && isoMatch[5]) {
+                        const hh = String(parseInt(isoMatch[4])).padStart(2, '0');
+                        const min = String(parseInt(isoMatch[5])).padStart(2, '0');
+                        return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+                    }
+                    return `${dd}/${mm}/${yyyy}`;
+                }
+
+                if (str.includes('/')) return str.split(' ')[0];
                 return '';
             };
             
@@ -4208,7 +4238,7 @@ async function loadLastmileData() {
             if (r.startTime) {
                 r.dateStr = r.startTime.split(' ')[0];
             } else {
-                r.dateStr = parseAndFormatDate(r.dateStr, false);
+                r.dateStr = parseAndFormatDate(r.dateStr || dateSrc, false);
             }
             
             r.createdById = String(r.createdById || '');

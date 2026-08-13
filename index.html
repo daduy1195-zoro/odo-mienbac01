@@ -1702,18 +1702,17 @@ async function loadAllData() {
                 const archiveOdoGid = CONFIG.ARCHIVE_GIDS['odo_data'];
                 if (archiveOdoGid) {
                     const archiveEmpRows = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, archiveOdoGid);
-                    if (archiveEmpRows.length > 1) {
-                        // Skip header row (row 0 = headers from sync script)
-                        const dataRows = archiveEmpRows.slice(1);
-                        dataRows.forEach((r, idx) => {
+                    if (archiveEmpRows.length > 0) {
+                        // fetchSheetJSONP dùng headers=1 → trả về data rows only (không có header)
+                        archiveEmpRows.forEach((r, idx) => {
                             if (r) {
                                 // _gid và _sheetRow nằm ở 2 cột cuối (do sync script thêm vào)
                                 r._gid = (r[r.length - 2] || '').toString();
                                 r._sheetRow = parseInt(r[r.length - 1]) || (idx + 2);
                             }
                         });
-                        empRowsArrays = [dataRows];
-                        console.log(`✅ Archive ODO: ${dataRows.length} rows`);
+                        empRowsArrays = [archiveEmpRows];
+                        console.log(`✅ Archive ODO: ${archiveEmpRows.length} rows`);
                     }
                 }
             } catch(archErr) {
@@ -1724,8 +1723,8 @@ async function loadAllData() {
             if (masterRowsGH.length === 0) {
                 try {
                     const archiveMaster = await fetchSheetByNameJSONP(CONFIG.ARCHIVE_SHEET_ID, 'master_data');
-                    if (archiveMaster.length > 1) {
-                        masterRowsGH = archiveMaster.slice(1); // Skip header
+                    if (archiveMaster.length > 0) {
+                        masterRowsGH = archiveMaster;
                         console.log(`✅ Archive Master: ${masterRowsGH.length} rows`);
                     }
                 } catch(e) { console.warn('⚠️ Archive Master fallback lỗi:', e.message); }
@@ -1735,8 +1734,8 @@ async function loadAllData() {
             if (supRows.length === 0) {
                 try {
                     const archiveSup = await fetchSheetByNameJSONP(CONFIG.ARCHIVE_SHEET_ID, 'supplier_data');
-                    if (archiveSup.length > 1) {
-                        supRows = archiveSup.slice(1);
+                    if (archiveSup.length > 0) {
+                        supRows = archiveSup;
                         console.log(`✅ Archive Supplier: ${supRows.length} rows`);
                     }
                 } catch(e) { console.warn('⚠️ Archive Supplier fallback lỗi:', e.message); }

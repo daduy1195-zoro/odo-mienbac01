@@ -1490,17 +1490,14 @@ function fetchSheetJSONP(sheetId, gid) {
                 table.rows.forEach(row => {
                     const r = row.c.map(cell => {
                         if (!cell) return '';
-                        // Ưu tiên formatted value (f) cho ngày tháng
-                        if (cell.f) return String(cell.f).normalize('NFC');
-                        if (cell.v === null || cell.v === undefined) return '';
-                        // Xử lý ngày dạng Date(yyyy,mm,dd...) từ Google Viz
-                        const sv = String(cell.v).normalize('NFC');
+                        const sv = cell.v !== null && cell.v !== undefined ? String(cell.v).normalize('NFC') : '';
                         const dateMatch = sv.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
                         if (dateMatch) {
                             const dd = String(parseInt(dateMatch[3])).padStart(2, '0');
                             const mm = String(parseInt(dateMatch[2]) + 1).padStart(2, '0');
                             return dd + '/' + mm + '/' + dateMatch[1];
                         }
+                        if (cell.f) return String(cell.f).normalize('NFC');
                         return sv;
                     });
                     rows.push(r);
@@ -1548,15 +1545,14 @@ function fetchSheetByNameJSONP(sheetId, sheetName) {
                 table.rows.forEach(row => {
                     const r = row.c.map(cell => {
                         if (!cell) return '';
-                        if (cell.f) return String(cell.f).normalize('NFC');
-                        if (cell.v === null || cell.v === undefined) return '';
-                        const sv = String(cell.v).normalize('NFC');
+                        const sv = cell.v !== null && cell.v !== undefined ? String(cell.v).normalize('NFC') : '';
                         const dateMatch = sv.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
                         if (dateMatch) {
                             const dd = String(parseInt(dateMatch[3])).padStart(2, '0');
                             const mm = String(parseInt(dateMatch[2]) + 1).padStart(2, '0');
                             return dd + '/' + mm + '/' + dateMatch[1];
                         }
+                        if (cell.f) return String(cell.f).normalize('NFC');
                         return sv;
                     });
                     rows.push(r);

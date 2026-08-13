@@ -1,0 +1,540 @@
+// ============================================================
+// GOOGLE APPS SCRIPT - PROXY SHEET ODO 24/7 + TELEGRAM BOT ALL-IN-ONE
+// ============================================================
+// HƯỚNG DẪN CẬP NHẬT 2 NỐT NHẠC:
+// 1. Truy cập đường link dự án của bạn:
+//    https://script.google.com/u/0/home/projects/1pjUHvZclOXAyT4auMqaRbgVDdn-U2BWAkRN0qlfMsgutld7fJ8lMViyD/edit
+// 2. Xóa hết code cũ trong file Code.gs, DÁN TOÀN BỘ CODE NÀY VÀO.
+// 3. Bấm "Triển khai" (Deploy) → "Quản lý các bản triển khai" (Manage deployments).
+// 4. Bấm biểu tượng Cây bút ✏️ (Edit) ở bản Web app hiện tại:
+//    - Phiên bản (Version): Chọn "Phiên bản mới" (New version).
+//    - Nhấn "Triển khai" (Deploy).
+// 5. XONG! Từ bây giờ tất cả máy tính & điện thoại đều tải dữ liệu 24/7 mượt mà!
+// ============================================================
+
+const CONFIG = {
+  EMPLOYEE_SHEET_ID: '1vI_rzcjX6F12SOm06QvEo9W2s5kiDjYcRtvm2kWuCXo',
+  EMPLOYEE_GIDS: ['1274066622', '409459817'],
+  SUPPLIER_SHEET_ID: '14zXhTqxD7VsN_PE3OxNY7hLss8zxG4zUNT_cNN9QV90',
+  SUPPLIER_GID: '0',
+  MASTER_SHEET_ID: '1RMe38TNV-EoIAradnynYmk8mt7l9pNWqJELM9O84Wxc',
+  MASTER_GID: '1254809645',
+  TELEGRAM_TOKEN: '8633414952:AAEsbut_yJIKXWzcKtuLDIFVGul1pY5E_6o',
+  TELEGRAM_CHAT_ID: '-1002346875748',
+};
+
+const TELEGRAM_GROUPS = {
+  'Hải Dương': { chatId: '-1003955414942', tag: '@Messi_haiduong' },
+  'Hải Phòng': { chatId: '-1003838432995', tag: '@Tuan210593' },
+  'Hưng Yên':  { chatId: '-1003915590818', tag: '@NguyenHue_3101082' },
+  'Thái Bình': { chatId: '-1003927320437', tag: '@oanh1505' },
+};
+
+const WH_KEYWORDS = {
+  'Hải Dương': ['hai duong'],
+  'Hải Phòng': ['hai phong'],
+  'Hưng Yên':  ['hung yen', 'mien bac', 'mien bang'],
+  'Thái Bình': ['thai binh'],
+};
+
+// ============================================================
+// 1. GET HANDLER — ĐỌC DỮ LIỆU GOOGLE SHEET 24/7
+// ============================================================
+function doGet(e) {
+  const action = (e && e.parameter && e.parameter.action) ? e.parameter.action.toLowerCase() : '';
+  const gid = (e && e.parameter && e.parameter.gid) ? e.parameter.gid : '';
+  
+  if (action) {
+    let result;
+    try {
+      switch (action) {
+        case 'employee':
+          result = getAllEmployeeData();
+          break;
+        case 'employee_gid':
+          result = getSheetDataByGid(CONFIG.EMPLOYEE_SHEET_ID, gid);
+          break;
+        case 'supplier':
+          result = getSheetDataByGid(CONFIG.SUPPLIER_SHEET_ID, CONFIG.SUPPLIER_GID);
+          break;
+        case 'master':
+          result = getSheetDataByGid(CONFIG.MASTER_SHEET_ID, CONFIG.MASTER_GID);
+          break;
+        case 'master_nvph':
+          result = getSheetDataByName(CONFIG.MASTER_SHEET_ID, 'NVPH');
+          break;
+        case 'master_ctv':
+          result = getSheetDataByName(CONFIG.MASTER_SHEET_ID, 'CTV');
+          break;
+        case 'ping':
+          result = { status: 'ok', timestamp: new Date().toISOString() };
+          break;
+        default:
+          result = { status: 'ok', message: 'Proxy API active: ' + action };
+      }
+    } catch (err) {
+      result = { error: err.message, stack: err.stack };
+    }
+    
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    ok: true,
+    message: 'Telegram & Sheet Proxy is running 24/7',
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// Helper: Lấy dữ liệu tất cả tab nhân viên
+function getAllEmployeeData() {
+  const allRows = [];
+  CONFIG.EMPLOYEE_GIDS.forEach(function(gid) {
+    const ss = SpreadsheetApp.openById(CONFIG.EMPLOYEE_SHEET_ID);
+    const sheets = ss.getSheets();
+    let targetSheet = null;
+    for (let i = 0; i < sheets.length; i++) {
+      if (String(sheets[i].getSheetId()) === String(gid)) {
+        targetSheet = sheets[i];
+        break;
+      }
+    }
+    if (!targetSheet) return;
+    const data = targetSheet.getDataRange().getValues();
+    if (data.length <= 1) return;
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i].map(function(cell) {
+        if (cell instanceof Date) {
+          var dd = String(cell.getDate()).padStart(2, '0');
+          var mm = String(cell.getMonth() + 1).padStart(2, '0');
+          var yyyy = cell.getFullYear();
+          return dd + '/' + mm + '/' + yyyy;
+        }
+        return cell !== null && cell !== undefined ? String(cell) : '';
+      });
+      row.push(gid);
+      row.push(i + 1);
+      allRows.push(row);
+    }
+  });
+  return { status: 'ok', count: allRows.length, metaCols: ['_gid', '_sheetRow'], rows: allRows };
+}
+
+function getSheetDataByGid(sheetId, gid) {
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sheets = ss.getSheets();
+  let targetSheet = null;
+  for (let i = 0; i < sheets.length; i++) {
+    if (String(sheets[i].getSheetId()) === String(gid)) {
+      targetSheet = sheets[i];
+      break;
+    }
+  }
+  if (!targetSheet) return { status: 'error', error: 'Sheet not found: gid=' + gid };
+  return getSheetRows(targetSheet);
+}
+
+function getSheetDataByName(sheetId, tabName) {
+  const ss = SpreadsheetApp.openById(sheetId);
+  const targetSheet = ss.getSheetByName(tabName);
+  if (!targetSheet) return { status: 'ok', count: 0, rows: [] };
+  return getSheetRows(targetSheet);
+}
+
+function getSheetRows(sheet) {
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return { status: 'ok', count: 0, rows: [] };
+  const rows = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i].map(function(cell) {
+      if (cell instanceof Date) {
+        var dd = String(cell.getDate()).padStart(2, '0');
+        var mm = String(cell.getMonth() + 1).padStart(2, '0');
+        var yyyy = cell.getFullYear();
+        return dd + '/' + mm + '/' + yyyy;
+      }
+      return cell !== null && cell !== undefined ? String(cell) : '';
+    });
+    rows.push(row);
+  }
+  return { status: 'ok', count: rows.length, rows: rows };
+}
+
+// ============================================================
+// 2. POST HANDLER — TELEGRAM BOT & TRIPS SYNC
+// ============================================================
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const action = data.action;
+
+    if (action === 'sync_trips') {
+      const trips = data.trips || [];
+      if (!trips.length) return ContentService.createTextOutput(JSON.stringify({ ok: true, msg: 'No trips' })).setMimeType(ContentService.MimeType.JSON);
+
+      const ss = SpreadsheetApp.openById(CONFIG.EMPLOYEE_SHEET_ID);
+      let sheet = ss.getSheetByName('Trips');
+      if (!sheet) {
+        sheet = ss.insertSheet('Trips');
+        sheet.appendRow(['Mã chuyến đi', 'Mã NV', 'Tài xế', 'Biển số xe', 'Ngày kết thúc']);
+      }
+
+      const existingData = sheet.getDataRange().getValues();
+      const existingCodes = new Set();
+      for (let i = 1; i < existingData.length; i++) {
+        existingCodes.add(String(existingData[i][0]));
+      }
+
+      let added = 0;
+      for (const t of trips) {
+        if (!existingCodes.has(String(t.tripCode))) {
+          sheet.appendRow([t.tripCode, t.empCode, t.empName, t.plate, t.dateStr]);
+          added++;
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, added })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'sendPhoto') {
+      const imageData = data.image;
+      const caption = data.caption || '';
+      const mimeType = data.mimeType || 'image/jpeg';
+      const imageBlob = Utilities.newBlob(Utilities.base64Decode(imageData), mimeType, 'report.jpg');
+
+      const url = 'https://api.telegram.org/bot' + CONFIG.TELEGRAM_TOKEN + '/sendPhoto';
+      const formData = {
+        'chat_id': data.chat_id || CONFIG.TELEGRAM_CHAT_ID,
+        'photo': imageBlob,
+        'caption': caption,
+      };
+
+      const options = {
+        method: 'post',
+        payload: formData,
+        muteHttpExceptions: true,
+      };
+
+      const response = UrlFetchApp.fetch(url, options);
+      const result = JSON.parse(response.getContentText());
+
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: result.ok,
+        message: result.ok ? 'Sent' : (result.description || 'Error'),
+      })).setMimeType(ContentService.MimeType.JSON);
+
+    } else if (action === 'sendMessage') {
+      const text = data.text || '';
+      const chatId = data.chat_id || CONFIG.TELEGRAM_CHAT_ID;
+      sendTelegram_(text, chatId);
+
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: true,
+        message: 'Sent',
+      })).setMimeType(ContentService.MimeType.JSON);
+
+    } else {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        message: 'Unknown action',
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: false,
+      message: 'Server error: ' + err.message,
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ============================================================
+// 3. BÁO CÁO TỰ ĐỘNG TELEGRAM LÚC 17:30
+// ============================================================
+function sendDailyReport() {
+  try {
+    const empData1 = getSheetData_(CONFIG.EMPLOYEE_SHEET_ID, CONFIG.EMPLOYEE_GIDS[0]);
+    const empData2 = getSheetData_(CONFIG.EMPLOYEE_SHEET_ID, CONFIG.EMPLOYEE_GIDS[1]);
+    const empData = [...empData1, ...empData2];
+    const masterData = getSheetData_(CONFIG.MASTER_SHEET_ID, CONFIG.MASTER_GID);
+
+    const masterList = [];
+    masterData.forEach(r => {
+      if (!r || r.length < 3) return;
+      const code = String(r[0] || '').replace(/[^0-9]/g, '').trim();
+      const name = String(r[1] || '').trim().toUpperCase();
+      const plate = String(r[2] || '').trim().toUpperCase().replace(/[\s\-\.]/g, '');
+      const warehouse = String(r[6] || '').trim();
+      if (!code || !name) return;
+      masterList.push({ code, name, plate, warehouse });
+    });
+
+    const today = new Date();
+    const cycle = getCycleRange_(today);
+
+    const employees = [];
+    empData.forEach((r, idx) => {
+      if (!r || r.length < 10) return;
+      const fullName = String(r[2] || '').trim();
+      if (!fullName) return;
+      const warehouse = String(r[6] || '').trim();
+      const shortWH = getShortWH_(warehouse);
+      if (!shortWH) return;
+
+      const dateStr = String(r[4] || '').trim();
+      const dateObj = parseDate_(dateStr);
+      if (!dateObj || !isInCycle_(dateObj, cycle)) return;
+
+      const parts = fullName.match(/^(.+?)\s+(\d{5,})$/);
+      const name = parts ? parts[1].trim().toUpperCase() : fullName.toUpperCase();
+      const code = parts ? parts[2].trim() : '';
+      const plate = String(r[9] || '').trim();
+      const kmStart = String(r[7] || '').trim();
+      const kmEnd = String(r[12] || '').trim();
+      const hourEnd = String(r[13] || '').trim();
+
+      employees.push({ name, code, plate, shortWH, dateStr, kmStart, kmEnd, hourEnd });
+    });
+
+    const daysElapsed = countDays_(cycle, today);
+    const allDates = getAllDates_(cycle, today);
+
+    const whMap = {};
+    employees.forEach(e => {
+      const key = e.name + '|' + e.code;
+      if (!whMap[e.shortWH]) whMap[e.shortWH] = {};
+      if (!whMap[e.shortWH][key]) {
+        const m = masterList.find(x => x.code === e.code);
+        whMap[e.shortWH][key] = { name: e.name, code: e.code, plate: m ? fmtPlate_(m.plate) : e.plate, days: {} };
+      }
+      whMap[e.shortWH][key].days[e.dateStr] = true;
+    });
+
+    masterList.forEach(m => {
+      const wh = getShortWH_(m.warehouse);
+      if (!wh) return;
+      const key = m.name + '|' + m.code;
+      if (!whMap[wh]) whMap[wh] = {};
+      if (!whMap[wh][key]) {
+        whMap[wh][key] = { name: m.name, code: m.code, plate: fmtPlate_(m.plate), days: {} };
+      }
+    });
+
+    ['Hải Dương', 'Hải Phòng', 'Hưng Yên', 'Thái Bình'].forEach(wh => {
+      const empObj = whMap[wh];
+      if (!empObj) return;
+
+      const groupConf = TELEGRAM_GROUPS[wh];
+      if (!groupConf) return;
+
+      const list = Object.values(empObj).map(e => {
+        const ud = Object.keys(e.days).length;
+        const rate = daysElapsed > 0 ? Math.round((ud / daysElapsed) * 100) : 0;
+        const missingDates = allDates.filter(d => !e.days[d]);
+
+        const toShort = (d) => {
+          const p = d.match(/(\d{1,2})\/(\d{1,2})/);
+          return p ? parseInt(p[1]) + '/' + parseInt(p[2]) : d;
+        };
+
+        const missingRanges = [];
+        if (missingDates.length > 0) {
+          let start = missingDates[0];
+          let end = missingDates[0];
+          let lastIdx = allDates.indexOf(missingDates[0]);
+
+          for (let j = 1; j < missingDates.length; j++) {
+            const current = missingDates[j];
+            const currentIdx = allDates.indexOf(current);
+            if (currentIdx === lastIdx + 1) {
+              end = current;
+            } else {
+              missingRanges.push(start === end ? toShort(start) : toShort(start) + ' → ' + toShort(end));
+              start = current;
+              end = current;
+            }
+            lastIdx = currentIdx;
+          }
+          missingRanges.push(start === end ? toShort(start) : toShort(start) + ' → ' + toShort(end));
+        }
+
+        return { ...e, ud, rate, missing: missingRanges };
+      });
+      list.sort((a, b) => b.rate - a.rate);
+
+      let msg1 = '📊 *BÁO CÁO ODO HÀNG NGÀY*\n';
+      msg1 += '📅 Kỳ: ' + fmt_(cycle.start, 'dd/MM') + ' → ' + fmt_(cycle.end, 'dd/MM/yyyy') + '\n';
+      msg1 += '🕐 ' + fmt_(today, 'HH:mm dd/MM/yyyy') + '\n';
+      msg1 += '━━━━━━━━━━━━━━━━━━━━\n';
+      msg1 += '\n🏢 *Kho ' + wh + '* (' + list.length + ' NV · ' + daysElapsed + ' ngày)\n';
+      
+      list.forEach((e, i) => {
+        const icon = e.rate >= 80 ? '🟢' : e.rate >= 50 ? '🟡' : '🔴';
+        msg1 += (i + 1) + '. ' + e.name + ' (' + e.code + ') ' + icon + ' ' + e.ud + '/' + daysElapsed + ' = ' + Math.min(e.rate, 100) + '%\n';
+        if (e.rate < 100 && e.missing.length > 0) {
+          msg1 += '   ❌ Thiếu: ' + e.missing.join(', ') + '\n';
+        }
+      });
+      
+      msg1 += '\n👤 Quản lý: ' + groupConf.tag;
+      sendTelegram_(msg1, groupConf.chatId);
+    });
+
+    const fraud = [];
+    employees.forEach(e => {
+      const km = parseInt(e.kmEnd) - parseInt(e.kmStart);
+      const reasons = [];
+      if (!isNaN(km) && km > 200) reasons.push('Km: ' + km);
+      if (!isNaN(km) && km < 0) reasons.push('Km âm: ' + km + ' (gõ sai)');
+
+      const ot = calcOT_(e.hourEnd);
+      if (ot > 180) {
+        const h = Math.floor(ot / 60), m = ot % 60;
+        reasons.push('TC: ' + h + 'h' + (m > 0 ? String(m).padStart(2, '0') : ''));
+      }
+
+      if (reasons.length > 0) fraud.push({ ...e, km: isNaN(km) ? 0 : km, ot, reasons });
+    });
+
+    if (fraud.length > 0) {
+      ['Hải Dương', 'Hải Phòng', 'Hưng Yên', 'Thái Bình'].forEach(wh => {
+        const whFraud = fraud.filter(f => f.shortWH === wh);
+        if (whFraud.length === 0) return;
+        const groupConf = TELEGRAM_GROUPS[wh];
+        if (!groupConf) return;
+
+        let msg2 = '🚨 *CẢNH BÁO GIAN LẬN - KHO ' + wh.toUpperCase() + '*\n';
+        msg2 += '⚠️ ' + whFraud.length + ' trường hợp cần kiểm tra\n';
+        msg2 += '🔴 Km > 200, Km âm, hoặc TC > 3 tiếng\n';
+        msg2 += '━━━━━━━━━━━━━━━━━━━━\n\n';
+
+        whFraud.forEach((e, i) => {
+          const otStr = e.ot > 0 ? Math.floor(e.ot / 60) + 'h' + (e.ot % 60 > 0 ? String(e.ot % 60).padStart(2, '0') : '') : '—';
+          msg2 += (i + 1) + '. *' + e.name + '* (' + e.code + ')\n';
+          msg2 += '   📅 ' + e.dateStr + '\n';
+          msg2 += '   🚗 ' + e.plate + ' | Km: *' + e.km + '* | TC: *' + otStr + '*\n';
+          msg2 += '   ⚠️ ' + e.reasons.join(' | ') + '\n\n';
+        });
+
+        msg2 += '👤 Quản lý: ' + groupConf.tag;
+        sendTelegram_(msg2, groupConf.chatId);
+      });
+    }
+
+    Logger.log('✅ Đã gửi báo cáo thành công!');
+  } catch (err) {
+    Logger.log('❌ Lỗi: ' + err.message);
+    sendTelegram_('❌ Lỗi báo cáo tự động:\n' + err.message, CONFIG.TELEGRAM_CHAT_ID);
+  }
+}
+
+function getSheetData_(id, gid) {
+  const url = 'https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?tqx=out:json&gid=' + gid + '&headers=1';
+  const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  const text = res.getContentText();
+  const jsonStr = text.replace(/^[^(]*\(/, '').replace(/\);?$/, '');
+  const json = JSON.parse(jsonStr);
+  const rows = [];
+  if (json.table && json.table.rows) {
+    json.table.rows.forEach(row => {
+      rows.push(row.c ? row.c.map(c => c ? (c.v != null ? String(c.v) : '') : '') : []);
+    });
+  }
+  return rows;
+}
+
+function sendTelegram_(text, chatId = CONFIG.TELEGRAM_CHAT_ID) {
+  const url = 'https://api.telegram.org/bot' + CONFIG.TELEGRAM_TOKEN + '/sendMessage';
+  const chunks = [];
+  let rem = text;
+  while (rem.length > 0) {
+    if (rem.length <= 4000) { chunks.push(rem); break; }
+    let cut = rem.lastIndexOf('\n', 4000);
+    if (cut <= 0) cut = 4000;
+    chunks.push(rem.substring(0, cut));
+    rem = rem.substring(cut);
+  }
+  chunks.forEach(chunk => {
+    UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({ chat_id: chatId, text: chunk, parse_mode: 'Markdown' }),
+      muteHttpExceptions: true,
+    });
+    Utilities.sleep(500);
+  });
+}
+
+function getCycleRange_(date) {
+  const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
+  return d >= 26
+    ? { start: new Date(y, m, 26), end: new Date(y, m + 1, 25) }
+    : { start: new Date(y, m - 1, 26), end: new Date(y, m, 25) };
+}
+
+function isInCycle_(date, cycle) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return d >= new Date(cycle.start.getFullYear(), cycle.start.getMonth(), cycle.start.getDate())
+      && d <= new Date(cycle.end.getFullYear(), cycle.end.getMonth(), cycle.end.getDate());
+}
+
+function parseDate_(str) {
+  if (!str) return null;
+  const p = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return p ? new Date(parseInt(p[3]), parseInt(p[2]) - 1, parseInt(p[1])) : null;
+}
+
+function countDays_(cycle, today) {
+  let c = 0;
+  const end = today < cycle.end ? today : cycle.end;
+  for (let dt = new Date(cycle.start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+    if (dt.getDay() !== 0) c++;
+  }
+  return c;
+}
+
+function getAllDates_(cycle, today) {
+  const dates = [];
+  const end = today < cycle.end ? today : cycle.end;
+  for (let dt = new Date(cycle.start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+    if (dt.getDay() !== 0) dates.push(fmt_(new Date(dt), 'dd/MM/yyyy'));
+  }
+  return dates;
+}
+
+function getShortWH_(wh) {
+  if (!wh) return null;
+  const lower = rmDia_(wh);
+  for (const [short, kws] of Object.entries(WH_KEYWORDS)) {
+    for (const kw of kws) { if (lower.includes(kw)) return short; }
+  }
+  return null;
+}
+
+function rmDia_(s) {
+  return s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().trim() : '';
+}
+
+function fmtPlate_(p) {
+  if (!p) return '';
+  const s = p.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const m = s.match(/^(\d{2}[A-Z]{1,2})(\d{4,5})$/);
+  return m ? m[1] + '-' + m[2] : s;
+}
+
+function calcOT_(hourEnd) {
+  if (!hourEnd) return 0;
+  const ts = String(hourEnd).replace(/h/gi, ':');
+  const p = ts.match(/(\d{1,2}):(\d{2})/);
+  if (!p) return 0;
+  let h = parseInt(p[1]);
+  const m = parseInt(p[2]);
+  if (/PM/i.test(ts) && h < 12) h += 12;
+  if (/AM/i.test(ts) && h === 12) h = 0;
+  const total = h * 60 + m;
+  return total > 1140 ? total - 1140 : 0;
+}
+
+function fmt_(date, pattern) {
+  return Utilities.formatDate(date, 'Asia/Ho_Chi_Minh', pattern);
+}

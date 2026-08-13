@@ -43,37 +43,49 @@ const WH_KEYWORDS = {
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) ? e.parameter.action.toLowerCase() : '';
   const gid = (e && e.parameter && e.parameter.gid) ? e.parameter.gid : '';
+  const callback = (e && e.parameter && e.parameter.callback) ? e.parameter.callback : '';
+  const sheet = (e && e.parameter && e.parameter.sheet) ? e.parameter.sheet : '';
   
-  if (action) {
+  if (action || sheet) {
     let result;
     try {
-      switch (action) {
-        case 'employee':
-          result = getAllEmployeeData();
-          break;
-        case 'employee_gid':
-          result = getSheetDataByGid(CONFIG.EMPLOYEE_SHEET_ID, gid);
-          break;
-        case 'supplier':
-          result = getSheetDataByGid(CONFIG.SUPPLIER_SHEET_ID, CONFIG.SUPPLIER_GID);
-          break;
-        case 'master':
-          result = getSheetDataByGid(CONFIG.MASTER_SHEET_ID, CONFIG.MASTER_GID);
-          break;
-        case 'master_nvph':
-          result = getSheetDataByName(CONFIG.MASTER_SHEET_ID, 'NVPH');
-          break;
-        case 'master_ctv':
-          result = getSheetDataByName(CONFIG.MASTER_SHEET_ID, 'CTV');
-          break;
-        case 'ping':
-          result = { status: 'ok', timestamp: new Date().toISOString() };
-          break;
-        default:
-          result = { status: 'ok', message: 'Proxy API active: ' + action };
+      if (sheet) {
+        result = getSheetDataByName(CONFIG.EMPLOYEE_SHEET_ID, sheet);
+      } else {
+        switch (action) {
+          case 'employee':
+            result = getAllEmployeeData();
+            break;
+          case 'employee_gid':
+            result = getSheetDataByGid(CONFIG.EMPLOYEE_SHEET_ID, gid);
+            break;
+          case 'supplier':
+            result = getSheetDataByGid(CONFIG.SUPPLIER_SHEET_ID, CONFIG.SUPPLIER_GID);
+            break;
+          case 'master':
+            result = getSheetDataByGid(CONFIG.MASTER_SHEET_ID, CONFIG.MASTER_GID);
+            break;
+          case 'master_nvph':
+            result = getSheetDataByName(CONFIG.MASTER_SHEET_ID, 'NVPH');
+            break;
+          case 'master_ctv':
+            result = getSheetDataByName(CONFIG.MASTER_SHEET_ID, 'CTV');
+            break;
+          case 'ping':
+            result = { status: 'ok', timestamp: new Date().toISOString() };
+            break;
+          default:
+            result = { status: 'ok', message: 'Proxy API active: ' + action };
+        }
       }
     } catch (err) {
       result = { error: err.message, stack: err.stack };
+    }
+    
+    if (callback) {
+      return ContentService
+        .createTextOutput(callback + '(' + JSON.stringify(result) + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
     
     return ContentService

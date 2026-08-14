@@ -4017,12 +4017,6 @@ async function loadNccTripData() {
             }
         }
         
-        // Lưu data mới vào Archive (chạy ngầm, không block UI)
-        if (newRecordsToArchive.length > 0) {
-            console.log(`📤 Đang lưu ${newRecordsToArchive.length} chuyến NCC mới vào Archive...`);
-            saveToArchive('ncc_trips', newRecordsToArchive);
-        }
-        
         // Sắp xếp theo ngày giảm dần
         allNccData.sort((a, b) => {
             const da = a.dateStr ? String(a.dateStr).split('/').reverse().join('') : '';

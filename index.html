@@ -1772,10 +1772,21 @@ async function loadAllData() {
             const ncc = (r[3] || '').trim();
             const province = (r[5] || '').trim();
             const warehouse = (r[6] || '').trim();
+            const note = (r[9] || '').trim();
             const backupStr = (r[10] || '').trim().toUpperCase(); // Cột K = Biển số xe tăng cường
             const backupPlates = backupStr ? backupStr.split(/[\n,;]+/).map(p => String(p).replace(/[\s\-\.]/g, '')).filter(Boolean) : [];
             if (!code || !name) return;
-            masterList.push({ code, name, plate, ncc, province, warehouse, backupPlates });
+            
+            let startDate = null;
+            const dateMatch = note.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+            if (dateMatch) {
+                const dd = dateMatch[1].padStart(2, '0');
+                const mm = dateMatch[2].padStart(2, '0');
+                const yy = dateMatch[3] ? (dateMatch[3].length === 2 ? '20' + dateMatch[3] : dateMatch[3]) : new Date().getFullYear();
+                startDate = `${dd}/${mm}/${yy}`;
+            }
+            
+            masterList.push({ code, name, plate, ncc, province, warehouse, backupPlates, note, startDate });
         });
         console.log(`✅ Master list: ${masterList.length} NV`);
 
@@ -2564,7 +2575,7 @@ function renderRanking(filtered, month, whFilter) {
             // Cũng check xem code này đã tồn tại trong whMap chưa (bất kể key format)
             const existsByCode = m.code && Object.values(whMap[wh]).some(e => e.code === m.code);
             if (!whMap[wh][key] && !existsByCode) {
-                whMap[wh][key] = { name: m.name, code: m.code, plate: formatPlate(m.plate), days: new Set(), workedDays: new Set() };
+                whMap[wh][key] = { name: m.name, code: m.code, plate: formatPlate(m.plate), startDate: m.startDate, note: m.note, days: new Set(), workedDays: new Set() };
             }
         });
     }
@@ -2591,10 +2602,25 @@ function renderRanking(filtered, month, whFilter) {
                     const empName = emp.name ? removeAccents(emp.name).toUpperCase().replace(/[^A-Z]/g, '') : '';
 
                     const isCodeMatch = tCode && empCode && (tCode === empCode || tCode.includes(empCode) || empCode.includes(tCode));
-                    const isPlateMatch = tPlate && empPlate && (tPlate === empPlate || tPlate.includes(empPlate) || empPlate.includes(tPlate));
                     const isNameMatch = normTName && empName && (normTName === empName || normTName.includes(empName) || empName.includes(normTName));
+                    const isPlateMatch = tPlate && empPlate && (tPlate === empPlate || tPlate.includes(empPlate) || empPlate.includes(tPlate));
 
-                    if (isCodeMatch || isPlateMatch || isNameMatch) {
+                    let isMatch = false;
+                    // Fix: Đừng gán chuyến theo biển số nếu mã NV hoặc Tên NV trên chuyến đi đã thuộc về người khác!
+                    if (isCodeMatch || isNameMatch) {
+                        isMatch = true;
+                    } else if (isPlateMatch && !tCode && !normTName) {
+                        // Chỉ dùng biển số nếu chuyến đi không có cả thông tin mã NV và tên NV
+                        isMatch = true;
+                    } else if (isPlateMatch && tCode && tCode !== empCode) {
+                        // Nếu chuyến có mã NV khác người này -> Xe được lái bởi người khác -> Không match
+                        isMatch = false;
+                    } else if (isPlateMatch && normTName && empName && !normTName.includes(empName)) {
+                        // Nếu chuyến có tên NV khác người này -> Xe được lái bởi người khác -> Không match
+                        isMatch = false;
+                    }
+
+                    if (isMatch) {
                         emp.workedDays.add(cleanDate);
                     }
                 });
@@ -2631,11 +2657,19 @@ function renderRanking(filtered, month, whFilter) {
             
             // Tìm ngày hoạt động đầu tiên (ODO hoặc Lastmile) để hỗ trợ NV mới vào
             let firstActiveIndex = -1;
-            for (let i = 0; i < allDatesInCycle.length; i++) {
-                const d = allDatesInCycle[i];
-                if (e.days.has(d) || (e.workedDays && e.workedDays.has(d))) {
-                    firstActiveIndex = i;
-                    break;
+            
+            if (e.startDate) {
+                const sIdx = allDatesInCycle.indexOf(e.startDate);
+                if (sIdx !== -1) firstActiveIndex = sIdx;
+            }
+            
+            if (firstActiveIndex === -1) {
+                for (let i = 0; i < allDatesInCycle.length; i++) {
+                    const d = allDatesInCycle[i];
+                    if (e.days.has(d) || (e.workedDays && e.workedDays.has(d))) {
+                        firstActiveIndex = i;
+                        break;
+                    }
                 }
             }
 

@@ -2710,9 +2710,15 @@ function renderRanking(filtered, month, whFilter) {
             }
 
             // Tính ngày NGHỈ (không có chuyến đi)
-            const offDays = allDatesInCycle.filter((d, index) => {
+            let offDays = allDatesInCycle.filter((d, index) => {
                 return isTrackedInTrips && syncedDates.has(d) && !e.workedDays.has(d);
             });
+
+            // Nếu là nhân viên hỗ trợ (ghi trong Ghi chú), không liệt kê Ngày Nghỉ để tránh rối bảng
+            const isSupport = e.note && e.note.toLowerCase().includes('hỗ trợ');
+            if (isSupport) {
+                offDays = [];
+            }
 
             // Tính % hoàn thành = (ngày làm việc - ngày thiếu báo cáo) / ngày làm việc
             const reportedWorkDays = myExpectedDays - workedNoReport.length;
@@ -2726,16 +2732,19 @@ function renderRanking(filtered, month, whFilter) {
             const missingRanges = workedNoReport.map(d => toShort(d));
             const offDayRanges = offDays.map(d => toShort(d));
 
-            return { ...e, uniqueDays: reportedWorkDays, rate, missingDates: missingRanges, offDays: offDayRanges, myExpectedDays, isResigned };
+            return { ...e, uniqueDays: reportedWorkDays, rate, missingDates: missingRanges, offDays: offDayRanges, myExpectedDays, isResigned, isSupport };
         });
 
+        // Lọc bỏ những nhân viên hỗ trợ nếu họ không phát sinh ngày công nào trong tháng
+        const finalEmpList = empList.filter(e => !(e.isSupport && e.myExpectedDays === 0));
+
         // Sắp xếp theo % giảm dần
-        empList.sort((a, b) => b.rate - a.rate || b.uniqueDays - a.uniqueDays);
+        finalEmpList.sort((a, b) => b.rate - a.rate || b.uniqueDays - a.uniqueDays);
 
         html += `
         <div class="ranking-card" id="ranking-wh-${String(wh).replace(/\s+/g, '-')}" style="grid-column: 1 / -1;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3>🏢 Kho ${escapeHtml(wh)} <span style="font-weight:400;color:var(--text-muted);font-size:13px;">(${empList.length} NV · ${daysElapsed} ngày)</span></h3>
+                <h3>🏢 Kho ${escapeHtml(wh)} <span style="font-weight:400;color:var(--text-muted);font-size:13px;">(${finalEmpList.length} NV · ${daysElapsed} ngày)</span></h3>
                 <button class="btn btn-primary" onclick="sendWarehouseRankingTelegram('${wh}', event)" style="padding:4px 10px; font-size:11px;">
                     📤 Gửi lên Telegram
                 </button>

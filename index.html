@@ -905,11 +905,10 @@ function levenshtein(a, b) {
 // Tổ hợp xuất hiện nhiều nhất = "đúng". Tổ hợp tương tự nhưng ít hơn = "sai".
 function detectTypos(data) {
     // NV đã nghỉ việc → bỏ qua, không cảnh báo gõ sai hoặc ODO âm
-    const RESIGNED_EMPLOYEES = ['PHAM DINH TU', 'PHAM VAN TU'];
+    const RESIGNED_CODES = ['3160330', '3174126']; // Phạm Văn Tú, Bùi Thọ Bình cũ
     const isResigned = (name, code) => {
-        if (code && String(code).trim() === '3160330') return true;
-        const normName = removeAccents(name || '').toUpperCase();
-        return RESIGNED_EMPLOYEES.some(r => normName.includes(r));
+        if (!code) return false;
+        return RESIGNED_CODES.includes(String(code).trim());
     };
 
     // Bước 1: Đếm tần suất mỗi tổ hợp (tên, mã NV)
@@ -1065,6 +1064,7 @@ function detectTypos(data) {
         // Gom unique NV từ báo cáo (theo mã)
         const reportedByCode = {};
         data.forEach(e => {
+            if (isResigned(e.name, e.code)) return; // Bỏ qua NV đã nghỉ
             if (!e.code) return;
             const key = e.code;
             if (!reportedByCode[key]) {
@@ -1818,10 +1818,13 @@ async function loadAllData() {
             // 1. Tự động bổ sung kho từ Master List nếu kho rỗng hoặc không khớp 4 kho
             if (!isMyWarehouse(warehouse) && masterList && masterList.length > 0) {
                 const normFullName = removeDiacritics(fullName).toUpperCase();
+                // Chỉ fallback dựa trên tên nếu Kho bị bỏ trống hoặc chung chung (tránh trùng tên người ở tỉnh khác như Ninh Bình)
+                const isGenericOrEmpty = !warehouse || warehouse.toUpperCase().includes('MIỀN BẮC') || warehouse.toUpperCase() === 'GXT';
                 const mMatch = masterList.find(m =>
                     (m.code && fullName.includes(m.code)) ||
-                    (m.name && normFullName.includes(removeDiacritics(m.name).toUpperCase())) ||
-                    (normPlate && m.plate && normPlate === m.plate)
+                    (normPlate && m.plate && normPlate === m.plate) ||
+                    // Nếu match bằng TÊN, phải đảm bảo KHÔNG XUNG ĐỘT MÃ (nghĩa là fullName không chứa 1 mã nào đó sai khác với m.code > 2)
+                    (m.name && normFullName.includes(removeDiacritics(m.name).toUpperCase()) && isGenericOrEmpty && (!fullName.match(/\d{5,8}/) || (m.code && levenshtein(fullName.match(/\d{5,8}/)[0], m.code) <= 2)))
                 );
                 if (mMatch && mMatch.warehouse && isMyWarehouse(mMatch.warehouse)) {
                     warehouse = mMatch.warehouse;
@@ -2714,10 +2717,18 @@ function renderRanking(filtered, month, whFilter) {
                 return isTrackedInTrips && syncedDates.has(d) && !e.workedDays.has(d);
             });
 
-            // Nếu là nhân viên hỗ trợ (ghi trong Ghi chú), không liệt kê Ngày Nghỉ để tránh rối bảng
-            const isSupport = e.note && e.note.toLowerCase().includes('hỗ trợ');
+            // Nếu là nhân viên hỗ trợ (ghi trong Ghi chú) hoặc nhân viên đã nghỉ việc, không liệt kê Ngày Nghỉ để tránh rối bảng
+            const isSupport = (e.note && removeAccents(e.note.toLowerCase()).includes('ho tro')) || e.code === '3125207';
+            const isNghi = e.note && removeAccents(e.note.toLowerCase()).includes('nghi');
+            
             if (isSupport) {
+                // Hỗ trợ: Expected days chỉ là những ngày CÓ phát sinh chuyến trên Lastmile
+                myExpectedDays = e.workedDays ? e.workedDays.size : 0;
+                offDays = []; // Không tính ngày nghỉ
+                if (myExpectedDays === 0 && e.days.size === 0) return null; 
+            } else if (isNghi) {
                 offDays = [];
+                if (e.days.size === 0) return null;
             }
 
             // Tính % hoàn thành = (ngày làm việc - ngày thiếu báo cáo) / ngày làm việc
@@ -3104,12 +3115,10 @@ function renderTypoWarnings(filtered) {
         html += '</tbody></table>';
     }
 
-    // Bảng 4: ODO gõ sai (Km âm) - Bỏ qua NV đã nghỉ việc (PHẠM VĂN TÚ, PHẠM ĐÌNH TÚ)
-    const RESIGNED_LIST = ['PHAM DINH TU', 'PHAM VAN TU'];
+    // Bảng 4: ODO gõ sai (Km âm) - Bỏ qua NV đã nghỉ việc
+    const RESIGNED_CODES = ['3160330', '3174126'];
     const odoErrors = filtered.filter(e => {
-        if (e.code && String(e.code).trim() === '3160330') return false;
-        const normName = removeAccents(e.name || '').toUpperCase();
-        if (RESIGNED_LIST.some(r => normName.includes(r))) return false;
+        if (e.code && RESIGNED_CODES.includes(String(e.code).trim())) return false;
         const km = parseInt(e.kmEnd) - parseInt(e.kmStart);
         return !isNaN(km) && km < 0;
     });
@@ -3601,7 +3610,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         const scanStart = Math.max(0, headerRowIdx - 3);
         const scanEnd = Math.min(rawData.length - 1, headerRowIdx + 1);
         for (let ri = scanStart; ri <= scanEnd; ri++) {
-            const hdr = rawData[ri].map(c => (c || '').toString().toLowerCase().trim());
+            const hdr = rawData[ri].map(c => (c || '').toString().toLowerCase().replace(/\s+/g, ' ').trim());
             for (let ci = 0; ci < hdr.length; ci++) {
                 const h = hdr[ci];
                 if (!h) continue;
@@ -3618,7 +3627,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
                 if ((h.includes('đơn giá') && (h.includes('ngày') || h.includes('ngay'))) || h.includes('giá ngày') || h.includes('thuê/ngày') || h.includes('thue/ngay')) colDailyRate = ci;
                 if (h.includes('cầu đường') || h.includes('giá cầu') || h.includes('phí cầu') || h.includes('cau duong')) colTollFee = ci;
                 if (h.includes('ngày lễ') || h.includes('ngay le') || h.includes('lễ tết')) colHolidayFee = ci;
-                if (h.includes('vượt km') || h.includes('phí vượt') || h.includes('vuot km')) colKmOverFee = ci;
+                if (h.includes('vượt km') || h.includes('km vượt') || h.includes('phí vượt') || h.includes('vuot km')) colKmOverFee = ci;
             }
         }
     }
@@ -3810,6 +3819,10 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
             if (overrides[finalKey] !== undefined) {
                 matchedTripCode = overrides[finalKey];
             }
+            const notes = JSON.parse(localStorage.getItem("GHN_NCC_TRIP_NOTES") || "{}");
+            if (notes[finalKey] !== undefined) {
+                tripNote = notes[finalKey];
+            }
         } catch(e) {}
 
         results.push({
@@ -3821,6 +3834,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
             tollFee, holidayFee, totalCost,
             warehouse,
             ghnTripCode: matchedTripCode,
+            note: tripNote,
             sheetId: sheetId || '',
             tabName: tabName || '',
             tabGid: tabGid || '',
@@ -4046,6 +4060,23 @@ async function loadNccTripData() {
     }
 }
 
+function updateNccTripNote(index, value) {
+    if (nccTripData[index]) {
+        nccTripData[index].note = value;
+        try {
+            const notes = JSON.parse(localStorage.getItem("GHN_NCC_TRIP_NOTES") || "{}");
+            const r = nccTripData[index];
+            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.sourceRow}`;
+            if (value) {
+                notes[key] = value;
+            } else {
+                delete notes[key];
+            }
+            localStorage.setItem("GHN_NCC_TRIP_NOTES", JSON.stringify(notes));
+        } catch(e) {}
+    }
+}
+
 function updateNccTripCode(index, value) {
     if (nccTripData[index]) {
         nccTripData[index].ghnTripCode = value;
@@ -4135,6 +4166,7 @@ function renderNccTrip() {
     const filterStatus = document.getElementById('filterNccStatus') ? document.getElementById('filterNccStatus').value : '';
     
     const filtered = [];
+    window.currentNccTripFiltered = filtered;
     
     nccTripData.forEach((row, idx) => {
         if (filterWh && row.warehouse !== filterWh) return;
@@ -4218,6 +4250,7 @@ function renderNccTrip() {
     html += '<option value="phat" style="color: #000;" ' + (filterStatus === 'phat' ? 'selected' : '') + '>⚠️ Phạt</option>';
     html += '</select>';
     html += '</th>';
+    html += '<th style="min-width:150px">Ghi chú</th>';
     html += '</tr></thead><tbody>';
 
     filtered.forEach((r, i) => {
@@ -4346,6 +4379,7 @@ function renderNccTrip() {
                 <td style="text-align:right; font-family:monospace; font-weight:bold; color:#fbbf24;">${formatMoneyCell(r.totalCost)}</td>
                 <td>${ghnHtml}</td>
                 <td style="font-weight:bold;">${statusHtml}</td>
+                <td><input type="text" class="form-control" style="font-size:12px; height:26px; padding:2px 6px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width:150px;" placeholder="Ghi ch�..." onchange="updateNccTripNote(${r.originalIndex}, this.value)" value="${escapeHtml(r.note || '')}"></td>
             </tr>
         `;
     });
@@ -4355,43 +4389,35 @@ function renderNccTrip() {
 }
 
 function exportNccTripExcel() {
-    if (!nccTripData || nccTripData.length === 0) {
-        showToast('❌', 'Chưa có dữ liệu để xuất!');
-        return;
-    }
-    if (typeof XLSX === 'undefined') {
-        showToast('❌', 'Thư viện Excel chưa được tải xong!');
-        return;
-    }
+    const data = window.currentNccTripFiltered || [];
+    if (data.length === 0) { showToast("?", "Chua c� d? li?u d? xu?t!"); return; }
+    if (typeof XLSX === "undefined") { showToast("?", "Thu vi?n Excel chua du?c t?i xong!"); return; }
     
-    const filterWh = document.getElementById('nccTripWhFilter').value;
-    const exportData = nccTripData
-        .filter(r => filterWh ? r.warehouse === filterWh : true)
-        .map(r => ({
-            'Ngày': r.dateStr,
-            'Tên NCC': r.ncc,
-            'Biển số xe': r.plate,
-            'Kho': r.warehouse,
-            'Lộ trình': r.route,
-            'KM phát sinh': r.kmDiff || '',
-            'Phí vượt KM': r.kmOverFee || '',
-            'Giờ đi': formatTimeHM(r.hourStart) || r.hourStart || '',
-            'Giờ về': formatTimeHM(r.hourEnd) || r.hourEnd || '',
-            'TG Tăng ca (h)': r.otHours || '',
-            'Phí tăng ca': r.otFee || '',
-            'Đơn giá/tháng': r.monthlyRate || '',
-            'Đơn giá ngày': r.dailyRate || '',
-            'Phí cầu đường': r.tollFee || '',
-            'Phí ngày lễ': r.holidayFee || '',
-            'Tổng chi phí': r.totalCost || '',
-            'Mã chuyến đi GHN': r.ghnTripCode || '',
-            'Trạng thái': (r.ghnTripCode === 'GHN OFF' || r.ghnTripCode === 'GHN_OFF') ? 'GHN OFF' : ((r.ghnTripCode === 'Phạt' || r.ghnTripCode === 'PHẠT') ? 'Phạt' : ((r.ghnTripCode === 'NCC OFF' || r.ghnTripCode === 'NCC_OFF' || r.ghnTripCode === 'OFF') ? 'NCC OFF' : (r.ghnTripCode ? 'Đã khớp' : 'Thiếu mã')))
-        }));
-        
+    const exportData = data.map(r => ({
+        "Ng�y": r.dateStr,
+        "T�n NCC": r.ncc,
+        "Bi?n s? xe": r.plate,
+        "Kho": r.warehouse,
+        "L? tr�nh": r.route,
+        "KM ph�t sinh": r.kmDiff || "",
+        "Ph� vu?t KM": r.kmOverFee || "",
+        "Gi? di - v?": (r.hourStart && r.hourEnd) ? (r.hourStart + " - " + r.hourEnd) : "",
+        "TG tang ca": r.otHours || "",
+        "Ph� tang ca": r.otFee || "",
+        "�on gi� th�ng": r.monthlyRate || "",
+        "�on gi� ng�y": r.dailyRate || "",
+        "Ph� c?u du?ng": r.tollFee || "",
+        "Ph� ng�y l?": r.holidayFee || "",
+        "T?ng chi ph�": r.totalCost || "",
+        "M� chuy?n di GHN": r.ghnTripCode || "",
+        "Tr?ng th�i": (r.ghnTripCode === "GHN OFF" || r.ghnTripCode === "GHN_OFF") ? "GHN OFF" : ((r.ghnTripCode === "Ph?t" || r.ghnTripCode === "PH?T") ? "Ph?t" : ((r.ghnTripCode === "NCC OFF" || r.ghnTripCode === "NCC_OFF" || r.ghnTripCode === "OFF") ? "NCC OFF" : (r.ghnTripCode ? "�� kh?p" : "Thi?u m�"))),
+        "Ghi ch�": r.note || ""
+    }));
+    
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Ghep Chuyen");
-    XLSX.writeFile(wb, `Ghep_Chuyen_NCC_${filterWh || 'Tat_Ca'}.xlsx`);
+    XLSX.writeFile(wb, "Ghep_Chuyen_NCC.xlsx");
 }
 
 // ====== CHUYỂN TAB & MẬT KHẨU ======
@@ -4606,6 +4632,7 @@ function renderLastmile() {
     }
     
     var filtered = [];
+    window.currentLastmileFiltered = filtered;
     for (var i = 0; i < lastmileData.length && filtered.length < 5000; i++) {
         var row = lastmileData[i];
         // 1. Lọc Kho
@@ -4717,15 +4744,16 @@ function renderLastmile() {
     console.log('✅ renderLastmile done!');
 }
 function exportLastmileExcel() {
-    if (!lastmileData || lastmileData.length === 0) { showToast('❌', 'Chưa có dữ liệu!'); return; }
-    if (typeof XLSX === 'undefined') { showToast('❌', 'Thư viện Excel chưa tải!'); return; }
-    var rows = lastmileData.map(function(r,i) { return [i+1, r.dateStr, r.hubName, r.tripCode, r.plate, r.createdTime, r.startTime, r.endTime, r.createdById, r.createdByName, r.pickCount||0, r.deliverCount||0, r.returnCount||0, r.orderCount||0, r.driverId, r.driverName, _phoneUnlocked ? (r.driverPhone || '') : '******', r.servicePartner]; });
-    rows.unshift(['STT','Ngày','Hub','Mã chuyến đi','Biển số xe','Tạo','Bắt đầu','Kết thúc','Người tạo (Mã)','Người tạo (Tên)','Lấy','Giao','Trả','Tổng ĐH','Tài xế (Mã)','Tài xế (Tên)','SĐT','Đối tác']);
+    const data = window.currentLastmileFiltered || [];
+    if (data.length === 0) { showToast("?", "Chua c� d? li?u d? xu?t!"); return; }
+    if (typeof XLSX === "undefined") { showToast("?", "Thu vi?n Excel chua t?i!"); return; }
+    var rows = data.map(function(r,i) { return [i+1, r.dateStr, r.hubName, r.tripCode, r.plate, r.createdTime, r.startTime, r.endTime, r.createdById, r.createdByName, r.pickCount||0, r.deliverCount||0, r.returnCount||0, r.orderCount||0, r.driverId, r.driverName, _phoneUnlocked ? (r.driverPhone || "") : "******", r.servicePartner]; });
+    rows.unshift(["STT","Ng�y","Hub","M� chuy?n di","Bi?n s? xe","T?o","B?t d?u","K?t th�c","Ngu?i t?o (M�)","Ngu?i t?o (T�n)","L?y","Giao","Tr?","T?ng �H","T�i x? (M�)","T�i x? (T�n)","S�T","�?i t�c"]);
     var ws = XLSX.utils.aoa_to_sheet(rows);
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Lastmile');
-    XLSX.writeFile(wb, 'lastmile_trips_' + new Date().toISOString().slice(0,10) + '.xlsx');
-    showToast('✅', 'Đã xuất Excel!');
+    XLSX.utils.book_append_sheet(wb, ws, "Lastmile");
+    XLSX.writeFile(wb, "lastmile_trips_" + new Date().toISOString().slice(0,10) + ".xlsx");
+    showToast("?", "�� xu?t Excel!");
 }
 
 function switchTab(tab, el) {
@@ -4969,6 +4997,7 @@ window.renderRecon3Way = function() {
 
     // Classify
     var allRows = [];
+    window.currentRecon3WayFiltered = allRows;
     var counts = { perfect: 0, missingEmp: 0, missingSup: 0, orphanEmp: 0, orphanSup: 0, lmGhost: 0 };
 
     map.forEach(function(d) {
@@ -5091,48 +5120,57 @@ window.renderRecon3Way = function() {
 };
 
 window.exportRecon3WayExcel = function() {
-    if (!window.recon3WayData || window.recon3WayData.length === 0) { showToast('\u274C', 'Kh\u00F4ng c\u00F3 d\u1EEF li\u1EC7u!'); return; }
-
+    const data = window.currentRecon3WayFiltered || [];
+    if (data.length === 0) { showToast("?", "Kh�ng c� d? li?u!"); return; }
     var calcSupKm = function(supArr) {
         var total = 0;
         supArr.forEach(function(s) {
             if (s.kmDiff) {
-                var d = parseFloat(String(s.kmDiff).replace(/[^\d.]/g, ''));
+                var d = parseFloat(String(s.kmDiff).replace(/[^\d.]/g, ""));
                 if (!isNaN(d) && d > 0) { total += d; return; }
             }
-            var ks = parseFloat(String(s.kmStart || '0').replace(/[^\d.]/g, '')) || 0;
-            var ke = parseFloat(String(s.kmEnd || '0').replace(/[^\d.]/g, '')) || 0;
-            if (ks > 0 && ke >= ks) {
-                total += (ke - ks);
-            } else if (ks > 1000 && ke > 0 && ke < 1000) {
-                total += ke;
-            } else if (ks > 0 && ks < 1000 && ke === 0) {
-                total += ks;
-            }
+            var ks = parseFloat(String(s.kmStart || "0").replace(/[^\d.]/g, "")) || 0;
+            var ke = parseFloat(String(s.kmEnd || "0").replace(/[^\d.]/g, "")) || 0;
+            if (ke >= ks && ke > 0) { total += (ke - ks); }
         });
         return total;
     };
-
-    var csvRows = ['STT,Ng\u00E0y,Bi\u1EC3n s\u1ED1,NCC,Kho,M\u00E3 chuy\u1EBFn GHN,S\u1ED1 chuy\u1EBFn LM,NV B\u00E1o (Km),NCC Ch\u1ED1t (Km),Tr\u1EA1ng th\u00E1i'];
-    var rowNum = 1;
-    window.recon3WayData.forEach(function(d) {
-        var ncc = (d.emp[0] ? d.emp[0].supplier : '') || (d.sup[0] ? d.sup[0].ncc : '') || '';
-        var wh = d.hub || '';
-        var tripCodes = d.tripCodes.join(' | ');
-        var odo = 0; if (d.emp.length > 0) d.emp.forEach(function(e) { odo += (e.kmEnd - e.kmStart) || 0; });
-        var supKm = d.sup.length > 0 ? Math.round(calcSupKm(d.sup)) : 0;
-        csvRows.push(rowNum++ + ',"' + d.date + '","' + d.plate + '","' + ncc + '","' + wh + '","' + tripCodes + '",' + d.lm.length + ',' + odo + ',' + supKm + ',"' + d.statusText + '"');
+    var exportData = data.map(function(d, i) {
+        var ncc = (d.emp[0] ? d.emp[0].supplier : "") || (d.sup[0] ? d.sup[0].ncc : "") || "";
+        var wh = d.hub || "";
+        var lmCount = d.lm.length;
+        var tripStr = d.tripCodes.join(", ");
+        var odo = 0;
+        if (d.emp.length > 0) { d.emp.forEach(function(e) { odo += (e.kmEnd - e.kmStart) || 0; }); }
+        var supKm = 0;
+        if (d.sup.length > 0) { supKm = calcSupKm(d.sup); }
+        var diff = Math.abs(odo - supKm);
+        
+        var status = "";
+        if (d.sup.length===0 && d.emp.length===0 && d.lm.length>0) status = "Ch? c� GHN";
+        else if (d.sup.length===0) status = "Thi?u NCC";
+        else if (d.emp.length===0) status = "Thi?u NV";
+        else if (diff > 5) status = "L?ch KM (" + diff + "km)";
+        else status = "Kh?p";
+        
+        return {
+            "STT": i + 1,
+            "Ng�y": d.dateStr,
+            "Bi?n s?": d.plate,
+            "NCC": ncc,
+            "Kho": wh,
+            "M� chuy?n GHN": tripStr,
+            "S? chuy?n LM": lmCount,
+            "NV B�o (Km)": (d.emp.length > 0 ? odo : ""),
+            "NCC Ch?t (Km)": (d.sup.length > 0 ? supKm : ""),
+            "Tr?ng th�i": status
+        };
     });
-    var BOM = '\uFEFF';
-    var blob = new Blob([BOM + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    var link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'Doi_Soat_3_Chieu_' + new Date().getTime() + '.csv';
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('\u2705', '\u0110\u00E3 xu\u1EA5t file Excel!');
+    var ws = XLSX.utils.json_to_sheet(exportData);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Doi_Soat_3_Chieu");
+    XLSX.writeFile(wb, "doi_soat_3_chieu_" + new Date().toISOString().slice(0,10) + ".xlsx");
+    showToast("?", "�� xu?t Excel!");
 };
 
 

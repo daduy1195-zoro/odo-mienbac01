@@ -4424,7 +4424,7 @@ function renderNccTrip() {
                 <td style="text-align:right; font-family:monospace; font-weight:bold; color:#fbbf24;">${formatMoneyCell(r.totalCost)}</td>
                 <td>${ghnHtml}</td>
                 <td style="font-weight:bold;">${statusHtml}</td>
-                <td><input type="text" class="form-control" style="font-size:12px; height:26px; padding:2px 6px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width:150px;" placeholder="Ghi ch�..." onchange="updateNccTripNote(${r.originalIndex}, this.value)" value="${escapeHtml(r.note || '')}"></td>
+                <td><input type="text" class="form-control" style="font-size:12px; height:26px; padding:2px 6px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width:150px;" placeholder="Ghi chú..." onchange="updateNccTripNote(${r.originalIndex}, this.value)" value="${escapeHtml(r.note || '')}"></td>
             </tr>
         `;
     });
@@ -4456,7 +4456,7 @@ function exportNccTripExcel() {
         "T?ng chi ph�": r.totalCost || "",
         "M� chuy?n di GHN": r.ghnTripCode || "",
         "Tr?ng th�i": (r.ghnTripCode === "GHN OFF" || r.ghnTripCode === "GHN_OFF") ? "GHN OFF" : ((r.ghnTripCode === "Ph?t" || r.ghnTripCode === "PH?T") ? "Ph?t" : ((r.ghnTripCode === "NCC OFF" || r.ghnTripCode === "NCC_OFF" || r.ghnTripCode === "OFF") ? "NCC OFF" : (r.ghnTripCode ? "�� kh?p" : "Thi?u m�"))),
-        "Ghi ch�": r.note || ""
+        "Ghi chú": r.note || ""
     }));
     
     const ws = XLSX.utils.json_to_sheet(exportData);

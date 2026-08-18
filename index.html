@@ -3614,7 +3614,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
     let headerRowIdx = -1;
     for (let i = 0; i < Math.min(15, rawData.length); i++) {
         const rowStr = rawData[i].map(c => (c || '').toString().toLowerCase()).join(' ');
-        if (rowStr.includes('biển số') || (rowStr.includes('stt') && rowStr.includes('lộ trình'))) {
+        if (rowStr.includes('biển số') || (rowStr.includes('stt') && rowStr.includes('lộ trình')) || rowStr.includes('lộ trình')) {
             headerRowIdx = i;
             break;
         }
@@ -3794,6 +3794,11 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid)
         let tollFee = (colTollFee > -1 ? row[colTollFee] : '').toString().trim();
         let holidayFee = (colHolidayFee > -1 ? row[colHolidayFee] : '').toString().trim();
         let totalCost = (colTotalCost > -1 ? row[colTotalCost] : '').toString().trim();
+        if (i === startRow) {
+            console.log("==> NCC:", nccName, "Tab:", tabName);
+            console.log("colTotalCost:", colTotalCost, "Header text:", colTotalCost > -1 ? rawData[headerRowIdx][colTotalCost] : 'NOT FOUND');
+            console.log("Row 0 value for totalCost:", totalCost);
+        }
 
         // 1. Nếu dailyRate rỗng nhưng col 21 chứa Đơn giá ngày (300k - 5M), chuyển sang dailyRate
         const dVal = parseVietnameseNumber(dailyRate);

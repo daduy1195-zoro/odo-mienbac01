@@ -2678,7 +2678,12 @@ function renderRanking(filtered, month, whFilter) {
 
             if (isTrackedInTrips) {
                 allDatesInCycle.forEach((d, idx) => {
-                    // Náº¿u há»‡ thá»‘ng cÃ³ GHN trips, nhÆ°ng NV khÃ´ng cÃ³ -> NV nghá»‰
+                    // Nếu ngày này trước khi NV bắt đầu làm việc, trừ khỏi expected days
+                    if (firstActiveIndex !== -1 && idx < firstActiveIndex) {
+                        myExpectedDays--;
+                        return;
+                    }
+                    // Nếu hệ thống có GHN trips, nhưng NV không có -> NV nghỉ
                     if (syncedDates.has(d) && !e.workedDays.has(d)) {
                         myExpectedDays--;
                     }
@@ -2714,6 +2719,7 @@ function renderRanking(filtered, month, whFilter) {
 
             // TÃ­nh ngÃ y NGHá»ˆ (khÃ´ng cÃ³ chuyáº¿n Ä‘i)
             let offDays = allDatesInCycle.filter((d, index) => {
+                if (firstActiveIndex !== -1 && index < firstActiveIndex) return false;
                 return isTrackedInTrips && syncedDates.has(d) && !e.workedDays.has(d);
             });
 

@@ -2322,7 +2322,21 @@ function renderAll() {
     });
 
     // Sắp xếp theo ngày mới nhất
-    filtered.sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
+    filtered.sort((a, b) => {
+        // 1. Sắp xếp theo ngày (Mới nhất lên trên)
+        const dateDiff = (b.dateObj || 0) - (a.dateObj || 0);
+        if (dateDiff !== 0) return dateDiff;
+        
+        // 2. Cùng ngày -> Gom theo Kho (A-Z)
+        const whA = a.shortWH || '';
+        const whB = b.shortWH || '';
+        if (whA !== whB) return whA.localeCompare(whB, 'vi');
+        
+        // 3. Cùng kho -> Sắp xếp theo giờ đi (Cũ đến mới)
+        const hA = a.hourStart || '';
+        const hB = b.hourStart || '';
+        return hA.localeCompare(hB);
+    });
 
     // Tính toán thống kê
     computeStats(filtered, month);

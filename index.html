@@ -3761,11 +3761,38 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
 
         const stt = (row[0] || '').toString().trim();
         const dateStr = (row[1] || '').toString().trim();
-        const plate = (row[2] || '').toString().trim();
+        let plate = (row[2] || '').toString().trim();
         
-        // Bỏ qua row không hợp lệ
-        if (!dateStr || !plate) continue;
-        if (plate.toUpperCase().includes('OFF')) continue;
+        if (!dateStr) continue;
+        
+        let isOffByPlate = false;
+        // Quét tìm chữ OFF/NGHỈ trên tất cả các cột
+        for (let c = 2; c < row.length; c++) {
+            let val = (row[c] || '').toString().toUpperCase();
+            if (val === 'OFF' || val === 'NGHỈ' || val === 'NGHI' || val === 'GHN OFF' || val === 'NCC OFF') {
+                isOffByPlate = true;
+                break;
+            }
+        }
+        
+        // Nếu không có biển số, và cũng không phải ngày nghỉ -> bỏ qua luôn
+        if (!plate && !isOffByPlate) continue;
+        
+        if (isOffByPlate) {
+            let inferred = '';
+            // Quét lên/xuống 31 dòng để tìm biển số của block xe này
+            for (let j = Math.max(0, i - 31); j <= Math.min(rawData.length - 1, i + 31); j++) {
+                if (j === i || !rawData[j] || !rawData[j][1] || !rawData[j][1].toString().match(/\d{2}\/\d{2}\/\d{4}/)) continue;
+                let p = (rawData[j][2] || '').toString().trim().toUpperCase();
+                if (p && !p.includes('OFF') && !p.includes('NGHỈ') && !p.includes('NGHI') && p.length >= 6) {
+                    inferred = p;
+                    break;
+                }
+            }
+            if (inferred) plate = inferred;
+            else continue; // Không thể tìm ra biển số thực sự
+        }
+        
         if (!dateStr.match(/\d{2}\/\d{2}\/\d{4}/)) continue;
         if (stt && isNaN(stt) && !stt.match(/^\d/)) continue;
 
@@ -3838,7 +3865,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         
         const routeLower = (route || '').toLowerCase();
         if (!matchedTripCode) {
-            if (routeLower.includes('ghn off')) {
+            if (isOffByPlate) {
+                matchedTripCode = 'NCC OFF';
+            } else if (routeLower.includes('ghn off')) {
                 matchedTripCode = 'GHN OFF';
             } else if (routeLower.includes('phạt') || routeLower.includes('phat')) {
                 matchedTripCode = 'Phạt';

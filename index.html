@@ -2611,7 +2611,7 @@ function renderRanking(filtered, month, whFilter) {
         tripsData.forEach(t => {
             if (!t.dateStr) return;
             const cleanDate = normalizeToDDMMYYYY(t.dateStr);
-            if (!cleanDate) return;
+            if (!cleanDate || !allDatesInCycle.includes(cleanDate)) return;
             syncedDates.add(cleanDate);
 
             const tCode = String(t.driverId || t.code || t.createdById || '').trim();

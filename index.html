@@ -4231,6 +4231,7 @@ function suggestTripsForNcc(nccRecord) {
     const nccPlate = (nccRecord.plate || '').trim().toLowerCase().replace(/[-\s\.]/g, '');
     const nccWH = (nccRecord.warehouse || '').toLowerCase();
     const nccRoute = (nccRecord.route || '').toLowerCase();
+    const nccShortWH = typeof shortWarehouse === 'function' ? shortWarehouse(nccRecord.warehouse) : '';
     
     // Load plate mapping đã học
     let plateMapping = {};
@@ -4249,6 +4250,12 @@ function suggestTripsForNcc(nccRecord) {
         const tripPlate = (trip.plate || '').trim().toLowerCase().replace(/[-\s\.]/g, '');
         const tripHub = (trip.hubName || '').toLowerCase();
         const tripRoute = (trip.route || '').toLowerCase();
+        
+        // Lọc khắt khe theo kho: Nếu là 1 trong 4 kho đang quản lý, thì không gợi ý kho khác vào (tránh rối)
+        const tripShortWH = typeof shortWarehouse === 'function' ? shortWarehouse(trip.hubName) : '';
+        if (nccShortWH && ['Thái Bình', 'Hải Dương', 'Hải Phòng', 'Hưng Yên'].includes(nccShortWH)) {
+            if (tripShortWH !== nccShortWH) return; // Bỏ qua nếu khác kho
+        }
         
         let score = 0;
         let reasons = [];

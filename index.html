@@ -4762,19 +4762,16 @@ function exportNccTripExcel() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Ghep Chuyen");
       
-      // Lay ky doi soat
+      // Lấy kỳ đối soát để đặt tên file
       let kyDoiSoat = "TatCa";
-      const filterFrom = document.getElementById("filterNccFromDate").value;
-      const filterTo = document.getElementById("filterNccToDate").value;
+      const filterFrom = document.getElementById("filterDateFrom") ? document.getElementById("filterDateFrom").value : "";
+      const filterTo = document.getElementById("filterDateTo") ? document.getElementById("filterDateTo").value : "";
       if (filterFrom && filterTo) {
-          kyDoiSoat = filterFrom.replace(/\//g, "") + "_" + filterTo.replace(/\//g, "");
+          kyDoiSoat = filterFrom.replace(/\-/g, "") + "_" + filterTo.replace(/\-/g, "");
       } else {
-          const predefined = document.getElementById("filterNccReconCycle").value;
-          if (predefined) {
-              const matches = predefined.match(/\d{2}\/\d{2}\/\d{4}/g);
-              if (matches && matches.length === 2) {
-                  kyDoiSoat = matches[0].replace(/\//g, "") + "_" + matches[1].replace(/\//g, "");
-              }
+          const filterMonth = document.getElementById("filterMonth") ? document.getElementById("filterMonth").value : "";
+          if (filterMonth) {
+              kyDoiSoat = filterMonth.replace(/[^a-zA-Z0-9]/g, "");
           }
       }
       

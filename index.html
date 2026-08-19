@@ -3000,7 +3000,9 @@ function renderTypoWarnings(filtered) {
     // Chỉ lấy dữ liệu trong kỳ đối soát hiện tại
     const { typos, plateTypos, masterMismatches } = detectTypos(filtered);
 
-    const totalIssues = typos.length + plateTypos.length + masterMismatches.length;
+    
+
+    const totalIssues = typos.length + filteredPlateTypos.length + masterMismatches.length;
     document.getElementById('typoBadge').textContent = totalIssues;
     document.getElementById('typoCount').textContent = totalIssues + ' lỗi';
 

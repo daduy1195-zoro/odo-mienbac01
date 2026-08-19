@@ -4251,16 +4251,21 @@ function renderNccTrip() {
         return;
     }
 
-    // Sort filtered rows by date descending
+    // Sort filtered rows by date descending, then by warehouse
     filtered.sort((a, b) => {
         const partsA = String(a.dateStr || '').split('/');
         const partsB = String(b.dateStr || '').split('/');
+        let dateDiff = 0;
         if (partsA.length === 3 && partsB.length === 3) {
             const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0]));
             const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0]));
-            return dateB - dateA;
+            dateDiff = dateB - dateA;
         }
-        return 0;
+        if (dateDiff !== 0) return dateDiff;
+        
+        const whA = typeof shortWarehouse === 'function' ? shortWarehouse(a.warehouse || '') : (a.warehouse || '');
+        const whB = typeof shortWarehouse === 'function' ? shortWarehouse(b.warehouse || '') : (b.warehouse || '');
+        return whA.localeCompare(whB, 'vi');
     });
 
     let html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filtered.length + '/' + nccTripData.length + ' chuyến đi NCC.</div>';
@@ -4754,16 +4759,21 @@ function renderLastmile() {
         return;
     }
     
-    // Sắp xếp theo ngày giảm dần
+    // Sắp xếp theo ngày giảm dần, sau đó theo kho
     filtered.sort(function(a, b) {
         var partsA = (a.dateStr || '').split('/');
         var partsB = (b.dateStr || '').split('/');
+        var dateDiff = 0;
         if (partsA.length === 3 && partsB.length === 3) {
             var dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0]));
             var dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0]));
-            return dateB - dateA;
+            dateDiff = dateB - dateA;
         }
-        return 0;
+        if (dateDiff !== 0) return dateDiff;
+        
+        var whA = typeof shortWarehouse === 'function' ? shortWarehouse(a.hubName || '') : (a.hubName || '');
+        var whB = typeof shortWarehouse === 'function' ? shortWarehouse(b.hubName || '') : (b.hubName || '');
+        return whA.localeCompare(whB, 'vi');
     });
     
     var html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filtered.length + '/' + lastmileData.length + ' chuyến (tối đa 5000). Dùng bộ lọc ngày để thu hẹp.</div>';

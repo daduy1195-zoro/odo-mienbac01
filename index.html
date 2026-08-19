@@ -3690,6 +3690,38 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     if (colHolidayFee === -1) colHolidayFee = 22;
     if (colTotalCost === -1) colTotalCost = 23;
     
+    // ★ Fix: nếu colTotalCost trùng với cột khác đã detect, dịch sang cột kế tiếp
+    const usedCols = new Set([colOtHours, colOtRate, colOtFee, colKmOverFee, colMonthlyRate, colDailyRate, colTollFee, colHolidayFee]);
+    if (usedCols.has(colTotalCost)) {
+        // Tìm cột tiếp theo chưa dùng, ưu tiên colHolidayFee + 1 hoặc + 2
+        for (let tryCol = colHolidayFee + 1; tryCol <= colHolidayFee + 3; tryCol++) {
+            if (!usedCols.has(tryCol)) { colTotalCost = tryCol; break; }
+        }
+    }
+    
+    // ★ Auto-detect: nếu cột totalCost trong data rows đầu tiên toàn null/0, scan tìm cột có giá trị lớn (>100k)
+    const dataStartRow = headerRowIdx > -1 ? headerRowIdx + 1 : 0;
+    let totalCostHasValue = false;
+    for (let si = dataStartRow; si < Math.min(dataStartRow + 5, rawData.length); si++) {
+        const row = rawData[si];
+        if (!row) continue;
+        const v = parseVietnameseNumber(row[colTotalCost]);
+        if (v > 100000) { totalCostHasValue = true; break; }
+    }
+    if (!totalCostHasValue) {
+        // Scan các cột lân cận (22-26) để tìm cột có giá trị tiền lớn
+        for (let tryCol = 22; tryCol <= 26; tryCol++) {
+            if (tryCol === colTotalCost || usedCols.has(tryCol)) continue;
+            for (let si = dataStartRow; si < Math.min(dataStartRow + 5, rawData.length); si++) {
+                const row = rawData[si];
+                if (!row) continue;
+                const v = parseVietnameseNumber(row[tryCol]);
+                if (v > 100000) { colTotalCost = tryCol; totalCostHasValue = true; break; }
+            }
+            if (totalCostHasValue) break;
+        }
+    }
+    
     console.log(`📊 ${nccName} [${tabName}] cols: kmOver=${colKmOverFee}, monthly=${colMonthlyRate}, daily=${colDailyRate}, toll=${colTollFee}, holiday=${colHolidayFee}, total=${colTotalCost}`);
     
     const startRow = headerRowIdx > -1 ? headerRowIdx + 1 : 0;

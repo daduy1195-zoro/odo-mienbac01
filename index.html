@@ -754,6 +754,8 @@ function norm(str) {
     return str ? str.normalize('NFC').toLowerCase().trim() : '';
 }
 
+
+
 // 4 kho: dùng từ khóa ASCII để match chắc chắn (tránh lỗi Unicode)
 const WAREHOUSE_KEYWORDS = {
     'Hải Dương': ['hai duong'],
@@ -2084,6 +2086,12 @@ async function loadAllData() {
 
         // Lưu bộ nhớ đệm cho lần truy cập tới
         try {
+            if (typeof formatPlate === 'function') {
+                employeeData.forEach(e => { if (e.plate) e.plate = formatPlate(e.plate); });
+                supplierData.forEach(e => { if (e.plate) e.plate = formatPlate(e.plate); });
+                masterList.forEach(e => { if (e.plate) e.plate = formatPlate(e.plate); });
+            }
+            
             localStorage.setItem('GHN_DASHBOARD_CACHE_V2', JSON.stringify({
                 time: Date.now(),
                 employeeData: employeeData.map(e => ({ ...e, dateObj: null })),
@@ -2138,7 +2146,7 @@ function updateFilters() {
         const ePlate = e.plate || '';
 
         // Để lọc filterEmployee, xét theo filterPlate hiện tại (nếu có)
-        if (!oldPlate || norm(ePlate).includes(norm(oldPlate))) {
+        if (!oldPlate || norm(ePlate).replace(/-/g, '').includes(norm(oldPlate).replace(/-/g, ''))) {
             if (empStr) validNames.add(empStr);
         }
 
@@ -2528,7 +2536,7 @@ function renderDailyTable(filtered) {
             <td style="white-space:nowrap; font-weight:600;">${escapeHtml(e.dateStr)}</td>
             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
-            <td style="font-family:monospace; font-weight:600;">${escapeHtml(e.plate)}</td>
+            <td style="font-family:monospace; font-weight:600;">${escapeHtml(formatPlate(e.plate))}</td>
             <td style="font-size:12px;">${escapeHtml(e.supplier)}</td>
             <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:monospace;white-space:nowrap;">${escapeHtml(e.hourStart || '—')}</td>
@@ -2818,7 +2826,7 @@ function renderRanking(filtered, month, whFilter) {
                             <td>${i + 1}</td>
                             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
                             <td>${e.code || '—'}</td>
-                            <td style="font-family:monospace;font-weight:600;">${escapeHtml(e.plate || '—')}</td>
+                            <td style="font-family:monospace;font-weight:600;">${escapeHtml(formatPlate(e.plate) || '—')}</td>
                             <td style="text-align:center;">${e.uniqueDays}/${e.myExpectedDays}</td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:8px;">
@@ -2977,7 +2985,7 @@ function renderFraudWarnings(filtered) {
             <td style="white-space:nowrap;font-weight:600;">${escapeHtml(e.dateStr)}</td>
             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
-            <td style="font-family:monospace;font-weight:600;">${escapeHtml(e.plate)}</td>
+            <td style="font-family:monospace;font-weight:600;">${escapeHtml(formatPlate(e.plate))}</td>
             <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:monospace;">${escapeHtml(e.hourStart || '—')}</td>
             <td style="font-family:monospace;">${escapeHtml(e.hourEnd || '—')}</td>
@@ -3089,9 +3097,9 @@ function renderTypoWarnings(filtered) {
 
             html += `<tr>
                 <td>${i + 1}</td>
-                <td style="color:var(--danger);font-weight:700;">${escapeHtml(t.wrongPlate)}</td>
+                <td style="color:var(--danger);font-weight:700;">${escapeHtml(formatPlate(t.wrongPlate))}</td>
                 <td style="font-size:12px;white-space:nowrap;">${escapeHtml(province)}</td>
-                <td style="color:var(--success);font-weight:700;">${escapeHtml(t.correctPlate)}</td>
+                <td style="color:var(--success);font-weight:700;">${escapeHtml(formatPlate(t.correctPlate))}</td>
                 <td style="font-size:12px;">${empNames.map(n => escapeHtml(n)).join(', ')}</td>
                 <td style="text-align:center;font-weight:700;color:var(--danger);">${t.count}</td>
                 <td style="font-size:12px;">${dates.join(', ')}</td>
@@ -3175,7 +3183,7 @@ function renderTypoWarnings(filtered) {
                 <td style="white-space:nowrap;font-weight:600;">${e.dateStr}</td>
                 <td style="font-weight:600;">${escapeHtml(e.name)}</td>
                 <td><span class="badge badge-info">${e.code || '—'}</span></td>
-                <td style="font-family:monospace;">${escapeHtml(e.plate)}</td>
+                <td style="font-family:monospace;">${escapeHtml(formatPlate(e.plate))}</td>
                 <td>${escapeHtml(e.shortWH)}</td>
                 <td style="font-family:monospace;">${e.kmStart}</td>
                 <td style="font-family:monospace;">${e.kmEnd}</td>
@@ -4159,6 +4167,10 @@ async function loadNccTripData() {
             return da.localeCompare(db);
         });
         
+        if (typeof formatPlate === 'function') {
+            allNccData.forEach(r => { if(r.plate) r.plate = formatPlate(r.plate); });
+        }
+        
         nccTripData = allNccData;
         isNccTripLoaded = true;
         rematchNccTrips();
@@ -4504,7 +4516,7 @@ function renderNccTrip() {
     nccTripData.forEach((row, idx) => {
         if (filterWh && row.warehouse !== filterWh) return;
         if (filterNcc && norm(row.ncc) !== norm(filterNcc)) return;
-        if (filterPlate && !norm(row.plate).includes(norm(filterPlate))) return;
+        if (filterPlate && !norm(row.plate).replace(/-/g, '').includes(norm(filterPlate).replace(/-/g, ''))) return;
         if (filterEmp && (!row.fullName || !norm(row.fullName).includes(norm(filterEmp)))) return;
 
         const parts = row.dateStr ? String(row.dateStr).split('/') : [];
@@ -4661,7 +4673,7 @@ function renderNccTrip() {
                     return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
                 })() : escapeHtml(r.dateStr)}</td>
                 <td>${escapeHtml(r.ncc)}</td>
-                <td style="font-family:monospace; font-weight:700; color:#f0ad4e;">${escapeHtml(r.plate)}</td>
+                <td style="font-family:monospace; font-weight:700; color:#f0ad4e;">${escapeHtml(formatPlate(r.plate))}</td>
                 <td><span class="badge" style="${whColor}">${escapeHtml(shortWH)}</span></td>
                 <td style="font-size:11px; max-width:120px; width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
                 <td style="font-family:monospace; font-weight:600;">${(() => {
@@ -4924,6 +4936,11 @@ async function loadLastmileData() {
             lastmileData.push(r);
         }
         console.log('✅ After filter Ahamove: ' + lastmileData.length + ' records');
+        
+        if (typeof formatPlate === 'function') {
+            lastmileData.forEach(r => { if(r.plate) r.plate = formatPlate(r.plate); });
+        }
+        
         tripsData = lastmileData; // Use lastmileData directly as the source of truth for all trip matching
         lastmileData.sort(function(a, b) {
             var da = a.dateStr ? String(a.dateStr).split('/').reverse().join('') : '';
@@ -5000,7 +5017,7 @@ function renderLastmile() {
         }
         
         // 2. Lọc Biển số
-        if (filterPlate && !norm(row.plate || '').includes(norm(filterPlate))) continue;
+        if (filterPlate && !norm(row.plate || '').replace(/-/g, '').includes(norm(filterPlate).replace(/-/g, ''))) continue;
         
         // 3. Lọc Nhân viên (khớp Tên, Mã NV, Tên + Mã NV hoặc Người tạo)
         if (filterEmp) {

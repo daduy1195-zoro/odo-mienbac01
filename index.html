@@ -4032,6 +4032,14 @@ async function loadNccTripData() {
         
         // Build GHN trips map: normalize(plate) + dateStr → tripCode
         const ghnTripMap = new Map();
+        // ★ Load learned plate mappings (NCC sai biển → biển thực tế)
+        const plateMapping = JSON.parse(localStorage.getItem('GHN_PLATE_MAPPING') || '{}');
+        const reversePlateMapping = {}; // realPlate → [nccPlate1, nccPlate2, ...]
+        Object.entries(plateMapping).forEach(([nccP, realP]) => {
+            if (!reversePlateMapping[realP]) reversePlateMapping[realP] = [];
+            reversePlateMapping[realP].push(nccP);
+        });
+        
         if (typeof tripsData !== 'undefined' && Array.isArray(tripsData)) {
             tripsData.forEach(trip => {
                 if (!trip.plate || !trip.dateStr) return;
@@ -4040,6 +4048,14 @@ async function loadNccTripData() {
                 if (!ghnTripMap.has(key)) {
                     ghnTripMap.set(key, trip.tripCode);
                 }
+                // ★ Thêm entry cho các biển NCC sai đã học mapping
+                const mappedNccPlates = reversePlateMapping[normPlate] || [];
+                mappedNccPlates.forEach(nccP => {
+                    const mappedKey = `${nccP}_${trip.dateStr}`;
+                    if (!ghnTripMap.has(mappedKey)) {
+                        ghnTripMap.set(mappedKey, trip.tripCode);
+                    }
+                });
             });
         }
                 console.log(`🔍 GHN Trips map: ${ghnTripMap.size} entries`);
@@ -4173,7 +4189,203 @@ function updateNccTripNote(index, value) {
     }
 }
 
-function updateNccTripCode(index, value) {
+// ★ GỢI Ý CHUYẾN ĐI CHO NCC ★
+function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({length: m + 1}, (_, i) => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]) + 1;
+        }
+    }
+    return dp[m][n];
+}
+
+function plateSimilarity(plate1, plate2) {
+    if (!plate1 || !plate2) return 0;
+    const p1 = plate1.toLowerCase().replace(/[-\s\.]/g, '');
+    const p2 = plate2.toLowerCase().replace(/[-\s\.]/g, '');
+    if (p1 === p2) return 100;
+    const dist = levenshtein(p1, p2);
+    const maxLen = Math.max(p1.length, p2.length);
+    return Math.round((1 - dist / maxLen) * 100);
+}
+
+function suggestTripsForNcc(nccRecord) {
+    if (!tripsData || !Array.isArray(tripsData) || tripsData.length === 0) return [];
+    
+    // Tập hợp tất cả mã chuyến đã được ghép (tự động + thủ công)
+    const usedTripCodes = new Set();
+    const specialCodes = new Set(['GHN OFF','GHN_OFF','NCC OFF','NCC_OFF','OFF','Phạt','PHẠT']);
+    if (typeof nccTripData !== 'undefined' && Array.isArray(nccTripData)) {
+        nccTripData.forEach(r => {
+            if (r.ghnTripCode && !specialCodes.has(r.ghnTripCode)) {
+                usedTripCodes.add(r.ghnTripCode);
+            }
+        });
+    }
+    
+    const nccDate = nccRecord.dateStr;
+    const nccPlate = (nccRecord.plate || '').trim().toLowerCase().replace(/[-\s\.]/g, '');
+    const nccWH = (nccRecord.warehouse || '').toLowerCase();
+    const nccRoute = (nccRecord.route || '').toLowerCase();
+    
+    // Load plate mapping đã học
+    let plateMapping = {};
+    try { plateMapping = JSON.parse(localStorage.getItem('GHN_PLATE_MAPPING') || '{}'); } catch(e) {}
+    const learnedRealPlate = plateMapping[nccPlate] || '';
+    
+    const suggestions = [];
+    
+    tripsData.forEach(trip => {
+        if (!trip.tripCode || !trip.dateStr) return;
+        // Chỉ lấy cùng ngày
+        if (trip.dateStr !== nccDate) return;
+        // Bỏ qua chuyến đã ghép
+        if (usedTripCodes.has(trip.tripCode)) return;
+        
+        const tripPlate = (trip.plate || '').trim().toLowerCase().replace(/[-\s\.]/g, '');
+        const tripHub = (trip.hubName || '').toLowerCase();
+        const tripRoute = (trip.route || '').toLowerCase();
+        
+        let score = 0;
+        let reasons = [];
+        
+        // Biển số đã học mapping → điểm cao nhất
+        if (learnedRealPlate && tripPlate === learnedRealPlate) {
+            score += 100;
+            reasons.push('🧠 Biển đã học');
+        }
+        
+        // Biển số tương đồng cao
+        const sim = plateSimilarity(nccPlate, tripPlate);
+        if (sim >= 80) {
+            score += 50;
+            reasons.push(`🔤 Biển giống ${sim}%`);
+        } else if (sim >= 60) {
+            score += 30;
+            reasons.push(`🔤 Biển giống ${sim}%`);
+        } else if (sim >= 40) {
+            score += 10;
+            reasons.push(`🔤 Biển giống ${sim}%`);
+        }
+        
+        // Cùng tỉnh (2 ký tự đầu biển số)
+        if (nccPlate.length >= 2 && tripPlate.length >= 2 && nccPlate.substring(0, 2) === tripPlate.substring(0, 2)) {
+            score += 20;
+            reasons.push('📍 Cùng tỉnh');
+        }
+        
+        // Cùng kho
+        if (nccWH && tripHub && (tripHub.includes(nccWH) || nccWH.includes(tripHub))) {
+            score += 15;
+            reasons.push('🏭 Cùng kho');
+        }
+        
+        // Cùng tuyến đường (từ khóa trùng)
+        if (nccRoute && tripRoute) {
+            const routeWords = nccRoute.split(/[\s,\-]+/).filter(w => w.length > 2);
+            const matchedWords = routeWords.filter(w => tripRoute.includes(w));
+            if (matchedWords.length >= 2) {
+                score += 10;
+                reasons.push('🛣️ Tuyến tương tự');
+            }
+        }
+        
+        // Chỉ gợi ý nếu có ít nhất 1 lý do
+        if (reasons.length > 0) {
+            suggestions.push({
+                tripCode: trip.tripCode,
+                plate: trip.plate || '',
+                driver: trip.driverName || trip.name || '',
+                route: trip.route || '',
+                hubName: trip.hubName || '',
+                score,
+                reasons
+            });
+        }
+    });
+    
+    // Sắp xếp theo điểm giảm dần
+    suggestions.sort((a, b) => b.score - a.score);
+    return suggestions.slice(0, 10);
+}
+
+function showSuggestionPopup(originalIndex, buttonEl) {
+    const record = nccTripData[originalIndex];
+    if (!record) return;
+    
+    const suggestions = suggestTripsForNcc(record);
+    
+    // Xóa popup cũ nếu có
+    let popup = document.getElementById('suggestionPopup');
+    if (popup) popup.remove();
+    
+    popup = document.createElement('div');
+    popup.id = 'suggestionPopup';
+    popup.style.cssText = 'position:fixed;z-index:10000;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5);max-height:400px;overflow-y:auto;min-width:420px;max-width:500px;';
+    
+    if (suggestions.length === 0) {
+        popup.innerHTML = `<div style="padding:16px;text-align:center;color:var(--text-muted);">
+            <div style="font-size:20px;margin-bottom:8px;">😕</div>
+            <div>Không tìm thấy chuyến Lastmile nào chưa ghép cho ngày <b>${record.dateStr}</b></div>
+            <div style="margin-top:8px;font-size:12px;">Biển NCC: <code>${record.plate}</code></div>
+        </div>`;
+    } else {
+        let listHtml = `<div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;font-size:13px;">💡 Gợi ý ghép chuyến (${suggestions.length})</span>
+            <span style="font-size:11px;color:var(--text-muted);">Ngày ${record.dateStr} • NCC: ${record.plate}</span>
+        </div>`;
+        
+        suggestions.forEach((s, i) => {
+            const simPercent = plateSimilarity(record.plate, s.plate);
+            const simColor = simPercent >= 80 ? 'var(--success)' : simPercent >= 60 ? '#f0ad4e' : 'var(--text-muted)';
+            listHtml += `<div class="suggest-item" onclick="selectSuggestion(${originalIndex}, '${s.tripCode.replace(/'/g, "\\'")}', '${(s.plate || '').replace(/'/g, "\\'")}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-weight:700;color:var(--success);font-size:13px;">${s.tripCode}</span>
+                    <span style="font-size:11px;color:${simColor};font-weight:600;">Biển: ${s.plate} (${simPercent}%)</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+                    ${s.driver ? '👤 ' + s.driver + ' • ' : ''}${s.route ? '🛣️ ' + s.route.substring(0, 60) : ''}
+                </div>
+                <div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">
+                    ${s.reasons.map(r => '<span style="font-size:10px;background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:3px;">' + r + '</span>').join('')}
+                </div>
+            </div>`;
+        });
+        popup.innerHTML = listHtml;
+    }
+    
+    document.body.appendChild(popup);
+    
+    // Vị trí popup
+    const btnRect = buttonEl.getBoundingClientRect();
+    let top = btnRect.bottom + 4;
+    let left = btnRect.left;
+    if (top + 400 > window.innerHeight) top = btnRect.top - Math.min(400, suggestions.length * 80 + 50);
+    if (left + 420 > window.innerWidth) left = window.innerWidth - 430;
+    popup.style.top = Math.max(4, top) + 'px';
+    popup.style.left = Math.max(4, left) + 'px';
+    
+    // Đóng khi click ngoài
+    setTimeout(() => {
+        document.addEventListener('click', function closeSuggestion(e) {
+            if (!popup.contains(e.target) && e.target !== buttonEl) {
+                popup.style.display = 'none';
+                document.removeEventListener('click', closeSuggestion);
+            }
+        });
+    }, 100);
+}
+
+function selectSuggestion(originalIndex, tripCode, suggestedPlate) {
+    updateNccTripCode(originalIndex, tripCode, suggestedPlate);
+    showToast('✅', `Đã ghép mã chuyến: ${tripCode}`);
+}
+
+function updateNccTripCode(index, value, suggestedPlate) {
     if (nccTripData[index]) {
         nccTripData[index].ghnTripCode = value;
         
@@ -4189,6 +4401,24 @@ function updateNccTripCode(index, value) {
             }
             localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(overrides));
         } catch(e) {}
+
+        // ★ Học hỏi mapping biển số: nếu user chọn gợi ý có biển khác → lưu mapping
+        if (suggestedPlate && value && !['GHN OFF','NCC OFF','OFF','Phạt','PHẠT','GHN_OFF','NCC_OFF'].includes(value)) {
+            const nccPlate = nccTripData[index].plate.trim().toLowerCase().replace(/[-\s\.]/g, '');
+            const realPlate = suggestedPlate.trim().toLowerCase().replace(/[-\s\.]/g, '');
+            if (nccPlate !== realPlate && nccPlate && realPlate) {
+                try {
+                    const mapping = JSON.parse(localStorage.getItem('GHN_PLATE_MAPPING') || '{}');
+                    mapping[nccPlate] = realPlate;
+                    localStorage.setItem('GHN_PLATE_MAPPING', JSON.stringify(mapping));
+                    console.log(`🧠 Đã học mapping biển số: ${nccPlate} → ${realPlate}`);
+                } catch(e) {}
+            }
+        }
+
+        // Đóng popup gợi ý nếu đang mở
+        const popup = document.getElementById('suggestionPopup');
+        if (popup) popup.style.display = 'none';
 
         renderNccTrip();
     }
@@ -4405,6 +4635,7 @@ function renderNccTrip() {
         } else {
             ghnHtml = `<div style="display:flex; gap: 4px; align-items:center;">
                 <input type="text" class="form-control" style="background:#fff3cd; color:#856404; width:85px; font-size:12px; padding: 2px 6px; height: 26px;" placeholder="Nhập mã..." onchange="updateNccTripCode(${r.originalIndex}, this.value)" value="${r.ghnTripCode || ''}">
+                <button class="btn btn-secondary" style="padding: 2px 5px; font-size: 11px; height: 26px; background:#f59e0b; color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:bold;" onclick="showSuggestionPopup(${r.originalIndex}, this)" title="Gợi ý chuyến Lastmile">💡</button>
                 <button class="btn btn-secondary" style="padding: 2px 5px; font-size: 11px; height: 26px; background:#6366f1; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="updateNccTripCode(${r.originalIndex}, 'GHN OFF')" title="Đánh dấu GHN OFF">GHN OFF</button>
                 <button class="btn btn-secondary" style="padding: 2px 5px; font-size: 11px; height: 26px; background:#475569; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="updateNccTripCode(${r.originalIndex}, 'NCC OFF')" title="Đánh dấu NCC OFF">NCC OFF</button>
                 <button class="btn btn-secondary" style="padding: 2px 5px; font-size: 11px; height: 26px; background:#ef4444; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="updateNccTripCode(${r.originalIndex}, 'Phạt')" title="Đánh dấu Phạt">Phạt</button>

@@ -3629,7 +3629,14 @@ function formatMoneyCell(val) {
 function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid, sourceRowsArray) {
     const results = [];
     const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
-    
+    const detectWH = (str) => {
+        if (str.includes('thái bình')) return 'Thái Bình';
+        if (str.includes('hải dương')) return 'Hải Dương';
+        if (str.includes('hải phòng') && /kv2|kv3/i.test(str)) return 'Hải Dương';
+        if (str.includes('hải phòng')) return 'Hải Phòng';
+        if (str.includes('hưng yên')) return 'Hưng Yên';
+        return '';
+    };
     // Tìm header row (chứa "Biển số" hoặc "STT")
     let headerRowIdx = -1;
     for (let i = 0; i < Math.min(15, rawData.length); i++) {
@@ -3774,9 +3781,10 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         if (!dateStr) continue;
         
         let isOffByPlate = false;
+        let inferredWH = '';
         // Quét tìm chữ OFF/NGHỈ trên tất cả các cột
         for (let c = 2; c < row.length; c++) {
-            let val = (row[c] || '').toString().toUpperCase();
+            let val = (row[c] || '').toString().trim().toUpperCase();
             if (val === 'OFF' || val === 'NGHỈ' || val === 'NGHI' || val === 'GHN OFF' || val === 'NCC OFF') {
                 isOffByPlate = true;
                 break;
@@ -3788,15 +3796,40 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         
         if (isOffByPlate) {
             let inferred = '';
-            // Quét lên/xuống 31 dòng để tìm biển số của block xe này
-            for (let j = Math.max(0, i - 31); j <= Math.min(rawData.length - 1, i + 31); j++) {
-                if (j === i || !rawData[j] || !rawData[j][1] || !rawData[j][1].toString().match(/\d{2}\/\d{2}\/\d{4}/)) continue;
+            
+            // Hàm quét lấy kho từ 1 dòng
+            const extractWHFromRow = (r) => {
+                let rRoute = colRoute > -1 ? (r[colRoute] || '').toString().toLowerCase() : '';
+                let rKho = '';
+                for (let ci = 25; ci <= 33; ci++) {
+                    if (r[ci]) rKho += ' ' + r[ci].toString().toLowerCase();
+                }
+                return detectWH(rKho) || detectWH(rKho + ' ' + rRoute);
+            };
+
+            // Quét lên trước (ưu tiên biển số liền trước đó)
+            for (let j = i - 1; j >= Math.max(0, i - 31); j--) {
+                if (!rawData[j] || !rawData[j][1] || !rawData[j][1].toString().match(/\d{2}\/\d{2}\/\d{4}/)) continue;
                 let p = (rawData[j][2] || '').toString().trim().toUpperCase();
                 if (p && !p.includes('OFF') && !p.includes('NGHỈ') && !p.includes('NGHI') && p.length >= 6) {
                     inferred = p;
+                    inferredWH = extractWHFromRow(rawData[j]);
                     break;
                 }
             }
+            // Nếu không có, quét xuống
+            if (!inferred) {
+                for (let j = i + 1; j <= Math.min(rawData.length - 1, i + 31); j++) {
+                    if (!rawData[j] || !rawData[j][1] || !rawData[j][1].toString().match(/\d{2}\/\d{2}\/\d{4}/)) continue;
+                    let p = (rawData[j][2] || '').toString().trim().toUpperCase();
+                    if (p && !p.includes('OFF') && !p.includes('NGHỈ') && !p.includes('NGHI') && p.length >= 6) {
+                        inferred = p;
+                        inferredWH = extractWHFromRow(rawData[j]);
+                        break;
+                    }
+                }
+            }
+
             if (inferred) plate = inferred;
             else continue; // Không thể tìm ra biển số thực sự
         }
@@ -3846,19 +3879,13 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         
         // ★ Ưu tiên cột Kho (chính xác hơn route)
         let warehouse = '';
-        const detectWH = (str) => {
-            if (str.includes('thái bình')) return 'Thái Bình';
-            if (str.includes('hải dương')) return 'Hải Dương';
-            if (str.includes('hải phòng') && /kv2|kv3/i.test(str)) return 'Hải Dương';
-            if (str.includes('hải phòng')) return 'Hải Phòng';
-            if (str.includes('hưng yên')) return 'Hưng Yên';
-            return '';
-        };
         
         // Check Kho column first (most authoritative)
         warehouse = detectWH(khoStr);
         // Fallback: check route + Kho combined
         if (!warehouse) warehouse = detectWH(searchStr);
+        // Fallback: lấy kho từ xe đã inferred (dành cho ngày OFF)
+        if (!warehouse && inferredWH) warehouse = inferredWH;
         
         if (!warehouse) continue;
         

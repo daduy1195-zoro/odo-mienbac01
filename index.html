@@ -2588,7 +2588,7 @@ function renderRanking(filtered, month, whFilter) {
         if (!whMap[wh][key]) {
             const master = masterList.find(m => m.code === e.code);
             const plate = master ? formatPlate(master.plate) : (e.plate || '');
-            whMap[wh][key] = { name: e.name, code: e.code, plate: plate, days: new Set(), workedDays: new Set() };
+            whMap[wh][key] = { name: e.name, code: e.code, plate: plate, startDate: master ? master.startDate : undefined, note: master ? master.note : undefined, days: new Set(), workedDays: new Set() };
         }
         whMap[wh][key].days.add(e.dateStr);
     });

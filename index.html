@@ -4095,8 +4095,40 @@ async function loadNccTripData() {
                 });
             });
         }
-                console.log(`🔍 GHN Trips map: ${ghnTripMap.size} entries`);
         
+        // Cầu nối qua báo cáo ODO: Nếu ODO khớp Lastmile bằng Mã/Tên, dùng biển ODO báo để gán mã cho NCC
+        if (typeof employeeData !== 'undefined' && Array.isArray(employeeData)) {
+            employeeData.forEach(e => {
+                if (!e.dateStr || !e.plate) return;
+                const empCode = e.code ? String(e.code).trim() : '';
+                const empName = e.name ? removeAccents(e.name).toUpperCase().replace(/[^A-Z]/g, '') : '';
+                let tripCode = null;
+                if (typeof tripsData !== 'undefined' && Array.isArray(tripsData)) {
+                    if (empCode) {
+                        const trip = tripsData.find(t => (String(t.driverId).trim() === empCode || String(t.code).trim() === empCode) && t.dateStr === e.dateStr);
+                        if (trip) tripCode = trip.tripCode;
+                    }
+                    if (!tripCode && empName) {
+                        const trip = tripsData.find(t => {
+                            if (t.dateStr !== e.dateStr) return false;
+                            const tName = t.driverName || t.name || t.createdByName || '';
+                            const normTName = tName ? removeAccents(tName).toUpperCase().replace(/[^A-Z]/g, '') : '';
+                            return normTName && empName && (normTName === empName || normTName.includes(empName) || empName.includes(normTName));
+                        });
+                        if (trip) tripCode = trip.tripCode;
+                    }
+                }
+                if (tripCode) {
+                    const normPlate = normalizeStr(e.plate);
+                    const key = `${normPlate}_${e.dateStr}`;
+                    if (!ghnTripMap.has(key)) {
+                        ghnTripMap.set(key, tripCode);
+                    }
+                }
+            });
+        }
+        
+        console.log(`🔍 GHN Trips map: ${ghnTripMap.size} entries`);
         // Rematch GHN trip codes for all records (especially archived ones which might have been saved before a GHN trip was created)
         allNccData.forEach(r => {
             if (!r.ghnTripCode) {
@@ -4494,6 +4526,42 @@ function rematchNccTrips() {
             if (!ghnDriverMap.has(driverKey)) ghnDriverMap.set(driverKey, trip.tripCode);
         }
     });
+    
+    // Cầu nối qua báo cáo ODO: Dùng biển số NV báo trên ODO để map sang tripCode
+    if (typeof employeeData !== 'undefined' && Array.isArray(employeeData)) {
+        employeeData.forEach(e => {
+            if (!e.dateStr || !e.plate) return;
+            const empCode = e.code ? String(e.code).trim() : '';
+            const empName = e.name ? removeAccents(e.name).toUpperCase().replace(/[^A-Z]/g, '') : '';
+            let tripCode = null;
+            if (empCode) {
+                const driverKey = `${empCode}_${e.dateStr}`;
+                tripCode = ghnDriverMap.get(driverKey);
+            }
+            if (!tripCode && typeof tripsData !== 'undefined' && Array.isArray(tripsData)) {
+                if (empCode) {
+                    const trip = tripsData.find(t => (String(t.driverId).trim() === empCode || String(t.code).trim() === empCode) && t.dateStr === e.dateStr);
+                    if (trip) tripCode = trip.tripCode;
+                }
+                if (!tripCode && empName) {
+                    const trip = tripsData.find(t => {
+                        if (t.dateStr !== e.dateStr) return false;
+                        const tName = t.driverName || t.name || t.createdByName || '';
+                        const normTName = tName ? removeAccents(tName).toUpperCase().replace(/[^A-Z]/g, '') : '';
+                        return normTName && empName && (normTName === empName || normTName.includes(empName) || empName.includes(normTName));
+                    });
+                    if (trip) tripCode = trip.tripCode;
+                }
+            }
+            if (tripCode) {
+                const normPlate = normalizeStr(e.plate);
+                const key = `${normPlate}_${e.dateStr}`;
+                if (!ghnTripMap.has(key)) {
+                    ghnTripMap.set(key, tripCode);
+                }
+            }
+        });
+    }
     
     let matched = 0;
     nccTripData.forEach(r => {

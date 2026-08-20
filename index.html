@@ -618,6 +618,7 @@
                 <select id="filterNccStatus" class="form-control" style="width: 160px; font-size: 13px;" onchange="renderNccTrip()">
                     <option value="">Tất cả trạng thái</option>
                     <option value="khop">✅ Khớp</option>
+                    <option value="khop_tay">📝 Khớp tay</option>
                     <option value="thieu">⚠️ Thiếu mã</option>
                     <option value="ghn_off">⏸️ GHN OFF</option>
                     <option value="ncc_off">⏸️ NCC OFF</option>
@@ -3936,10 +3937,14 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
 
         const finalKey = `${nccName}_${plate}_${dateStr}_${sourceRow}`;
         let tripNote = '';
+        let isManualMatch = false;
         try {
             const overrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
             if (overrides[finalKey] !== undefined) {
                 matchedTripCode = overrides[finalKey];
+                if (matchedTripCode && !['GHN OFF', 'NCC OFF', 'OFF', 'Phạt', 'PHẠT', 'GHN_OFF', 'NCC_OFF'].includes(String(matchedTripCode).toUpperCase())) {
+                    isManualMatch = true;
+                }
             }
             const notes = JSON.parse(localStorage.getItem("GHN_NCC_TRIP_NOTES") || "{}");
             if (notes[finalKey] !== undefined) {
@@ -3956,6 +3961,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             tollFee, holidayFee, totalCost,
             warehouse,
             ghnTripCode: matchedTripCode,
+            isManualMatch: isManualMatch,
             note: tripNote,
             sheetId: sheetId || '',
             tabName: tabName || '',
@@ -4472,6 +4478,7 @@ function selectSuggestion(originalIndex, tripCode, suggestedPlate) {
 function updateNccTripCode(index, value, suggestedPlate) {
     if (nccTripData[index]) {
         nccTripData[index].ghnTripCode = value;
+        nccTripData[index].isManualMatch = (value && !['GHN OFF', 'NCC OFF', 'OFF', 'Phạt', 'PHẠT', 'GHN_OFF', 'NCC_OFF'].includes(String(value).toUpperCase())) ? true : false;
         
         // Lưu trữ lâu dài thao tác chốt chuyến/OFF/Phạt vào localStorage
         try {
@@ -4637,8 +4644,10 @@ function renderNccTrip() {
         const isPhat = codeUpper === 'PHẠT' || codeUpper === 'PHAT';
         const isSpecialStatus = isGhnOff || isNccOff || isPhat;
         const hasMatch = !!row.ghnTripCode;
+        const isManual = !!row.isManualMatch && hasMatch && !isSpecialStatus;
         
         if (filterStatus === 'khop' && (!hasMatch || isSpecialStatus)) return;
+        if (filterStatus === 'khop_tay' && !isManual) return;
         if (filterStatus === 'thieu' && hasMatch) return;
         if (filterStatus === 'ghn_off' && !isGhnOff) return;
         if (filterStatus === 'ncc_off' && !isNccOff) return;
@@ -4695,6 +4704,7 @@ function renderNccTrip() {
     html += '<select onchange="document.getElementById(\'filterNccStatus\').value = this.value; renderNccTrip();" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer; outline: none;">';
     html += '<option value="" style="color: #000;">Trạng thái (Tất cả)</option>';
     html += '<option value="khop" style="color: #000;" ' + (filterStatus === 'khop' ? 'selected' : '') + '>✅ Khớp</option>';
+    html += '<option value="khop_tay" style="color: #000;" ' + (filterStatus === 'khop_tay' ? 'selected' : '') + '>📝 Khớp tay</option>';
     html += '<option value="thieu" style="color: #000;" ' + (filterStatus === 'thieu' ? 'selected' : '') + '>⚠️ Thiếu</option>';
     html += '<option value="ghn_off" style="color: #000;" ' + (filterStatus === 'ghn_off' ? 'selected' : '') + '>⏸️ GHN OFF</option>';
     html += '<option value="ncc_off" style="color: #000;" ' + (filterStatus === 'ncc_off' ? 'selected' : '') + '>⏸️ NCC OFF</option>';
@@ -4751,7 +4761,12 @@ function renderNccTrip() {
                 <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 11px; height: 26px;" onclick="updateNccTripCode(${r.originalIndex}, '')" title="Hủy đánh dấu">❌</button>
             </div>`;
         } else if (hasMatch) {
-            ghnHtml = `<a href="https://nhanh.ghn.vn/lastmile/trip-detail/${r.ghnTripCode}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${r.ghnTripCode}</strong></a>`;
+            ghnHtml = `<div style="display:flex; gap: 6px; align-items:center;">
+                <a href="https://nhanh.ghn.vn/lastmile/trip-detail/${r.ghnTripCode}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${r.ghnTripCode}</strong></a>`;
+            if (r.isManualMatch) {
+                ghnHtml += `<span class="badge" style="background:rgba(251,191,36,0.15);color:#f59e0b;font-size:10px;padding:2px 4px;border:1px solid rgba(251,191,36,0.3);" title="Được khớp bằng tay">📝 Khớp tay</span>`;
+            }
+            ghnHtml += `</div>`;
         } else {
             ghnHtml = `<div style="display:flex; gap: 4px; align-items:center;">
                 <input type="text" class="form-control" style="background:#fff3cd; color:#856404; width:85px; font-size:12px; padding: 2px 6px; height: 26px;" placeholder="Nhập mã..." onchange="updateNccTripCode(${r.originalIndex}, this.value)" value="${r.ghnTripCode || ''}">
@@ -4867,7 +4882,7 @@ function exportNccTripExcel() {
           "Phí ngày lễ": formatEmpty(r.holidayFee),
           "Tổng chi phí": formatEmpty(r.totalCost),
           "Mã chuyến đi GHN": r.ghnTripCode || "-",
-          "Trạng thái": (r.ghnTripCode === "GHN OFF" || r.ghnTripCode === "GHN_OFF") ? "GHN OFF" : ((r.ghnTripCode === "Phạt" || r.ghnTripCode === "PHẠT") ? "Phạt" : ((r.ghnTripCode === "NCC OFF" || r.ghnTripCode === "NCC_OFF" || r.ghnTripCode === "OFF") ? "NCC OFF" : (r.ghnTripCode ? "Đã khớp" : "Thiếu mã"))),
+          "Trạng thái": (r.ghnTripCode === "GHN OFF" || r.ghnTripCode === "GHN_OFF") ? "GHN OFF" : ((r.ghnTripCode === "Phạt" || r.ghnTripCode === "PHẠT") ? "Phạt" : ((r.ghnTripCode === "NCC OFF" || r.ghnTripCode === "NCC_OFF" || r.ghnTripCode === "OFF") ? "NCC OFF" : (r.ghnTripCode ? (r.isManualMatch ? "Khớp tay" : "Đã khớp") : "Thiếu mã"))),
           "Ghi chú": r.note || ""
       }));
       

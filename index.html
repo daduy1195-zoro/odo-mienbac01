@@ -1785,12 +1785,15 @@ async function loadAllData() {
             if (!code || !name) return;
             
             let startDate = null;
-            const dateMatch = note.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+            const noteLower = removeAccents(note).toLowerCase();
+            if (!noteLower.includes('nghi') && !noteLower.includes('off')) {
+                const dateMatch = note.match(/(?:từ|vao|lam|cuong|dau)?\s*(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?/i);
             if (dateMatch) {
                 const dd = dateMatch[1].padStart(2, '0');
                 const mm = dateMatch[2].padStart(2, '0');
                 const yy = dateMatch[3] ? (dateMatch[3].length === 2 ? '20' + dateMatch[3] : dateMatch[3]) : new Date().getFullYear();
                 startDate = `${dd}/${mm}/${yy}`;
+            }
             }
             
             masterList.push({ code, name, plate, ncc, province, warehouse, backupPlates, note, startDate });
@@ -3478,26 +3481,26 @@ async function fetchArchivedData(sheetName) {
         try {
             console.log(`📡 Fetching direct fallback from Archive Sheet (${sheetName}, gid=${CONFIG.ARCHIVE_GIDS[sheetName]})...`);
             const gid = CONFIG.ARCHIVE_GIDS[sheetName];
-            const url = `https://docs.google.com/spreadsheets/d/${CONFIG.ARCHIVE_SHEET_ID}/gviz/tq?tqx=out:json&gid=${gid}&headers=1&_cb=${Date.now()}`;
-            const res = await fetch(url);
-            const txt = await res.text();
-            const json = JSON.parse(txt.substring(47, txt.length - 2));
-            const table = json.table;
-            const headers = table.cols ? table.cols.map(c => c ? (c.label || '') : '') : [];
-            const objects = [];
-            if (table.rows) {
-                table.rows.forEach(r => {
+            
+            // Dùng fetchSheetJSONP để tránh lỗi CORS đối với các sheet public
+            const rows = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid);
+            
+            if (rows && rows.length > 0) {
+                // Hàng đầu tiên (index 0) là headers
+                const headers = rows[0].map(c => c ? String(c).trim() : '');
+                const objects = [];
+                for (let i = 1; i < rows.length; i++) {
+                    const r = rows[i];
                     const obj = {};
                     headers.forEach((h, idx) => {
                         if (!h) return;
-                        const cell = r.c ? r.c[idx] : null;
-                        obj[h] = cell ? (cell.f || String(cell.v || '')) : '';
+                        obj[h] = r[idx] !== undefined && r[idx] !== null ? String(r[idx]) : '';
                     });
                     objects.push(obj);
-                });
+                }
+                console.log(`✅ Direct Archive Fallback (${sheetName}): Loaded ${objects.length} records`);
+                return objects;
             }
-            console.log(`✅ Direct Archive Fallback (${sheetName}): Loaded ${objects.length} records`);
-            return objects;
         } catch(err) {
             console.error(`❌ Lỗi direct archive fetch (${sheetName}):`, err);
         }

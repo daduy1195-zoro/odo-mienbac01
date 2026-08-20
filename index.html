@@ -4828,19 +4828,30 @@ function renderNccTrip() {
                 <td><span class="badge" style="${whColor}">${escapeHtml(shortWH)}</span></td>
                 <td style="font-size:11px; max-width:120px; width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
                 <td style="font-family:monospace; font-weight:600;">${(() => {
+                    let finalDiff = null;
                     if (r.kmDiff !== undefined && r.kmDiff !== null && String(r.kmDiff).trim() !== '') {
                         let diffVal = parseFloat(String(r.kmDiff).replace(/[^\d.]/g, ''));
-                        if (!isNaN(diffVal)) return diffVal;
-                        return escapeHtml(r.kmDiff);
+                        if (!isNaN(diffVal)) finalDiff = diffVal;
+                        else return escapeHtml(r.kmDiff);
+                    } else {
+                        let s = parseFloat(String(r.kmStart).replace(/[^\d.]/g, ''));
+                        let e = parseFloat(String(r.kmEnd).replace(/[^\d.]/g, ''));
+                        if (!isNaN(s) && !isNaN(e) && s > 1000 && e >= s) {
+                            finalDiff = e - s;
+                        } else if (!isNaN(e) && e > 0 && e < 1000) {
+                            finalDiff = e;
+                        } else if (!isNaN(s) && s > 0 && s < 1000) {
+                            finalDiff = s;
+                        }
                     }
-                    let s = parseFloat(String(r.kmStart).replace(/[^\d.]/g, ''));
-                    let e = parseFloat(String(r.kmEnd).replace(/[^\d.]/g, ''));
-                    if (!isNaN(s) && !isNaN(e) && s > 1000 && e >= s) {
-                        return (e - s).toString();
-                    }
-                    if (!isNaN(e) && e > 0 && e < 1000) return e.toString();
-                    if (!isNaN(s) && s > 0 && s < 1000) return s.toString();
-                    return '-';
+                    if (finalDiff === null) return '-';
+                    
+                    let color = '';
+                    if (finalDiff > 200) color = '#ef4444';
+                    else if (finalDiff > 133) color = '#fbbf24';
+                    
+                    if (color) return `<span style="color:${color};">${finalDiff}</span>`;
+                    return finalDiff;
                 })()}</td>
                 <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.kmOverFee)}</td>
                 <td style="font-family:monospace; white-space:nowrap;">${(() => {

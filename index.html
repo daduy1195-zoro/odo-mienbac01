@@ -1711,8 +1711,8 @@ async function loadAllData() {
                 );
                 [empRowsArrays, supRows, masterRowsGH, masterRowsPH, ctvRows] = await Promise.all([
                     Promise.all(empPromises),
-                    fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID),
-                    fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID),
+                    fetchSheetJSONP(CONFIG.SHEET_SUPPLIER_ID, CONFIG.SHEET_SUPPLIER_GID).catch(e => []),
+                    fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID).catch(e => []),
                     fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'NVPH').catch(e => []),
                     fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'CTV').catch(e => [])
                 ]);
@@ -1744,21 +1744,27 @@ async function loadAllData() {
         if (empRows0.length === 0 && CONFIG.ARCHIVE_SHEET_ID) {
             console.log('📡 Proxy + Direct đều fail → Đọc từ Archive Sheet (public)...');
             try {
-                const archiveOdoGid = CONFIG.ARCHIVE_GIDS['odo_data'];
-                if (archiveOdoGid) {
-                    const archiveEmpRows = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, archiveOdoGid);
-                    if (archiveEmpRows.length > 0) {
-                        // fetchSheetJSONP dùng headers=1 → trả về data rows only (không có header)
-                        archiveEmpRows.forEach((r, idx) => {
-                            if (r) {
-                                // _gid và _sheetRow nằm ở 2 cột cuối (do sync script thêm vào)
-                                r._gid = (r[r.length - 2] || '').toString();
-                                r._sheetRow = parseInt(r[r.length - 1]) || (idx + 2);
-                            }
-                        });
-                        empRowsArrays = [archiveEmpRows];
-                        console.log(`✅ Archive ODO: ${archiveEmpRows.length} rows`);
-                    }
+                const gid1 = CONFIG.ARCHIVE_GIDS['odo_data'];
+                const gid2 = CONFIG.ARCHIVE_GIDS['odo_data_2'];
+                let archiveEmpRows = [];
+                if (gid1) {
+                    const r1 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid1);
+                    if (r1 && r1.length > 0) archiveEmpRows = archiveEmpRows.concat(r1);
+                }
+                if (gid2) {
+                    const r2 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid2);
+                    if (r2 && r2.length > 0) archiveEmpRows = archiveEmpRows.concat(r2);
+                }
+                
+                if (archiveEmpRows.length > 0) {
+                    archiveEmpRows.forEach((r, idx) => {
+                        if (r) {
+                            r._gid = (r[r.length - 2] || '').toString();
+                            r._sheetRow = parseInt(r[r.length - 1]) || (idx + 2);
+                        }
+                    });
+                    empRowsArrays = [archiveEmpRows];
+                    console.log(`✅ Archive ODO (FB3): ${archiveEmpRows.length} rows`);
                 }
             } catch(archErr) {
                 console.warn('⚠️ Archive ODO fallback lỗi:', archErr.message);

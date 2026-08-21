@@ -2810,7 +2810,7 @@ function renderRanking(filtered, month, whFilter) {
                     <th>Ghi chú</th>
                 </tr></thead>
                 <tbody>
-                    ${empList.map((e, i) => {
+                    ${finalEmpList.map((e, i) => {
                         const isZeroDays = e.myExpectedDays === 0;
                         const pct = isZeroDays ? 0 : Math.min(e.rate, 100);
                         const color = isZeroDays ? 'var(--text-muted)' : (pct >= 80 ? 'var(--success)' : pct >= 50 ? '#f0ad4e' : 'var(--danger)');

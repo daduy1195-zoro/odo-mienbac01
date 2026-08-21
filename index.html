@@ -2613,8 +2613,10 @@ function renderRanking(filtered, month, whFilter) {
         if (!whMap[wh][key]) {
             const master = masterList.find(m => m.code === e.code);
             const plate = master ? formatPlate(master.plate) : (e.plate || '');
-            whMap[wh][key] = { name: e.name, code: e.code, plate: plate, startDate: master ? master.startDate : undefined, note: master ? master.note : undefined, days: new Set(), workedDays: new Set() };
+            whMap[wh][key] = { name: e.name, code: e.code, plate: plate, startDate: master ? master.startDate : undefined, note: master ? master.note : undefined, days: new Set(), workedDays: new Set(), plates: new Set() };
+            if (plate) whMap[wh][key].plates.add(plate);
         }
+        if (e.plate) whMap[wh][key].plates.add(e.plate);
         whMap[wh][key].days.add(e.dateStr);
     });
 
@@ -2629,7 +2631,8 @@ function renderRanking(filtered, month, whFilter) {
             // Cũng check xem code này đã tồn tại trong whMap chưa (bất kể key format)
             const existsByCode = m.code && Object.values(whMap[wh]).some(e => e.code === m.code);
             if (!whMap[wh][key] && !existsByCode) {
-                whMap[wh][key] = { name: m.name, code: m.code, plate: formatPlate(m.plate), startDate: m.startDate, note: m.note, days: new Set(), workedDays: new Set() };
+                whMap[wh][key] = { name: m.name, code: m.code, plate: formatPlate(m.plate), startDate: m.startDate, note: m.note, days: new Set(), workedDays: new Set(), plates: new Set() };
+                if (m.plate) whMap[wh][key].plates.add(formatPlate(m.plate));
             }
         });
     }
@@ -2657,7 +2660,13 @@ function renderRanking(filtered, month, whFilter) {
 
                     const isCodeMatch = tCode && empCode && (tCode === empCode || tCode.includes(empCode) || empCode.includes(tCode));
                     const isNameMatch = normTName && empName && (normTName === empName || normTName.includes(empName) || empName.includes(normTName));
-                    const isPlateMatch = tPlate && empPlate && (tPlate === empPlate || tPlate.includes(empPlate) || empPlate.includes(tPlate));
+                    const isPlateMatch = tPlate && (
+                        (empPlate && (tPlate === empPlate || tPlate.includes(empPlate) || empPlate.includes(tPlate))) ||
+                        (emp.plates && Array.from(emp.plates).some(p => {
+                            const cp = p.toLowerCase().replace(/[-\s\.]/g, '');
+                            return cp && (tPlate === cp || tPlate.includes(cp) || cp.includes(tPlate));
+                        }))
+                    );
 
                     let isMatch = false;
                     // Fix: Đừng gán chuyến theo biển số nếu mã NV hoặc Tên NV trên chuyến đi đã thuộc về người khác!
@@ -2712,19 +2721,24 @@ function renderRanking(filtered, month, whFilter) {
             // Tìm ngày hoạt động đầu tiên (ODO hoặc Lastmile) để hỗ trợ NV mới vào
             let firstActiveIndex = -1;
             
+            // Tìm ngày có dữ liệu thực tế đầu tiên
+            let actualFirstIdx = -1;
+            for (let i = 0; i < allDatesInCycle.length; i++) {
+                const d = allDatesInCycle[i];
+                if (e.days.has(d) || (e.workedDays && e.workedDays.has(d))) {
+                    actualFirstIdx = i;
+                    break;
+                }
+            }
+
             if (e.startDate) {
                 const sIdx = allDatesInCycle.indexOf(e.startDate);
-                if (sIdx !== -1) firstActiveIndex = sIdx;
-            }
-            
-            if (firstActiveIndex === -1) {
-                for (let i = 0; i < allDatesInCycle.length; i++) {
-                    const d = allDatesInCycle[i];
-                    if (e.days.has(d) || (e.workedDays && e.workedDays.has(d))) {
-                        firstActiveIndex = i;
-                        break;
-                    }
+                if (sIdx !== -1) {
+                    // Nếu có ngày bắt đầu, nhưng thực tế họ làm trước đó thì dùng ngày thực tế
+                    firstActiveIndex = actualFirstIdx !== -1 ? Math.min(sIdx, actualFirstIdx) : sIdx;
                 }
+            } else {
+                firstActiveIndex = actualFirstIdx;
             }
 
             if (isTrackedInTrips) {
@@ -3607,6 +3621,7 @@ function normalizeToDDMMYYYY(dateStr) {
     if (!dateStr) return '';
     let str = String(dateStr).trim();
     if (str.includes(' ')) str = str.split(' ')[0];
+    if (str.includes('T')) str = str.split('T')[0];
     if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
         const parts = str.split('-');
         return parts[2] + '/' + parts[1] + '/' + parts[0];

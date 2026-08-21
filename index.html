@@ -1473,7 +1473,7 @@ function fetchViaProxy(action, extraParams) {
     });
 }
 
-function fetchSheetJSONP(sheetId, gid) {
+function fetchSheetJSONP(sheetId, gid, headersCount = 1) {
     return new Promise((resolve, reject) => {
         const callbackName = '_sheetCB_' + (++_jsonpCounter) + '_' + Date.now();
         const timeoutMs = 30000; // timeout 30 giây
@@ -1527,7 +1527,7 @@ function fetchSheetJSONP(sheetId, gid) {
 
         // Tạo thẻ <script> để tải dữ liệu (bypass CORS)
         const script = document.createElement('script');
-        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName};reqId:${Date.now()}&gid=${gid}&range=A1:AH&headers=1&_cb=${Date.now()}`;
+        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName};reqId:${Date.now()}&gid=${gid}&range=A1:AH&headers=${headersCount}&_cb=${Date.now()}`;
         script.onerror = () => {
               window[callbackName] = function(){ delete window[callbackName]; };
             clearTimeout(timer);
@@ -3483,7 +3483,7 @@ async function fetchArchivedData(sheetName) {
             const gid = CONFIG.ARCHIVE_GIDS[sheetName];
             
             // Dùng fetchSheetJSONP để tránh lỗi CORS đối với các sheet public
-            const rows = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid);
+            const rows = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid, 0);
             
             if (rows && rows.length > 0) {
                 // Hàng đầu tiên (index 0) là headers

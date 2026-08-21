@@ -1716,6 +1716,24 @@ async function loadAllData() {
                     fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'NVPH').catch(e => []),
                     fetchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'CTV').catch(e => [])
                 ]);
+
+                // BỔ SUNG: Luôn kéo dữ liệu ODO từ Archive (public) phòng hờ HTMLView bị CORS
+                if (CONFIG.ARCHIVE_SHEET_ID) {
+                    try {
+                        const gid1 = CONFIG.ARCHIVE_GIDS['odo_data'];
+                        const gid2 = CONFIG.ARCHIVE_GIDS['odo_data_2'];
+                        if (gid1) {
+                            const r1 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid1);
+                            r1.forEach((r, idx) => { if(r) { r._gid = (r[r.length-2] || '').toString(); r._sheetRow = parseInt(r[r.length-1]) || (idx+2); } });
+                            empRowsArrays.push(r1);
+                        }
+                        if (gid2) {
+                            const r2 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid2);
+                            r2.forEach((r, idx) => { if(r) { r._gid = (r[r.length-2] || '').toString(); r._sheetRow = parseInt(r[r.length-1]) || (idx+2); } });
+                            empRowsArrays.push(r2);
+                        }
+                    } catch(e) { console.warn('Lỗi bổ sung archive:', e); }
+                }
             } catch (directErr) {
                 empRowsArrays = [[]]; supRows = []; masterRowsGH = []; masterRowsPH = []; ctvRows = [];
             }
@@ -1828,11 +1846,7 @@ async function loadAllData() {
         // headers=1 → rows chỉ chứa data, bắt đầu từ index 0
         // Chỉ lấy NV thuộc 4 kho anh quản lý
         // ═══════════════════════════════════════
-        const archivedOdo1 = await fetchArchivedData('odo_data');
-        const archivedOdo2 = await fetchArchivedData('odo_data_2');
-        const archivedOdo = [...archivedOdo1, ...archivedOdo2];
-        const archivedOdoMap = new Map(archivedOdo.map(o => [o.id, o]));
-        const newOdoToArchive = [];
+        const dedupeSet = new Set();
         
         employeeData = []; // ★ Bắt đầu từ rỗng, ưu tiên dữ liệu fresh từ Google Sheet
         // (Phục hồi dateObj cho archive data đã chuyển xuống sau khi load fresh data)
@@ -1935,29 +1949,12 @@ async function loadAllData() {
                 kmStart, kmEnd, hourStart, hourEnd, matchKey, jsMatchKey, fullName, sheetRow, gid
             };
 
-            // Luôn lưu dữ liệu đã làm ODO (kể cả chưa tự động ghép được mã NV)
-            employeeData.push(entry);
-            if (!archivedOdoMap.has(entry.id)) {
-                const archiveEntry = { ...entry };
-                delete archiveEntry.dateObj;
-                newOdoToArchive.push(archiveEntry);
+            // Luôn lưu dữ liệu đã làm ODO
+            if (!dedupeSet.has(entry.id)) {
+                dedupeSet.add(entry.id);
+                employeeData.push(entry);
             }
         }
-        
-        // ★ Bổ sung dữ liệu cũ từ archive (chỉ những ngày KHÔNG có trong fresh data)
-        const freshIds = new Set(employeeData.map(e => e.id));
-        archivedOdo.forEach(arc => {
-            if (arc.id && !freshIds.has(arc.id)) {
-                // Phục hồi dateObj
-                if (arc.dateStr) {
-                    const dp = String(arc.dateStr).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-                    if (dp) arc.dateObj = new Date(parseInt(dp[3]), parseInt(dp[2]) - 1, parseInt(dp[1]));
-                }
-                employeeData.push(arc);
-            }
-        });
-        
-        if (newOdoToArchive.length > 0) saveToArchive('odo_data', newOdoToArchive);
 
         // ═══════════════════════════════════════
         // SỬA TÊN NV BỊ GÕ NHẦM THÀNH BIỂN SỐ XE

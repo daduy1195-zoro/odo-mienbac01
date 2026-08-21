@@ -2115,14 +2115,17 @@ async function loadAllData() {
     } catch (err) {
         console.error('Lỗi tải dữ liệu:', err);
         showToast('❌', 'Không thể tải dữ liệu. Vui lòng thử lại.');
-        document.getElementById('loadingDaily').innerHTML = `
-            <div class="empty-state">
-                <div class="icon">❌</div>
-                <p>Không thể tải dữ liệu. Hãy kiểm tra:<br>
-                1. Kết nối internet<br>
-                2. File Google Sheet đã mở quyền "Bất kỳ ai có link"<br><br>
-                <small style="color:var(--text-muted);">Vui lòng thử lại sau hoặc liên hệ quản trị viên.</small><br><br><small style="color:red; font-family:monospace;">Chi tiết lỗi: ${err.message}</small></p>
-            </div>`;
+        const container = document.getElementById('loadingDaily') || document.getElementById('dailyTableContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">❌</div>
+                    <p>Không thể tải dữ liệu. Hãy kiểm tra:<br>
+                    1. Kết nối internet<br>
+                    2. File Google Sheet đã mở quyền "Bất kỳ ai có link"<br><br>
+                    <small style="color:var(--text-muted);">Vui lòng thử lại sau hoặc liên hệ quản trị viên.</small><br><br><small style="color:red; font-family:monospace;">Chi tiết lỗi: ${err.message}</small></p>
+                </div>`;
+        }
     }
 }
 
@@ -2781,7 +2784,7 @@ function renderRanking(filtered, month, whFilter) {
         });
 
         // Lọc bỏ những nhân viên hỗ trợ nếu họ không phát sinh ngày công nào trong tháng
-        const finalEmpList = empList.filter(e => !(e.isSupport && e.myExpectedDays === 0));
+        const finalEmpList = empList.filter(e => e && !(e.isSupport && e.myExpectedDays === 0));
 
         // Sắp xếp theo % giảm dần
         finalEmpList.sort((a, b) => b.rate - a.rate || b.uniqueDays - a.uniqueDays);

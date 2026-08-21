@@ -1493,6 +1493,11 @@ function fetchSheetJSONP(sheetId, gid, headersCount = 1) {
             // Chuyển đổi từ format Google Viz sang mảng 2D đơn giản
             const rows = [];
             const table = data.table;
+            
+            let extractedHeaders = [];
+            if (headersCount > 0 && table.cols) {
+                extractedHeaders = table.cols.map(c => c && c.label ? String(c.label).normalize('NFC').trim() : '');
+            }
 
             // Data rows (headers=1 nên không có header trong rows)
             if (table.rows) {
@@ -1502,11 +1507,17 @@ function fetchSheetJSONP(sheetId, gid, headersCount = 1) {
                         const sv = cell.v !== null && cell.v !== undefined ? String(cell.v).normalize('NFC') : '';
                         // Kiểm tra Date(yyyy,m,d) từ Google Viz - chỉ parse nếu là ngày thực (năm >= 1900)
                         // Ô giờ (time-only) trả về Date(1899,11,30,H,M,S) → bỏ qua, dùng cell.f
-                        const dateMatch = sv.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+                        const dateMatch = sv.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d+)\s*,\s*(\d+))?/);
                         if (dateMatch && parseInt(dateMatch[1]) >= 1900) {
                             const dd = String(parseInt(dateMatch[3])).padStart(2, '0');
                             const mm = String(parseInt(dateMatch[2]) + 1).padStart(2, '0');
-                            return dd + '/' + mm + '/' + dateMatch[1];
+                            let dtStr = dd + '/' + mm + '/' + dateMatch[1];
+                            if (dateMatch[4] !== undefined && dateMatch[5] !== undefined) {
+                                const hh = String(parseInt(dateMatch[4])).padStart(2, '0');
+                                const min = String(parseInt(dateMatch[5])).padStart(2, '0');
+                                dtStr += ' ' + hh + ':' + min;
+                            }
+                            return dtStr;
                         }
                         if (cell.f) return String(cell.f).normalize('NFC');
                         return sv;
@@ -1515,6 +1526,7 @@ function fetchSheetJSONP(sheetId, gid, headersCount = 1) {
                 });
             }
 
+            rows.headers = extractedHeaders;
             resolve(rows);
         };
 
@@ -1557,11 +1569,17 @@ function fetchSheetByNameJSONP(sheetId, sheetName) {
                     const r = row.c.map(cell => {
                         if (!cell) return '';
                         const sv = cell.v !== null && cell.v !== undefined ? String(cell.v).normalize('NFC') : '';
-                        const dateMatch = sv.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+                        const dateMatch = sv.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d+)\s*,\s*(\d+))?/);
                         if (dateMatch && parseInt(dateMatch[1]) >= 1900) {
                             const dd = String(parseInt(dateMatch[3])).padStart(2, '0');
                             const mm = String(parseInt(dateMatch[2]) + 1).padStart(2, '0');
-                            return dd + '/' + mm + '/' + dateMatch[1];
+                            let dtStr = dd + '/' + mm + '/' + dateMatch[1];
+                            if (dateMatch[4] !== undefined && dateMatch[5] !== undefined) {
+                                const hh = String(parseInt(dateMatch[4])).padStart(2, '0');
+                                const min = String(parseInt(dateMatch[5])).padStart(2, '0');
+                                dtStr += ' ' + hh + ':' + min;
+                            }
+                            return dtStr;
                         }
                         if (cell.f) return String(cell.f).normalize('NFC');
                         return sv;
@@ -3486,13 +3504,15 @@ async function fetchArchivedData(sheetName) {
             const gid = CONFIG.ARCHIVE_GIDS[sheetName];
             
             // Dùng fetchSheetJSONP để tránh lỗi CORS đối với các sheet public
-            const rows = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid, 0);
+            const rows = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid, 1);
             
             if (rows && rows.length > 0) {
-                // Hàng đầu tiên (index 0) là headers
-                const headers = rows[0].map(c => c ? String(c).trim() : '');
+                const hasExtractedHeaders = rows.headers && rows.headers.length > 0 && rows.headers.some(h => h !== '');
+                const headers = hasExtractedHeaders ? rows.headers : rows[0].map(c => c ? String(c).trim() : '');
+                const startIndex = hasExtractedHeaders ? 0 : 1;
+                
                 const objects = [];
-                for (let i = 1; i < rows.length; i++) {
+                for (let i = startIndex; i < rows.length; i++) {
                     const r = rows[i];
                     const obj = {};
                     headers.forEach((h, idx) => {

@@ -721,6 +721,7 @@ const CONFIG = {
     ARCHIVE_SHEET_ID: '174ZaGkN2_oTrDmNfY9Tr99zHxdvjX4lOVCMwlEcyvLU',
     ARCHIVE_GIDS: {
         'odo_data': '517652990',
+        'odo_data_2': '', // Điền GID của tab odo_data_2 vào đây
         'ncc_trips': '0',
         'Bao_cao_chuyen_di': '461028690',
         'master_data': '',   // Sẽ được tạo bởi sync script
@@ -1827,7 +1828,9 @@ async function loadAllData() {
         // headers=1 → rows chỉ chứa data, bắt đầu từ index 0
         // Chỉ lấy NV thuộc 4 kho anh quản lý
         // ═══════════════════════════════════════
-        const archivedOdo = await fetchArchivedData('odo_data');
+        const archivedOdo1 = await fetchArchivedData('odo_data');
+        const archivedOdo2 = await fetchArchivedData('odo_data_2');
+        const archivedOdo = [...archivedOdo1, ...archivedOdo2];
         const archivedOdoMap = new Map(archivedOdo.map(o => [o.id, o]));
         const newOdoToArchive = [];
         

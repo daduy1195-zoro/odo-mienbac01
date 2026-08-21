@@ -688,6 +688,7 @@ const CONFIG = {
     // Link Google Sheet danh sách NV chuẩn (master list)
     SHEET_MASTER_ID: '1RMe38TNV-EoIAradnynYmk8mt7l9pNWqJELM9O84Wxc',
     SHEET_MASTER_GID: '1254809645',
+    EXCLUDED_CTV_IDS: ['3163445', '3169220', '3171087', '3178191'], // 4 cộng tác viên Hải Dương không hiển thị báo cáo lastmile
     
     // Cấu hình NCC Sheets
     NCC_SHEETS: [
@@ -1768,6 +1769,9 @@ async function loadAllData() {
         }
         
         const ctvCodes = new Set();
+        if (CONFIG.EXCLUDED_CTV_IDS) {
+            CONFIG.EXCLUDED_CTV_IDS.forEach(id => ctvCodes.add(id));
+        }
         if (ctvRows && ctvRows.length > 0) {
             ctvRows.forEach(r => {
                 if (r && r[0]) {
@@ -5133,6 +5137,11 @@ async function loadLastmileData() {
             r.driverName = String(r.driverName || '');
             r.driverPhone = String(r.driverPhone || '');
             r.servicePartner = String(r.servicePartner || '');
+            
+            if (CONFIG.EXCLUDED_CTV_IDS && (CONFIG.EXCLUDED_CTV_IDS.includes(r.driverId) || CONFIG.EXCLUDED_CTV_IDS.includes(r.createdById))) {
+                continue;
+            }
+            
             lastmileData.push(r);
         }
         console.log('✅ After filter Ahamove: ' + lastmileData.length + ' records');

@@ -2565,7 +2565,7 @@ function renderDailyTable(filtered) {
             <td style="white-space:nowrap; font-weight:600;">${escapeHtml(e.dateStr)}</td>
             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
-            <td style="font-family:monospace; font-weight:600;">${escapeHtml(formatPlate(e.plate))}</td>
+            <td style="font-family:monospace; font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
             <td style="font-size:12px;">${escapeHtml(e.supplier)}</td>
             <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:monospace;white-space:nowrap;">${escapeHtml(e.hourStart || '—')}</td>
@@ -2869,7 +2869,7 @@ function renderRanking(filtered, month, whFilter) {
                             <td>${i + 1}</td>
                             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
                             <td>${e.code || '—'}</td>
-                            <td style="font-family:monospace;font-weight:600;">${escapeHtml(formatPlate(e.plate) || '—')}</td>
+                            <td style="font-family:monospace;font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
                             <td style="text-align:center;">${e.uniqueDays}/${e.myExpectedDays}</td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:8px;">
@@ -3028,7 +3028,7 @@ function renderFraudWarnings(filtered) {
             <td style="white-space:nowrap;font-weight:600;">${escapeHtml(e.dateStr)}</td>
             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
-            <td style="font-family:monospace;font-weight:600;">${escapeHtml(formatPlate(e.plate))}</td>
+            <td style="font-family:monospace;font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
             <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:monospace;">${escapeHtml(e.hourStart || '—')}</td>
             <td style="font-family:monospace;">${escapeHtml(e.hourEnd || '—')}</td>
@@ -3226,7 +3226,7 @@ function renderTypoWarnings(filtered) {
                 <td style="white-space:nowrap;font-weight:600;">${e.dateStr}</td>
                 <td style="font-weight:600;">${escapeHtml(e.name)}</td>
                 <td><span class="badge badge-info">${e.code || '—'}</span></td>
-                <td style="font-family:monospace;">${escapeHtml(formatPlate(e.plate))}</td>
+                <td style="font-family:monospace;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
                 <td>${escapeHtml(e.shortWH)}</td>
                 <td style="font-family:monospace;">${e.kmStart}</td>
                 <td style="font-family:monospace;">${e.kmEnd}</td>
@@ -5769,3 +5769,4 @@ window.exportRecon3WayExcel = function() {
 </script>
 </body>
 </html>
+

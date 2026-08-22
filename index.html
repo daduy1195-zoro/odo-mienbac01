@@ -619,6 +619,8 @@
                     <option value="">Tất cả trạng thái</option>
                     <option value="khop">✅ Khớp</option>
                     <option value="khop_tay">📝 Khớp tay</option>
+                    <option value=\"da_chuyen\">🔄 Đa chuyến</option>
+                    <option value=\"da_chuyen\">🔄 Đa chuyến</option>
                     <option value="thieu">⚠️ Thiếu mã</option>
                     <option value="ghn_off">⏸️ GHN OFF</option>
                     <option value="ncc_off">⏸️ NCC OFF</option>
@@ -3969,7 +3971,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         // Ghép mã chuyến GHN
         const normPlate = normalizeStr(plate);
         const matchKey = `${normPlate}_${dateStr}`;
-          let matchedTripCode = ghnTripMap.get(matchKey) || null;
+          let mCodes = ghnTripMap.get(matchKey); let matchedTripCode = mCodes ? mCodes.join(' | ') : null;
           
           const routeLower = (route || '').toLowerCase();
           const kmStartLower = kmStart.toLowerCase();
@@ -4207,16 +4209,14 @@ async function loadNccTripData() {
                 if (!trip.plate || !trip.dateStr) return;
                 const normPlate = normalizeStr(trip.plate);
                 const key = `${normPlate}_${trip.dateStr}`;
-                if (!ghnTripMap.has(key)) {
-                    ghnTripMap.set(key, trip.tripCode);
-                }
+                if (!ghnTripMap.has(key)) ghnTripMap.set(key, [trip.tripCode]);
+                else { let arr = ghnTripMap.get(key); if (!arr.includes(trip.tripCode)) arr.push(trip.tripCode); }
                 // ★ Thêm entry cho các biển NCC sai đã học mapping
                 const mappedNccPlates = reversePlateMapping[normPlate] || [];
                 mappedNccPlates.forEach(nccP => {
                     const mappedKey = `${nccP}_${trip.dateStr}`;
-                    if (!ghnTripMap.has(mappedKey)) {
-                        ghnTripMap.set(mappedKey, trip.tripCode);
-                    }
+                    if (!ghnTripMap.has(mappedKey)) ghnTripMap.set(mappedKey, [trip.tripCode]);
+                        else { let arr = ghnTripMap.get(mappedKey); if (!arr.includes(trip.tripCode)) arr.push(trip.tripCode); }
                 });
             });
         }
@@ -4246,9 +4246,8 @@ async function loadNccTripData() {
                 if (tripCode) {
                     const normPlate = normalizeStr(e.plate);
                     const key = `${normPlate}_${e.dateStr}`;
-                    if (!ghnTripMap.has(key)) {
-                        ghnTripMap.set(key, tripCode);
-                    }
+                    if (!ghnTripMap.has(key)) ghnTripMap.set(key, [tripCode]);
+                        else { let arr = ghnTripMap.get(key); if (!arr.includes(tripCode)) arr.push(tripCode); }
                 }
             });
         }
@@ -4259,7 +4258,7 @@ async function loadNccTripData() {
             if (!r.ghnTripCode) {
                 const normPlate = normalizeStr(r.plate);
                 const matchKey = `${normPlate}_${r.dateStr}`;
-                r.ghnTripCode = ghnTripMap.get(matchKey) || null;
+                let codes = ghnTripMap.get(matchKey); r.ghnTripCode = codes ? codes.join(' | ') : null;
             }
         });
         
@@ -4651,11 +4650,11 @@ function rematchNccTrips() {
         if (trip.plate) {
             const normPlate = normalizeStr(trip.plate);
             const key = `${normPlate}_${trip.dateStr}`;
-            if (!ghnTripMap.has(key)) ghnTripMap.set(key, trip.tripCode);
+            if (!ghnTripMap.has(key)) ghnTripMap.set(key, [trip.tripCode]); else { let arr = ghnTripMap.get(key); if (!arr.includes(trip.tripCode)) arr.push(trip.tripCode); }
         }
         if (trip.driverId) {
             const driverKey = `${String(trip.driverId).trim()}_${trip.dateStr}`;
-            if (!ghnDriverMap.has(driverKey)) ghnDriverMap.set(driverKey, trip.tripCode);
+            if (!ghnDriverMap.has(driverKey)) ghnDriverMap.set(driverKey, [trip.tripCode]); else { let arr = ghnDriverMap.get(driverKey); if (!arr.includes(trip.tripCode)) arr.push(trip.tripCode); }
         }
     });
     
@@ -4688,9 +4687,8 @@ function rematchNccTrips() {
             if (tripCode) {
                 const normPlate = normalizeStr(e.plate);
                 const key = `${normPlate}_${e.dateStr}`;
-                if (!ghnTripMap.has(key)) {
-                    ghnTripMap.set(key, tripCode);
-                }
+                if (!ghnTripMap.has(key)) ghnTripMap.set(key, [tripCode]);
+                        else { let arr = ghnTripMap.get(key); if (!arr.includes(tripCode)) arr.push(tripCode); }
             }
         });
     }
@@ -4710,10 +4708,10 @@ function rematchNccTrips() {
         }
         const normPlate = normalizeStr(r.plate);
         const matchKey = `${normPlate}_${r.dateStr}`;
-        let code = ghnTripMap.get(matchKey);
+        let codeArr = ghnTripMap.get(matchKey); let code = codeArr ? codeArr.join(' | ') : null;
         if (!code && r.driverId) {
             const driverKey = `${String(r.driverId).trim()}_${r.dateStr}`;
-            code = ghnDriverMap.get(driverKey);
+            let dCodeArr = ghnDriverMap.get(driverKey); code = dCodeArr ? dCodeArr.join(' | ') : null;
         }
         if (code) {
             r.ghnTripCode = code;
@@ -4826,6 +4824,7 @@ function renderNccTrip() {
     html += '<option value="" style="color: #000;">Trạng thái (Tất cả)</option>';
     html += '<option value="khop" style="color: #000;" ' + (filterStatus === 'khop' ? 'selected' : '') + '>✅ Khớp</option>';
     html += '<option value="khop_tay" style="color: #000;" ' + (filterStatus === 'khop_tay' ? 'selected' : '') + '>📝 Khớp tay</option>';
+    html += '<option value=\"da_chuyen\" style=\"color: #000;\" ' + (filterStatus === 'da_chuyen' ? 'selected' : '') + '>🔄 Đa chuyến</option>';
     html += '<option value="thieu" style="color: #000;" ' + (filterStatus === 'thieu' ? 'selected' : '') + '>⚠️ Thiếu</option>';
     html += '<option value="ghn_off" style="color: #000;" ' + (filterStatus === 'ghn_off' ? 'selected' : '') + '>⏸️ GHN OFF</option>';
     html += '<option value="ncc_off" style="color: #000;" ' + (filterStatus === 'ncc_off' ? 'selected' : '') + '>⏸️ NCC OFF</option>';
@@ -4851,40 +4850,13 @@ function renderNccTrip() {
         } else if (isPhat) {
             statusHtml = '<span style="color:#ef4444; font-weight:700;">⚠️ Phạt</span>';
         } else if (hasMatch) {
-            statusHtml = '<span style="color:var(--success); font-weight:700;">✅ Khớp</span>';
-        } else {
-            statusHtml = '<span style="color:var(--warning); font-weight:700;">⚠️ Thiếu mã</span>';
-        }
-            
-        let ghnHtml = '';
-        if (isSpecialStatus) {
-            let labelText = 'OFF';
-            let badgeBg = 'rgba(148, 163, 184, 0.15)';
-            let badgeColor = '#94a3b8';
-            let badgeBorder = 'rgba(148, 163, 184, 0.3)';
-            
-            if (isGhnOff) {
-                labelText = 'GHN OFF';
-                badgeBg = 'rgba(167, 139, 250, 0.15)';
-                badgeColor = '#a78bfa';
-                badgeBorder = 'rgba(167, 139, 250, 0.3)';
-            } else if (isPhat) {
-                labelText = 'Phạt';
-                badgeBg = 'rgba(239, 68, 68, 0.15)';
-                badgeColor = '#ef4444';
-                badgeBorder = 'rgba(239, 68, 68, 0.3)';
-            } else {
-                labelText = r.ghnTripCode === 'OFF' ? 'OFF' : 'NCC OFF';
-            }
-            
-            ghnHtml = `<div style="display:flex; gap: 4px; align-items:center;">
-                <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder}; font-weight:bold; padding: 3px 8px; font-size: 11px;">${labelText}</span>
-                <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 11px; height: 26px;" onclick="updateNccTripCode(${r.originalIndex}, '')" title="Hủy đánh dấu">❌</button>
-            </div>`;
-        } else if (hasMatch) {
-            ghnHtml = `<div style="display:flex; gap: 6px; align-items:center;">
-                <a href="https://nhanh.ghn.vn/lastmile/trip-detail/${r.ghnTripCode}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${r.ghnTripCode}</strong></a>`;
-            if (r.isManualMatch) {
+              const codes = String(r.ghnTripCode).split('|').map(c => c.trim()).filter(c => c);
+              ghnHtml = `<div style="display:flex; gap: 6px; align-items:center; flex-wrap:wrap;">`;
+              codes.forEach((c, idx) => {
+                  ghnHtml += `<a href="https://nhanh.ghn.vn/lastmile/trip-detail/${c}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${c}</strong></a>`;
+                  if (idx < codes.length - 1) ghnHtml += `<span style="color:#64748b;">|</span>`;
+              });
+              if (r.isManualMatch) {
                 ghnHtml += `<span class="badge" style="background:rgba(251,191,36,0.15);color:#f59e0b;font-size:10px;padding:2px 4px;border:1px solid rgba(251,191,36,0.3);" title="Được khớp bằng tay">📝 Khớp tay</span>`;
             }
             ghnHtml += `</div>`;
@@ -5253,9 +5225,12 @@ function renderLastmile() {
             if (nccTripData[n].ghnTripCode) {
                 const cUp = String(nccTripData[n].ghnTripCode).toUpperCase();
                 if (!['OFF', 'GHN OFF', 'GHN_OFF', 'NCC OFF', 'NCC_OFF', 'PHẠT', 'PHAT'].includes(cUp)) {
-                    matchedTripCodes.add(nccTripData[n].ghnTripCode);
-                      tripNccMap.set(nccTripData[n].ghnTripCode, nccTripData[n].ncc);
-                      if (nccTripData[n].isManualMatch) manualTripCodes.add(nccTripData[n].ghnTripCode);
+                    const codes = String(nccTripData[n].ghnTripCode).split('|').map(x => x.trim()).filter(x => x);
+                      codes.forEach(c => {
+                          matchedTripCodes.add(c);
+                          tripNccMap.set(c, nccTripData[n].ncc);
+                          if (nccTripData[n].isManualMatch) manualTripCodes.add(c);
+                      });
                 }
             }
         }

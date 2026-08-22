@@ -642,6 +642,7 @@
                 <select id="filterLastmileStatus" class="form-control" style="width: 150px; font-size: 13px;" onchange="if(typeof renderLastmile === 'function') renderLastmile()">
                     <option value="">Tất cả trạng thái</option>
                     <option value="khop">✅ Đã đối soát</option>
+                    <option value="khop_tay">🖐️ Khớp tay</option>
                     <option value="thieu">⚠️ Chưa đối soát</option>
                 </select>
                 <button class="btn btn-primary" onclick="exportLastmileExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
@@ -5282,7 +5283,9 @@ function renderLastmile() {
         var filterStatus = document.getElementById('filterLastmileStatus') ? document.getElementById('filterLastmileStatus').value : '';
         if (filterStatus) {
             var isMatched = matchedTripCodes.has(row.tripCode);
+            var isManual = typeof manualTripCodes !== 'undefined' && manualTripCodes.has(row.tripCode);
             if (filterStatus === 'khop' && !isMatched) continue;
+            if (filterStatus === 'khop_tay' && !isManual) continue;
             if (filterStatus === 'thieu' && isMatched) continue;
         }
         var filterMonth = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';

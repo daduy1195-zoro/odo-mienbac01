@@ -2004,8 +2004,19 @@ async function loadAllData() {
             const supplier = normalizeSupplierName(r[5]);
             const kmStart = (r[7] || '').trim();
             const kmEnd = (r[12] || '').trim();
-            const hourStart = (r[8] || '').trim();
-            const hourEnd = (r[13] || '').trim();
+                    const hourStart = (r[8] || '').trim();
+                    const hourEnd = (r[13] || '').trim();
+                    
+                    let imgLinks = [];
+                    r.forEach(col => {
+                        const s = String(col).trim();
+                        if (s.startsWith('http')) {
+                            const links = s.split(/[\s,;]+/).filter(l => l.startsWith('http'));
+                            imgLinks.push(...links);
+                        }
+                    });
+                    const imgStart = imgLinks[0] || '';
+                    const imgEnd = imgLinks[1] || '';
 
             const gid = r._gid || CONFIG.SHEET_EMPLOYEE_GIDS[0];
             const jsMatchKey = dateStr && normPlate ? `${dateStr}_${normPlate}` : '';
@@ -2033,7 +2044,7 @@ async function loadAllData() {
             const entry = {
                 id: `${dateStr}_${code || name}_${normPlate}`, // Khóa chống trùng lặp
                 name, code, area, dateStr, dateObj, plate, supplier, warehouse, shortWH,
-                kmStart, kmEnd, hourStart, hourEnd, matchKey, jsMatchKey, fullName, sheetRow, gid
+                kmStart, kmEnd, hourStart, hourEnd, imgStart, imgEnd, matchKey, jsMatchKey, fullName, sheetRow, gid
             };
 
             // Luôn lưu dữ liệu đã làm ODO
@@ -2662,8 +2673,8 @@ function renderDailyTable(filtered) {
             <td style="font-family:Calibri, sans-serif;white-space:nowrap;">${escapeHtml(e.hourStart || '—')}</td>
             <td style="font-family:Calibri, sans-serif;white-space:nowrap;">${escapeHtml(e.hourEnd || '—')}</td>
             <td style="font-weight:700;color:${otColor};text-align:center;">${escapeHtml(otDisplay)}</td>
-            <td style="font-family:Calibri, sans-serif;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
-            <td style="font-family:Calibri, sans-serif;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
+            <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
+            <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
             <td style="font-weight:600; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + escapeHtml(String(kmDisplay)) + ' (gõ sai!)' : escapeHtml(String(kmDisplay))}</td>
             <td style="font-size:12px; min-width: 250px; white-space: normal;">${routeHtml}</td>
             <td>${tripHtml}</td>
@@ -3129,8 +3140,8 @@ function renderFraudWarnings(filtered) {
             <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.hourStart || '—')}</td>
             <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.hourEnd || '—')}</td>
             <td style="font-weight:700;color:${otColor};">${escapeHtml(otDisplay)}</td>
-            <td style="font-family:Calibri, sans-serif;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
-            <td style="font-family:Calibri, sans-serif;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
+            <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
+            <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
             <td style="font-weight:700;color:${f.km < 0 || f.km > 200 ? 'var(--danger)' : 'var(--success)'};">${escapeHtml(String(kmDisplay))}</td>
             <td>${reasonBadges}</td>
             <td>${editLink}</td>
@@ -3324,8 +3335,8 @@ function renderTypoWarnings(filtered) {
                 <td><span class="badge badge-info">${e.code || '—'}</span></td>
                 <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
                 <td>${escapeHtml(e.shortWH)}</td>
-                <td style="font-family:Calibri, sans-serif;">${e.kmStart}</td>
-                <td style="font-family:Calibri, sans-serif;">${e.kmEnd}</td>
+                <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
+                <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
                 <td style="font-weight:700;color:var(--danger);">⚠️ ${km.toLocaleString()}</td>
                 <td>${editLink}</td>
             </tr>`;

@@ -1334,12 +1334,12 @@ async function loadNccData() {
             };
         }
         
-        pivotData[khoGroup][bienSo].chiPhi += Number(String(r.totalCost || '0').replace(/[^\d\.-]/g, ''));
-        pivotData[khoGroup][bienSo].kmPhatSinh += Number(String(r.kmOver || '0').replace(/[^\d\.-]/g, ''));
-        pivotData[khoGroup][bienSo].phiVuotKm += Number(String(r.kmOverFee || '0').replace(/[^\d\.-]/g, ''));
-        pivotData[khoGroup][bienSo].thoiGianTangCa += Number(String(r.otHours || '0').replace(/[^\d\.-]/g, ''));
-        pivotData[khoGroup][bienSo].phiTangCa += Number(String(r.otFee || '0').replace(/[^\d\.-]/g, ''));
-        pivotData[khoGroup][bienSo].phiCauDuong += Number(String(r.tollFee || '0').replace(/[^\d\.-]/g, ''));
+        pivotData[khoGroup][bienSo].chiPhi += parseVietnameseNumber(r.totalCost);
+        pivotData[khoGroup][bienSo].kmPhatSinh += parseVietnameseNumber(r.kmOver);
+        pivotData[khoGroup][bienSo].phiVuotKm += parseVietnameseNumber(r.kmOverFee);
+        pivotData[khoGroup][bienSo].thoiGianTangCa += parseVietnameseNumber(r.otHours);
+        pivotData[khoGroup][bienSo].phiTangCa += parseVietnameseNumber(r.otFee);
+        pivotData[khoGroup][bienSo].phiCauDuong += parseVietnameseNumber(r.tollFee);
         
         hasData = true;
     });

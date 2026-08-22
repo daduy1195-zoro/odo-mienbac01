@@ -624,6 +624,7 @@
                     <option value="ghn_off">⏸️ GHN OFF</option>
                     <option value="ncc_off">⏸️ NCC OFF</option>
                     <option value="phat">⚠️ Phạt</option>
+                    <option value="khong_chay">🛑 Không chạy vẫn tính tiền</option>
                 </select>
                 <button class="btn btn-primary" onclick="exportNccTripExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
             </div>
@@ -4780,6 +4781,8 @@ function renderNccTrip() {
         if (filterStatus === 'ghn_off' && !isGhnOff) return;
         if (filterStatus === 'ncc_off' && !isNccOff) return;
         if (filterStatus === 'phat' && !isPhat) return;
+        let _km = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.kmOver) : Number(String(row.kmOver || '0').replace(/[^\d\.-]/g, '')); let _cost = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.totalCost) : Number(String(row.totalCost || '0').replace(/[^\d\.-]/g, '')); let isKhongChay = (_km === 0 && _cost > 0);
+        if (filterStatus === 'khong_chay' && !isKhongChay) return;
         if (filterStatus === 'da_chuyen' && (!row.ghnTripCode || !String(row.ghnTripCode).includes('|'))) return;
         
         filtered.push({ ...row, originalIndex: idx });
@@ -4839,6 +4842,7 @@ function renderNccTrip() {
     html += '<option value="ghn_off" style="color: #000;" ' + (filterStatus === 'ghn_off' ? 'selected' : '') + '>⏸️ GHN OFF</option>';
     html += '<option value="ncc_off" style="color: #000;" ' + (filterStatus === 'ncc_off' ? 'selected' : '') + '>⏸️ NCC OFF</option>';
     html += '<option value="phat" style="color: #000;" ' + (filterStatus === 'phat' ? 'selected' : '') + '>⚠️ Phạt</option>';
+    html += '<option value="khong_chay" style="color: #000;" ' + (filterStatus === 'khong_chay' ? 'selected' : '') + '>🛑 Không chạy vẫn tính tiền</option>';
     html += '</select>';
     html += '</th>';
     html += '<th style="min-width:150px">Ghi chú</th>';

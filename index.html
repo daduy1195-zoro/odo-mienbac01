@@ -1290,13 +1290,13 @@ async function loadNccData() {
     if(!container) return;
     
     if (!isNccTripLoaded) {
-        container.innerHTML = <div style="padding:40px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 10px"></div>Đang tải dữ liệu chuyến đi NCC... Vui lòng đợi!</div>;
+        container.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 10px"></div>Đang tải dữ liệu chuyến đi NCC... Vui lòng đợi!</div>`;
         document.getElementById('nccTotalCost').innerText = '0 đ';
         return;
     }
     
     if (typeof nccTripData === 'undefined' || nccTripData.length === 0) {
-        container.innerHTML = <div class="empty-state"><div class="icon">📫</div><p>Chưa có dữ liệu chuyến đi NCC</p></div>;
+        container.innerHTML = `<div class="empty-state"><div class="icon">📫</div><p>Chưa có dữ liệu chuyến đi NCC</p></div>`;
         document.getElementById('nccTotalCost').innerText = '0 đ';
         return;
     }
@@ -1346,7 +1346,7 @@ async function loadNccData() {
     });
     
     if (!hasData) {
-        container.innerHTML = <div class="empty-state"><div class="icon">📫</div><p>Chưa có dữ liệu chi phí xe NCC cho kỳ này</p></div>;
+        container.innerHTML = `<div class="empty-state"><div class="icon">📫</div><p>Chưa có dữ liệu chi phí xe NCC cho kỳ này</p></div>`;
         document.getElementById('nccTotalCost').innerText = '0 đ';
         return;
     }

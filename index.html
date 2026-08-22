@@ -3710,8 +3710,14 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     }
     
     // ★ Xác định vị trí cột KM vào/ra từ header row
-    let colKmStart = -1, colKmEnd = -1, colKmDiff = -1, colRoute = -1, colDate = 1, colPlate = 2, colVehicle = 3, colNcc = -1;
-    let colOtHours = -1, colOtRate = -1, colOtFee = -1, colKmOver = -1, colKmOverFee = -1, colMonthlyRate = -1, colDailyRate = -1, colTollFee = -1, colHolidayFee = -1, colTotalCost = -1;
+    let colKmStart = -1, colKmEnd = -1, colKmDiff = -1, colRoute = -1, colDate = 1, colPlate = 2, colVehicle = 3, colNcc = -1, colKho = -1;
+      let colOtHours = -1, colOtRate = -1, colOtFee = -1, colKmOver = -1, colKmOverFee = -1, colMonthlyRate = -1, colDailyRate = -1, colTollFee = -1, colHolidayFee = -1, colTotalCost = -1;
+      
+      if (tabGid === '1482895796' || (sheetId && sheetId.includes('1jFaJutdZD8uhBYa9Hy9fH6tHVaSnEf-iyg4VUMniXl8'))) {
+          colNcc = 1; colDate = 2; colPlate = 3; colVehicle = 4; colRoute = 5; 
+          colOtHours = 10; colOtFee = 12; colKmStart = 14; colKmEnd = 15; colKmOver = 16; colKmOverFee = 17; 
+          colTollFee = 18; colHolidayFee = 19; colTotalCost = 24; colKho = 27;
+      }
     if (headerRowIdx > -1) {
         // Scan nhiều dòng header (multi-row merged headers) cho cột tài chính
         const scanStart = Math.max(0, headerRowIdx - 3);
@@ -3730,6 +3736,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 if (h.includes('ngày') && h.includes('thực hiện')) colDate = ci;
                 if (h.includes('biển số')) colPlate = ci;
                 if (h === 'xe' || h.includes('loại xe')) colVehicle = ci;
+                  if (h === 'kho' || h.includes('kho trạm') || h.includes('trạm')) colKho = ci;
                 if (h === 'chi' || h.includes('nhà cung cấp') || h === 'ncc') colNcc = ci;
                 if (h.includes('số km phát sinh tăng') || h.includes('km phát sinh tăng')) colKmOver = ci;
                 }
@@ -3834,6 +3841,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 if (h.includes('ngày') && h.includes('thực hiện')) colDate = ci;
                 if (h.includes('biển số')) colPlate = ci;
                 if (h === 'xe' || h.includes('loại xe')) colVehicle = ci;
+                  if (h === 'kho' || h.includes('kho trạm') || h.includes('trạm')) colKho = ci;
                 if (h === 'chi' || h.includes('nhà cung cấp') || h === 'ncc') colNcc = ci;
                 if (h.includes('số km phát sinh tăng') || h.includes('km phát sinh tăng')) colKmOver = ci;
                 if ((h.includes('đơn giá') && (h.includes('tháng') || h.includes('thang'))) || h.includes('giá tháng') || h.includes('thuê/tháng') || h.includes('thue/thang')) colMonthlyRate = ci;

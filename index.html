@@ -1655,11 +1655,16 @@ async function loadAllData() {
         if (CONFIG.PROXY_API_URL) {
             try {
                 console.log('📡 Fetching via Proxy API...');
-                const [empResult, supResult, masterResult] = await Promise.all([
+                const [empResult, supResult] = await Promise.all([
                     fetchViaProxy('employee'),
                     fetchViaProxy('supplier'),
-                    fetchViaProxy('master')
                 ]);
+                let masterResultRows = await fetchSheetJSONP(CONFIG.SHEET_MASTER_ID, CONFIG.SHEET_MASTER_GID).catch(e => []);
+                if (!masterResultRows || masterResultRows.length === 0) {
+                    const masterProxy = await fetchViaProxy('master').catch(e => ({rows: []}));
+                    masterResultRows = masterProxy.rows || [];
+                }
+
                 
                 empRowsArrays = [[]];
                 if (empResult.rows) {
@@ -1673,7 +1678,7 @@ async function loadAllData() {
                 }
                 
                 supRows = supResult.rows || [];
-                masterRowsGH = masterResult.rows || [];
+                masterRowsGH = masterResultRows;
                 masterRowsPH = [];
                 ctvRows = [];
                 proxySuccess = true;
@@ -1827,7 +1832,7 @@ async function loadAllData() {
             const province = (r[5] || '').trim();
             const warehouse = (r[6] || '').trim();
             const note = (r[9] || '').trim();
-            const backupStr = (r[10] || '').trim().toUpperCase(); // Cột K = Biển số xe tăng cường
+            const backupStr = ((r[10] || '') + ' ' + (r[7] || '')).trim().toUpperCase(); // Lấy cả cột K và cột H (đề phòng Proxy API bị giới hạn 10 cột A-J)
             const backupPlates = backupStr ? backupStr.split(/[\n,;]+/).map(p => String(p).replace(/[\s\-\.]/g, '')).filter(Boolean) : [];
             if (!code || !name) return;
             

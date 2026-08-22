@@ -1,43 +1,52 @@
+﻿# -*- coding: utf-8 -*-
 import re
 
-with open('C:\\Users\\MSI\\Desktop\\AI\\App_tai_xe\\odo_script\\SyncOdoToArchive.gs', 'r', encoding='utf-8') as f:
+with open('C:\\Users\\MSI\\Desktop\\AI\\Odo\\index.html', 'r', encoding='utf-8') as f:
     code = f.read()
 
-search_regex = r"var allRows = \[\];.*?writeToArchive\(SYNC_CONFIG\.ARCHIVE_TAB_ODO, headerRow, allRows\);"
-replace_code = """  for (var si = 0; si < formSheets.length; si++) {
-    var sheet = formSheets[si];
-    var data = sheet.getDataRange().getValues();
-    var gid = String(sheet.getSheetId());
-    
-    if (data.length === 0) continue;
-    
-    var headerRow = [];
-    for (var hi = 0; hi < data[0].length; hi++) {
-      headerRow.push(String(data[0][hi]).trim());
-    }
-    headerRow.push('_gid', '_sheetRow');
-    
-    var allRows = [];
-    // Data rows (b? header)
-    for (var ri = 1; ri < data.length; ri++) {
-      var row = data[ri];
-      // B? d�ng tr?ng (c?t C = T�n NV)
-      if (!row[2] || String(row[2]).trim() === '') continue;
-      
-      var rowWithMeta = row.slice();
-      while (rowWithMeta.length < headerRow.length - 2) rowWithMeta.push('');
-      rowWithMeta.push(gid, ri + 1);
-      allRows.push(rowWithMeta);
-    }
-    
-    var tabName = (si === 0) ? SYNC_CONFIG.ARCHIVE_TAB_ODO : SYNC_CONFIG.ARCHIVE_TAB_ODO + '_' + (si + 1);
-    Logger.log('Employee ODO (' + tabName + '): ' + allRows.length + ' dong');
-    writeToArchive(tabName, headerRow, allRows);
-  }"""
+search = r"""          const matchKey = \$\{normPlate\}_\$\{dateStr\};
+          let matchedTripCode = ghnTripMap\.get\(matchKey\) \|\| null;
+          
+          const routeLower = \(route \|\| ''\)\.toLowerCase\(\);
+          if \(!matchedTripCode\) \{
+              if \(isOffByPlate\) \{
+                  matchedTripCode = 'NCC OFF';
+              \} else if \(routeLower\.includes\('ghn off'\)\) \{
+                  matchedTripCode = 'GHN OFF';
+              \} else if \(routeLower\.includes\('phát'\) \|\| routeLower\.includes\('phat'\)\) \{
+                  matchedTripCode = 'Phát';
+              \} else if \(routeLower\.includes\('ncc off'\) \|\| routeLower\.includes\('off'\) \|\| routeLower\.includes\('nghỉ'\) \|\| routeLower\.includes\('nghi'\)\) \{
+                  matchedTripCode = 'NCC OFF';
+              \}
+          \}"""
 
-new_code = re.sub(search_regex, replace_code, code, flags=re.DOTALL)
+replace = """          const matchKey = ${normPlate}_;
+          let matchedTripCode = ghnTripMap.get(matchKey) || null;
+          
+          const routeLower = (route || '').toLowerCase();
+          const kmStartLower = kmStart.toLowerCase();
+          const kmEndLower = kmEnd.toLowerCase();
+          const kmDiffLower = kmDiff.toLowerCase();
+          
+          const isOffStr = (str) => {
+              return str === 'off' || str.includes('ncc off') || str.includes('nghỉ') || str === 'nghi';
+          };
+          
+          if (isOffByPlate || isOffStr(routeLower) || routeLower.includes(' off ') || routeLower.startsWith('off ') || isOffStr(kmStartLower) || isOffStr(kmEndLower) || isOffStr(kmDiffLower)) {
+              if (routeLower.includes('ghn off')) {
+                  matchedTripCode = 'GHN OFF';
+              } else {
+                  matchedTripCode = 'NCC OFF';
+              }
+          } else if (!matchedTripCode) {
+              if (routeLower.includes('phát') || routeLower.includes('phat')) {
+                  matchedTripCode = 'Phát';
+              }
+          }"""
 
-with open('C:\\Users\\MSI\\Desktop\\AI\\App_tai_xe\\odo_script\\SyncOdoToArchive.gs', 'w', encoding='utf-8') as f:
-    f.write(new_code)
+code = re.sub(search, replace, code)
 
-print("Done")
+with open('C:\\Users\\MSI\\Desktop\\AI\\Odo\\index.html', 'w', encoding='utf-8') as f:
+    f.write(code)
+
+print("Replaced:", "isOffStr(kmStartLower)" in code)

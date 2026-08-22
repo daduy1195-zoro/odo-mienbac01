@@ -1,21 +1,42 @@
-import re
-
+Ôªø# -*- coding: utf-8 -*-
 with open('C:\\Users\\MSI\\Desktop\\AI\\Odo\\index.html', 'r', encoding='utf-8') as f:
-    code = f.read()
+    lines = f.readlines()
 
-# Replace the block
-search_block = r"// LuÙn luu d? li?u d„ l‡m ODO \(k? c? chua t? d?ng ghÈp du?c m„ NV\)\s*employeeData\.push\(entry\);\s*if \(!archivedOdoMap\.has\(entry\.id\)\) \{\s*const archiveEntry = \{ \.\.\.entry \};\s*delete archiveEntry\.dateObj;\s*newOdoToArchive\.push\(archiveEntry\);\s*\}\s*\}\s*// ?? B? sung d? li?u cu t? archive \(ch? nh?ng ng‡y KH‘NG cÛ trong fresh data\)\s*const freshIds = new Set\(employeeData\.map\(e => e\.id\)\);\s*archivedOdo\.forEach\(arc => \{\s*if \(arc\.id && !freshIds\.has\(arc\.id\)\) \{\s*// Ph?c h?i dateObj\s*if \(arc\.dateStr\) \{\s*const dp = String\(arc\.dateStr\)\.match\(/\\(\\d\{1,2\}\\)\[\\\\/\\\\-\]\\(\\d\{1,2\}\\)\[\\\\/\\\\-\]\\(\\d\{4\}\\)/\);\s*if \(dp\) arc\.dateObj = new Date\(parseInt\(dp\[3\]\), parseInt\(dp\[2\]\) - 1, parseInt\(dp\[1\]\)\);\s*\}\s*employeeData\.push\(arc\);\s*\}\s*\}\);\s*if \(newOdoToArchive\.length > 0\) saveToArchive\('odo_data', newOdoToArchive\);"
+start = -1
+end = -1
+for i, l in enumerate(lines):
+    if "let matchedTripCode = ghnTripMap.get(matchKey) || null;" in l:
+        start = i
+    if start != -1 and i > start and "const sourceRow = sourceRowsArray ? sourceRowsArray[i] : (i + 1);" in l:
+        end = i
+        break
 
-replace_block = """// LuÙn luu d? li?u d„ l‡m ODO
-            if (!dedupeSet.has(entry.id)) {
-                dedupeSet.add(entry.id);
-                employeeData.push(entry);
-            }
-        }"""
-
-code = re.sub(search_block, replace_block, code)
+if start != -1 and end != -1:
+    replace = '''          let matchedTripCode = ghnTripMap.get(matchKey) || null;
+          
+          const routeLower = (route || '').toLowerCase();
+          const kmStartLower = kmStart.toLowerCase();
+          const kmEndLower = kmEnd.toLowerCase();
+          const kmDiffLower = kmDiff.toLowerCase();
+          
+          const isOffStr = (str) => {
+              return str === 'off' || str.includes('ncc off') || str.includes('ngh·ªâ') || str === 'nghi';
+          };
+          
+          if (isOffByPlate || isOffStr(routeLower) || routeLower.includes(' off ') || routeLower.startsWith('off ') || isOffStr(kmStartLower) || isOffStr(kmEndLower) || isOffStr(kmDiffLower)) {
+              if (routeLower.includes('ghn off')) {
+                  matchedTripCode = 'GHN OFF';
+              } else {
+                  matchedTripCode = 'NCC OFF';
+              }
+          } else if (!matchedTripCode) {
+              if (routeLower.includes('ph√°t') || routeLower.includes('phat')) {
+                  matchedTripCode = 'Ph√°t';
+              }
+          }\n'''
+    lines[start:end] = [replace]
 
 with open('C:\\Users\\MSI\\Desktop\\AI\\Odo\\index.html', 'w', encoding='utf-8') as f:
-    f.write(code)
+    f.writelines(lines)
 
-print("Patch done!")
+print("Done")

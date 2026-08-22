@@ -1,44 +1,36 @@
-const fs = require('fs');
-let code = fs.readFileSync('C:\\Users\\MSI\\Desktop\\AI\\App_tai_xe\\odo_script\\SyncOdoToArchive.gs', 'utf8');
+﻿const fs = require('fs');
+let code = fs.readFileSync('C:\\\\Users\\\\MSI\\\\Desktop\\\\AI\\\\Odo\\\\index.html', 'utf8');
+const lines = code.split('\n');
 
-const searchRegex = /var allRows = \[\];[\s\S]*?writeToArchive\(SYNC_CONFIG\.ARCHIVE_TAB_ODO, headerRow, allRows\);/;
-const replaceCode = 
-  for (var si = 0; si < formSheets.length; si++) {
-    var sheet = formSheets[si];
-    var data = sheet.getDataRange().getValues();
-    var gid = String(sheet.getSheetId());
-    
-    if (data.length === 0) continue;
-    
-    var headerRow = [];
-    for (var hi = 0; hi < data[0].length; hi++) {
-      headerRow.push(String(data[0][hi]).trim());
-    }
-    headerRow.push('_gid', '_sheetRow');
-    
-    var allRows = [];
-    // Data rows (b? header)
-    for (var ri = 1; ri < data.length; ri++) {
-      var row = data[ri];
-      // B? d�ng tr?ng (c?t C = T�n NV)
-      if (!row[2] || String(row[2]).trim() === '') continue;
-      
-      var rowWithMeta = row.slice();
-      while (rowWithMeta.length < headerRow.length - 2) rowWithMeta.push('');
-      rowWithMeta.push(gid, ri + 1);
-      allRows.push(rowWithMeta);
-    }
-    
-    var tabName = (si === 0) ? SYNC_CONFIG.ARCHIVE_TAB_ODO : SYNC_CONFIG.ARCHIVE_TAB_ODO + '_' + (si + 1);
-    Logger.log('Employee ODO (' + tabName + '): ' + allRows.length + ' dong');
-    writeToArchive(tabName, headerRow, allRows);
-  }
+const start = lines.findIndex(l => l.includes('let matchedTripCode = ghnTripMap.get(matchKey) || null;'));
+const end = lines.findIndex((l, i) => i > start && l.includes('const sourceRow = sourceRowsArray ? sourceRowsArray[i] : (i + 1);'));
+
+if (start !== -1 && end !== -1) {
+    const replace =           let matchedTripCode = ghnTripMap.get(matchKey) || null;
+          
+          const routeLower = (route || '').toLowerCase();
+          const kmStartLower = kmStart.toLowerCase();
+          const kmEndLower = kmEnd.toLowerCase();
+          const kmDiffLower = kmDiff.toLowerCase();
+          
+          const isOffStr = (str) => {
+              return str === 'off' || str.includes('ncc off') || str.includes('nghỉ') || str === 'nghi';
+          };
+          
+          if (isOffByPlate || isOffStr(routeLower) || routeLower.includes(' off ') || routeLower.startsWith('off ') || isOffStr(kmStartLower) || isOffStr(kmEndLower) || isOffStr(kmDiffLower)) {
+              if (routeLower.includes('ghn off')) {
+                  matchedTripCode = 'GHN OFF';
+              } else {
+                  matchedTripCode = 'NCC OFF';
+              }
+          } else if (!matchedTripCode) {
+              if (routeLower.includes('phát') || routeLower.includes('phat')) {
+                  matchedTripCode = 'Phát';
+              }
+          }
 ;
-
-if (code.match(searchRegex)) {
-    code = code.replace(searchRegex, replaceCode);
-    fs.writeFileSync('C:\\Users\\MSI\\Desktop\\AI\\App_tai_xe\\odo_script\\SyncOdoToArchive.gs', code);
-    console.log('Success');
-} else {
-    console.log('Not found');
+    lines.splice(start, end - start, replace);
 }
+
+fs.writeFileSync('C:\\\\Users\\\\MSI\\\\Desktop\\\\AI\\\\Odo\\\\index.html', lines.join('\n'));
+console.log('Replaced:', lines.join('\n').includes('kmStartLower'));

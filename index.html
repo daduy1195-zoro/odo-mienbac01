@@ -5234,14 +5234,16 @@ function renderLastmile() {
     var filterNcc = document.getElementById('filterNcc') ? document.getElementById('filterNcc').value : '';
     
     var matchedTripCodes = new Set();
-    var tripNccMap = new Map();
+      var manualTripCodes = new Set();
+      var tripNccMap = new Map();
     if (typeof nccTripData !== 'undefined') {
         for (var n = 0; n < nccTripData.length; n++) {
             if (nccTripData[n].ghnTripCode) {
                 const cUp = String(nccTripData[n].ghnTripCode).toUpperCase();
                 if (!['OFF', 'GHN OFF', 'GHN_OFF', 'NCC OFF', 'NCC_OFF', 'PHẠT', 'PHAT'].includes(cUp)) {
                     matchedTripCodes.add(nccTripData[n].ghnTripCode);
-                    tripNccMap.set(nccTripData[n].ghnTripCode, nccTripData[n].ncc);
+                      tripNccMap.set(nccTripData[n].ghnTripCode, nccTripData[n].ncc);
+                      if (nccTripData[n].isManualMatch) manualTripCodes.add(nccTripData[n].ghnTripCode);
                 }
             }
         }
@@ -5355,8 +5357,17 @@ function renderLastmile() {
         }
         html += '<td style="font-size:12px; max-width:150px; white-space:normal;">' + (r.route ? escapeHtml(r.route) : '<span style="color:var(--text-muted);">—</span>') + '</td>';
         var isMatched = r.tripCode && matchedTripCodes.has(r.tripCode);
-        html += '<td style="text-align:center;font-weight:bold;">' + (isMatched ? '<span style="color:var(--success);">✅ Đã ĐS</span>' : '<span style="color:var(--warning);">⚠️ Chưa ĐS</span>') + '</td>';
-        html += '</tr>';
+        var isManual = r.tripCode && typeof manualTripCodes !== 'undefined' && manualTripCodes.has(r.tripCode);
+        
+        let statusHtml = '<span style="color:var(--warning);">⚠️ Chưa ĐS</span>';
+        if (isMatched) {
+            if (isManual) {
+                statusHtml = '<span class="badge" style="background:rgba(251,191,36,0.15);color:#f59e0b;font-size:10px;padding:2px 4px;border:1px solid rgba(251,191,36,0.3);" title="Được khớp bằng tay">🖐️ Khớp tay</span>';
+            } else {
+                statusHtml = '<span style="color:var(--success);">✅ Đã ĐS</span>';
+            }
+        }
+        html += '<td style="text-align:center;font-weight:bold;">' + statusHtml + '</td>';        html += '</tr>';
     }
     html += '</tbody></table></div></div>';
     

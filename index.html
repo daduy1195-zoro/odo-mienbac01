@@ -3151,7 +3151,7 @@ function renderTypoWarnings(filtered) {
                 <td>${i + 1}</td>
                 <td style="color:var(--danger);font-weight:700;">${escapeHtml(formatPlate(t.wrongPlate))}</td>
                 <td style="font-size:12px;white-space:nowrap;">${escapeHtml(province)}</td>
-                <td style="color:var(--success);font-weight:700;">${escapeHtml(formatPlate(t.correctPlate))}</td>
+                <td style="color:var(--success);font-weight:700;">${escapeHtml(t.correctPlate)}</td>
                 <td style="font-size:12px;">${empNames.map(n => escapeHtml(n)).join(', ')}</td>
                 <td style="text-align:center;font-weight:700;color:var(--danger);">${t.count}</td>
                 <td style="font-size:12px;">${dates.join(', ')}</td>

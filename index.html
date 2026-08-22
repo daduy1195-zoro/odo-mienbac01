@@ -5584,6 +5584,30 @@ function exportLastmileExcel() {
     showToast("?", "�� xu?t Excel!");
 }
 
+window.jumpToNccTrip = function(tripCode) {
+    if (!tripCode) return;
+    
+    // Set the search box value
+    const searchInput = document.getElementById('filterNccTripCode');
+    if (searchInput) searchInput.value = tripCode;
+    
+    // Reset status filter so we don't accidentally hide it
+    const statusFilter = document.getElementById('filterNccStatus');
+    if (statusFilter) statusFilter.value = '';
+    
+    // Find the tab button to activate it visually
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    let targetBtn = null;
+    tabBtns.forEach(b => {
+        if (b.getAttribute('onclick') && b.getAttribute('onclick').includes('nccTrip')) {
+            targetBtn = b;
+        }
+    });
+    
+    switchTab('nccTrip', targetBtn);
+    if (typeof renderNccTrip === 'function') renderNccTrip();
+};
+
 function switchTab(tab, el) {
     // Yêu cầu password khi vào tab NCC
     if (tab === 'ncc' && !_nccUnlocked) {

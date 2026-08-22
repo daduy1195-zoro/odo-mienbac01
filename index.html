@@ -4780,6 +4780,7 @@ function renderNccTrip() {
         if (filterStatus === 'ghn_off' && !isGhnOff) return;
         if (filterStatus === 'ncc_off' && !isNccOff) return;
         if (filterStatus === 'phat' && !isPhat) return;
+        if (filterStatus === 'da_chuyen' && (!row.ghnTripCode || !String(row.ghnTripCode).includes('|'))) return;
         
         filtered.push({ ...row, originalIndex: idx });
     });
@@ -5282,6 +5283,7 @@ function renderLastmile() {
             if (filterStatus === 'khop' && !isMatched) continue;
             if (filterStatus === 'khop_tay' && !isManual) continue;
             if (filterStatus === 'thieu' && isMatched) continue;
+            if (filterStatus === 'da_chuyen') { let c = (typeof nccTripData !== 'undefined') ? nccTripData.find(x => x.ghnTripCode && String(x.ghnTripCode).includes(row.tripCode) && String(x.ghnTripCode).includes('|')) : null; if (!c) continue; }
         }
         var filterMonth = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
         var parts = String(row.dateStr || '').split('/');

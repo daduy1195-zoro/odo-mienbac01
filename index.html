@@ -3958,22 +3958,28 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         // Ghép mã chuyến GHN
         const normPlate = normalizeStr(plate);
         const matchKey = `${normPlate}_${dateStr}`;
-        let matchedTripCode = ghnTripMap.get(matchKey) || null;
-        
-        const routeLower = (route || '').toLowerCase();
-        if (!matchedTripCode) {
-            if (isOffByPlate) {
-                matchedTripCode = 'NCC OFF';
-            } else if (routeLower.includes('ghn off')) {
-                matchedTripCode = 'GHN OFF';
-            } else if (routeLower.includes('phạt') || routeLower.includes('phat')) {
-                matchedTripCode = 'Phạt';
-            } else if (routeLower.includes('ncc off') || routeLower.includes('off') || routeLower.includes('nghỉ') || routeLower.includes('nghi')) {
-                matchedTripCode = 'NCC OFF';
-            }
-        }
-        
-        // Tính dòng gốc thực tế trong Google Sheet
+          let matchedTripCode = ghnTripMap.get(matchKey) || null;
+          
+          const routeLower = (route || '').toLowerCase();
+          const kmStartLower = kmStart.toLowerCase();
+          const kmEndLower = kmEnd.toLowerCase();
+          const kmDiffLower = kmDiff.toLowerCase();
+          
+          const isOffStr = (str) => {
+              return str === 'off' || str.includes('ncc off') || str.includes('nghỉ') || str === 'nghi';
+          };
+          
+          if (isOffByPlate || isOffStr(routeLower) || routeLower.includes(' off ') || routeLower.startsWith('off ') || isOffStr(kmStartLower) || isOffStr(kmEndLower) || isOffStr(kmDiffLower)) {
+              if (routeLower.includes('ghn off')) {
+                  matchedTripCode = 'GHN OFF';
+              } else {
+                  matchedTripCode = 'NCC OFF';
+              }
+          } else if (!matchedTripCode) {
+              if (routeLower.includes('phạt') || routeLower.includes('phat')) {
+                  matchedTripCode = 'Phạt';
+              }
+          }
         const sourceRow = sourceRowsArray ? sourceRowsArray[i] : (i + 1);
         
         let otHours = (colOtHours > -1 ? row[colOtHours] : '').toString().trim();

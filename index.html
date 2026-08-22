@@ -4782,15 +4782,30 @@ function renderNccTrip() {
         if (filterStatus === 'ncc_off' && !isNccOff) return;
         if (filterStatus === 'phat' && !isPhat) return;
         let _km = 0;
-        if (row.kmDiff) {
-            let rawNum = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.kmDiff) : parseInt(row.kmDiff);
-            if (!isNaN(rawNum) && rawNum > 0) _km = rawNum;
+        if (row.kmDiff !== undefined && row.kmDiff !== null && String(row.kmDiff).trim() !== '') {
+            let diffVal = parseFloat(String(row.kmDiff).replace(/[^\d.]/g, ''));
+            if (!isNaN(diffVal) && diffVal > 0) _km = diffVal;
         }
-        if (_km === 0 && row.kmStart && row.kmEnd) {
-            let s = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.kmStart) : parseInt(row.kmStart);
-            let e = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.kmEnd) : parseInt(row.kmEnd);
-            if (!isNaN(s) && !isNaN(e) && e > s) _km = e - s;
+        if (_km === 0) {
+            let s = parseFloat(String(row.kmStart || '').replace(/[^\d.]/g, ''));
+            let e = parseFloat(String(row.kmEnd || '').replace(/[^\d.]/g, ''));
+            if (!isNaN(s) && !isNaN(e) && s > 1000 && e >= s) {
+                _km = e - s;
+            } else if (!isNaN(e) && e > 0 && e < 1000) {
+                _km = e;
+            } else if (!isNaN(s) && s > 0 && s < 1000) {
+                _km = s;
+            }
         }
+
+
+
+
+
+
+
+
+
         let _cost = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.totalCost) : Number(String(row.totalCost || '0').replace(/[^\d\.-]/g, '')); 
         let isKhongChay = (_km === 0 && _cost > 0);
         if (filterStatus === 'khong_chay' && !isKhongChay) return;

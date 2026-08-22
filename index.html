@@ -5244,6 +5244,20 @@ async function loadLastmileData() {
       showToast('success', 'Đã gỡ đối soát chuyến ' + tripCode);
   };
 
+  
+  window.toggleVirtualTrip = function(tripCode, isChecked) {
+      if (!tripCode) return;
+      try {
+          var virtuals = JSON.parse(localStorage.getItem('GHN_VIRTUAL_TRIPS') || '{}');
+          if (isChecked) virtuals[tripCode] = true;
+          else delete virtuals[tripCode];
+          localStorage.setItem('GHN_VIRTUAL_TRIPS', JSON.stringify(virtuals));
+          showToast('success', (isChecked ? 'Đã đánh dấu chuyến ảo: ' : 'Đã bỏ chuyến ảo: ') + tripCode);
+      } catch(e) {
+          console.error('Error saving virtual trip:', e);
+      }
+  };
+
   function renderLastmile() {
     console.log('🎨 renderLastmile called, isLoaded=' + isLastmileLoaded + ', data=' + lastmileData.length);
     var container = document.getElementById('lastmileContainer');
@@ -5262,6 +5276,8 @@ async function loadLastmileData() {
     
     var matchedTripCodes = new Set();
       var manualTripCodes = new Set();
+      var virtualTrips = {};
+      try { virtualTrips = JSON.parse(localStorage.getItem('GHN_VIRTUAL_TRIPS') || '{}'); } catch(e){}
       var tripNccMap = new Map();
       var tripToNccIndex = new Map();
     if (typeof nccTripData !== 'undefined') {
@@ -5365,7 +5381,7 @@ async function loadLastmileData() {
         ? 'SĐT <span style="font-size:11px; color:var(--success);" title="Đã mở khóa">🔓</span>' 
         : 'SĐT <span onclick="unlockPhoneColumn()" style="cursor:pointer; font-size:11px; color:#fbbf24;" title="Nhấn để nhập mật khẩu xem SĐT">🔒</span>';
 
-    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:110px">' + sdtHeader + '</th><th style="min-width:200px;">Tuyến đường</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
+    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:110px">' + sdtHeader + '</th><th style="min-width:200px;">Tuyến đường</th><th style="width:80px; text-align:center;">Chuyến ảo</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
     html += '</tr></thead><tbody>';
     
     for (var m = 0; m < filtered.length; m++) {
@@ -5391,6 +5407,8 @@ async function loadLastmileData() {
             html += '<td style="font-family:monospace; font-weight:500; cursor:pointer;" onclick="unlockPhoneColumn()" title="Nhấn để nhập mật khẩu xem SĐT"><span style="color:#94a3b8; font-size:11px;">🔒 ******</span></td>';
         }
         html += '<td style="font-size:12px; max-width:150px; white-space:normal;">' + (r.route ? escapeHtml(r.route) : '<span style="color:var(--text-muted);">—</span>') + '</td>';
+        let isVirtual = r.tripCode && virtualTrips[r.tripCode];
+        html += '<td style="text-align:center;"><input type="checkbox" ' + (isVirtual ? 'checked' : '') + ' onchange="toggleVirtualTrip(\'' + r.tripCode + '\', this.checked)" style="cursor:pointer; width:16px; height:16px;"></td>';
         var isMatched = r.tripCode && matchedTripCodes.has(r.tripCode);
         var isManual = r.tripCode && typeof manualTripCodes !== 'undefined' && manualTripCodes.has(r.tripCode);
         

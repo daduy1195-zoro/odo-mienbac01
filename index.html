@@ -3828,6 +3828,10 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 if (h.includes('cầu đường') || h.includes('giá cầu') || h.includes('phí cầu') || h.includes('cau duong')) colTollFee = ci;
                 if (h.includes('ngày lễ') || h.includes('ngay le') || h.includes('lễ tết')) colHolidayFee = ci;
                 if (h.includes('vượt km') || h.includes('km vượt') || h.includes('phí vượt') || h.includes('vuot km')) colKmOverFee = ci;
+                  if (h.includes('thời gian tăng ca') || h.includes('tg tăng ca') || h.includes('giờ tăng ca')) colOtHours = ci;
+                  if (h.includes('phí tăng ca') || h.includes('tiền tăng ca')) colOtFee = ci;
+                  if (h.includes('đơn giá tăng ca') || h.includes('giá tăng ca')) colOtRate = ci;
+                  if (h.includes('số km phát sinh tăng') || h.includes('km phát sinh tăng') || (h.includes('km') && h.includes('phát sinh'))) colKmOver = ci;
             }
         }
     }
@@ -3858,15 +3862,16 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     if (colKmEnd === -1) colKmEnd = 15;
     if (colKmDiff === -1) colKmDiff = 16;
 
-    if (colOtHours === -1) colOtHours = 9;
-    if (colOtRate === -1) colOtRate = 10;
-    if (colOtFee === -1) colOtFee = 11;
-    if (colKmOverFee === -1) colKmOverFee = 18;
-    if (colMonthlyRate === -1) colMonthlyRate = 19;
+      if (colOtHours === -1) colOtHours = 10;
+      if (colOtRate === -1) colOtRate = 11;
+      if (colOtFee === -1) colOtFee = 12;
+      if (colKmOverFee === -1) colKmOverFee = 17;
+      if (colKmOver === -1) colKmOver = 16;
+      if (colMonthlyRate === -1) colMonthlyRate = 20;
     if (colDailyRate === -1) colDailyRate = 20;
-    if (colTollFee === -1) colTollFee = 21;
-    if (colHolidayFee === -1) colHolidayFee = 22;
-    if (colTotalCost === -1) colTotalCost = 23;
+      if (colTollFee === -1) colTollFee = 18;
+      if (colHolidayFee === -1) colHolidayFee = 19;
+      if (colTotalCost === -1) colTotalCost = 24;
     
     // ★ Fix: nếu colTotalCost trùng với cột khác đã detect, dịch sang cột kế tiếp
     const usedCols = new Set([colOtHours, colOtRate, colOtFee, colKmOverFee, colMonthlyRate, colDailyRate, colTollFee, colHolidayFee]);

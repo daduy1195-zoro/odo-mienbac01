@@ -1,35 +1,45 @@
-const fs = require('fs');
+ï»¿const fs = require('fs');
 let code = fs.readFileSync('C:\\Users\\MSI\\Desktop\\AI\\Odo\\index.html', 'utf8');
 
-// 1. Inject fetching raw archive ODO into empRowsArrays
-const searchInject = /fetchSheetByNameJSONP\(CONFIG\.SHEET_MASTER_ID, 'CTV'\)\.catch\(e => \[\]\)\s*\]\);/;
-const replaceInject = \etchSheetByNameJSONP(CONFIG.SHEET_MASTER_ID, 'CTV').catch(e => [])
-                ]);
+const s3 = `      var matchedTripCodes = new Set();
+      var manualTripCodes = new Set();
+      var tripNccMap = new Map();
+      if (typeof nccTripData !== 'undefined') {
+          for (var n = 0; n < nccTripData.length; n++) {
+              if (nccTripData[n].ghnTripCode) {
+                  const cUp = String(nccTripData[n].ghnTripCode).toUpperCase();
+                  if (!['OFF', 'GHN OFF', 'GHN_OFF', 'NCC OFF', 'NCC_OFF', 'PHáº T', 'PHAT'].includes(cUp)) {
+                      const codes = String(nccTripData[n].ghnTripCode).split('|').map(x => x.trim()).filter(x => x);
+                        codes.forEach(c => {
+                            matchedTripCodes.add(c);
+                            tripNccMap.set(c, nccTripData[n].ncc);
+                            if (nccTripData[n].isManualMatch) manualTripCodes.add(c);
+                        });
+                  }
+              }
+          }
+      }`;
 
-                // ?? B? SUNG: Luôn kéo d? li?u ODO t? Archive (public) phòng h? HTMLView b? CORS
-                if (CONFIG.ARCHIVE_SHEET_ID) {
-                    try {
-                        const gid1 = CONFIG.ARCHIVE_GIDS['odo_data'];
-                        const gid2 = CONFIG.ARCHIVE_GIDS['odo_data_2'];
-                        if (gid1) empRowsArrays.push(await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid1));
-                        if (gid2) empRowsArrays.push(await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid2));
-                    } catch(e) { console.warn('L?i b? sung archive:', e); }
-                }\;
-code = code.replace(searchInject, replaceInject);
+const r3 = `      var matchedTripCodes = new Set();
+      var manualTripCodes = new Set();
+      var tripNccMap = new Map();
+      var tripToNccIndex = new Map();
+      if (typeof nccTripData !== 'undefined') {
+          for (var n = 0; n < nccTripData.length; n++) {
+              if (nccTripData[n].ghnTripCode) {
+                  const cUp = String(nccTripData[n].ghnTripCode).toUpperCase();
+                  if (!['OFF', 'GHN OFF', 'GHN_OFF', 'NCC OFF', 'NCC_OFF', 'PHáº T', 'PHAT'].includes(cUp)) {
+                      const codes = String(nccTripData[n].ghnTripCode).split('|').map(x => x.trim()).filter(x => x);
+                        codes.forEach(c => {
+                            matchedTripCodes.add(c);
+                            tripNccMap.set(c, nccTripData[n].ncc);
+                            tripToNccIndex.set(c, n);
+                            if (nccTripData[n].isManualMatch) manualTripCodes.add(c);
+                        });
+                  }
+              }
+          }
+      }`;
 
-// 2. Remove old archivedOdo fetches
-const searchOldFetch = /const archivedOdo1[\s\S]*?const newOdoToArchive = \[\];/;
-const replaceOldFetch = "const dedupeSet = new Set();";
-code = code.replace(searchOldFetch, replaceOldFetch);
-
-// 3. Replace push logic with dedupe
-const searchPush = /\/\/ Luôn luu d? li?u dã làm ODO \([\s\S]*?saveToArchive\('odo_data', newOdoToArchive\);/;
-const replacePush = \// Luôn luu d? li?u dã làm ODO
-            if (!dedupeSet.has(entry.id)) {
-                dedupeSet.add(entry.id);
-                employeeData.push(entry);
-            }
-        }\;
-code = code.replace(searchPush, replacePush);
-
-fs.writeFileSync('C:\\Users\\MSI\\Desktop\\AI\\Odo\\index.html', code, 'utf8');
+code = code.replace(s3, r3);
+fs.writeFileSync('C:\\Users\\MSI\\Desktop\\AI\\Odo\\index.html', code);

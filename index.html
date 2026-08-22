@@ -2816,7 +2816,8 @@ function renderRanking(filtered, month, whFilter) {
             let actualFirstIdx = -1;
             for (let i = 0; i < allDatesInCycle.length; i++) {
                 const d = allDatesInCycle[i];
-                if (e.days.has(d) || (e.workedDays && e.workedDays.has(d))) {
+                // Chỉ lấy ngày đầu tiên có trong Lastmile, không lấy ngày báo ODO sớm (theo yêu cầu user)
+                if (e.workedDays && e.workedDays.has(d)) {
                     actualFirstIdx = i;
                     break;
                 }
@@ -2825,8 +2826,8 @@ function renderRanking(filtered, month, whFilter) {
             if (e.startDate) {
                 const sIdx = allDatesInCycle.indexOf(e.startDate);
                 if (sIdx !== -1) {
-                    // Nếu có ngày bắt đầu, nhưng thực tế họ làm trước đó thì dùng ngày thực tế
-                    firstActiveIndex = actualFirstIdx !== -1 ? Math.min(sIdx, actualFirstIdx) : sIdx;
+                    // Ưu tiên sử dụng startDate (ngày vào làm) để không tính quá khứ
+                    firstActiveIndex = sIdx;
                 }
             } else {
                 firstActiveIndex = actualFirstIdx;
@@ -2838,7 +2839,11 @@ function renderRanking(filtered, month, whFilter) {
                         myExpectedDays--;
                         return;
                     }
-                    if (syncedDates.has(d) && !e.workedDays.has(d)) {
+                    if (!syncedDates.has(d)) {
+                        // Chưa có dữ liệu hệ thống (vd: ngày hôm nay), không tính vào ngày kỳ vọng
+                        myExpectedDays--;
+                    } else if (!e.workedDays.has(d)) {
+                        // Ngày nghỉ (có dữ liệu hệ thống nhưng không có chuyến đi)
                         myExpectedDays--;
                     }
                 });
@@ -2907,7 +2912,7 @@ function renderRanking(filtered, month, whFilter) {
         });
 
         // Lọc bỏ những nhân viên hỗ trợ nếu họ không phát sinh ngày công nào trong tháng
-        const finalEmpList = empList.filter(e => e && !(e.isSupport && e.myExpectedDays === 0));
+        const finalEmpList = empList.filter(e => e && !(e.isSupport && e.myExpectedDays === 0) && !e.isResigned);
 
         // Sắp xếp theo % giảm dần
         finalEmpList.sort((a, b) => b.rate - a.rate || b.uniqueDays - a.uniqueDays);

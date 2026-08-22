@@ -1,36 +1,21 @@
 ﻿const fs = require('fs');
-let code = fs.readFileSync('C:\\\\Users\\\\MSI\\\\Desktop\\\\AI\\\\Odo\\\\index.html', 'utf8');
-const lines = code.split('\n');
+let code = fs.readFileSync('C:\\Users\\MSI\\Desktop\\AI\\Odo\\index.html', 'utf8');
 
-const start = lines.findIndex(l => l.includes('let matchedTripCode = ghnTripMap.get(matchKey) || null;'));
-const end = lines.findIndex((l, i) => i > start && l.includes('const sourceRow = sourceRowsArray ? sourceRowsArray[i] : (i + 1);'));
+const s1 = `        let _km = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.kmOver) : Number(String(row.kmOver || '0').replace(/[^\\d\\.-]/g, '')); let _cost = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.totalCost) : Number(String(row.totalCost || '0').replace(/[^\\d\\.-]/g, '')); let isKhongChay = (_km === 0 && _cost > 0);\n        if (filterStatus === 'khong_chay' && !isKhongChay) return;`;
 
-if (start !== -1 && end !== -1) {
-    const replace =           let matchedTripCode = ghnTripMap.get(matchKey) || null;
-          
-          const routeLower = (route || '').toLowerCase();
-          const kmStartLower = kmStart.toLowerCase();
-          const kmEndLower = kmEnd.toLowerCase();
-          const kmDiffLower = kmDiff.toLowerCase();
-          
-          const isOffStr = (str) => {
-              return str === 'off' || str.includes('ncc off') || str.includes('nghỉ') || str === 'nghi';
-          };
-          
-          if (isOffByPlate || isOffStr(routeLower) || routeLower.includes(' off ') || routeLower.startsWith('off ') || isOffStr(kmStartLower) || isOffStr(kmEndLower) || isOffStr(kmDiffLower)) {
-              if (routeLower.includes('ghn off')) {
-                  matchedTripCode = 'GHN OFF';
-              } else {
-                  matchedTripCode = 'NCC OFF';
-              }
-          } else if (!matchedTripCode) {
-              if (routeLower.includes('phát') || routeLower.includes('phat')) {
-                  matchedTripCode = 'Phát';
-              }
-          }
-;
-    lines.splice(start, end - start, replace);
-}
+const r1 = `        let _km = 0;
+        if (row.kmDiff) {
+            let rawNum = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.kmDiff) : parseInt(row.kmDiff);
+            if (!isNaN(rawNum) && rawNum > 0) _km = rawNum;
+        }
+        if (_km === 0 && row.kmStart && row.kmEnd) {
+            let s = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.kmStart) : parseInt(row.kmStart);
+            let e = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.kmEnd) : parseInt(row.kmEnd);
+            if (!isNaN(s) && !isNaN(e) && e > s) _km = e - s;
+        }
+        let _cost = typeof parseVietnameseNumber === 'function' ? parseVietnameseNumber(row.totalCost) : Number(String(row.totalCost || '0').replace(/[^\\d\\.-]/g, '')); 
+        let isKhongChay = (_km === 0 && _cost > 0);
+        if (filterStatus === 'khong_chay' && !isKhongChay) return;`;
 
-fs.writeFileSync('C:\\\\Users\\\\MSI\\\\Desktop\\\\AI\\\\Odo\\\\index.html', lines.join('\n'));
-console.log('Replaced:', lines.join('\n').includes('kmStartLower'));
+code = code.replace(s1, r1);
+fs.writeFileSync('C:\\Users\\MSI\\Desktop\\AI\\Odo\\index.html', code);

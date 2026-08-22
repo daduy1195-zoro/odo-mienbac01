@@ -1472,7 +1472,7 @@ function renderNcc(pivotData) {
             
             carRows += `
                 <tr>
-                    <td style="padding-left: 32px; font-family: monospace;">${escapeHtml(bienSo)}</td>
+                    <td style="padding-left: 32px; font-family:Calibri, sans-serif;">${escapeHtml(bienSo)}</td>
                     <td style="text-align:right;color:#fbbf24;font-weight:600;">${Math.round(data.chiPhi).toLocaleString('vi-VN')}</td>
                     <td style="text-align:right">${Math.round(data.kmPhatSinh).toLocaleString('vi-VN')}</td>
                     <td style="text-align:right">${Math.round(data.phiVuotKm).toLocaleString('vi-VN')}</td>
@@ -2232,7 +2232,7 @@ async function loadAllData() {
                     <p>Không thể tải dữ liệu. Hãy kiểm tra:<br>
                     1. Kết nối internet<br>
                     2. File Google Sheet đã mở quyền "Bất kỳ ai có link"<br><br>
-                    <small style="color:var(--text-muted);">Vui lòng thử lại sau hoặc liên hệ quản trị viên.</small><br><br><small style="color:red; font-family:monospace;">Chi tiết lỗi: ${err.message}</small></p>
+                    <small style="color:var(--text-muted);">Vui lòng thử lại sau hoặc liên hệ quản trị viên.</small><br><br><small style="color:red; font-family:Calibri, sans-serif;">Chi tiết lỗi: ${err.message}</small></p>
                 </div>`;
         }
     }
@@ -2656,14 +2656,14 @@ function renderDailyTable(filtered) {
             <td style="white-space:nowrap; font-weight:600;">${escapeHtml(e.dateStr)}</td>
             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
-            <td style="font-family:monospace; font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
+            <td style="font-family:Calibri, sans-serif; font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
             <td style="font-size:12px;">${escapeHtml(e.supplier)}</td>
             <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
-            <td style="font-family:monospace;white-space:nowrap;">${escapeHtml(e.hourStart || '—')}</td>
-            <td style="font-family:monospace;white-space:nowrap;">${escapeHtml(e.hourEnd || '—')}</td>
+            <td style="font-family:Calibri, sans-serif;white-space:nowrap;">${escapeHtml(e.hourStart || '—')}</td>
+            <td style="font-family:Calibri, sans-serif;white-space:nowrap;">${escapeHtml(e.hourEnd || '—')}</td>
             <td style="font-weight:700;color:${otColor};text-align:center;">${escapeHtml(otDisplay)}</td>
-            <td style="font-family:monospace;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
-            <td style="font-family:monospace;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
+            <td style="font-family:Calibri, sans-serif;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
+            <td style="font-family:Calibri, sans-serif;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
             <td style="font-weight:600; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + escapeHtml(String(kmDisplay)) + ' (gõ sai!)' : escapeHtml(String(kmDisplay))}</td>
             <td style="font-size:12px; min-width: 250px; white-space: normal;">${routeHtml}</td>
             <td>${tripHtml}</td>
@@ -2960,7 +2960,7 @@ function renderRanking(filtered, month, whFilter) {
                             <td>${i + 1}</td>
                             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
                             <td>${e.code || '—'}</td>
-                            <td style="font-family:monospace;font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
+                            <td style="font-family:Calibri, sans-serif;font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
                             <td style="text-align:center;">${e.uniqueDays}/${e.myExpectedDays}</td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:8px;">
@@ -3119,13 +3119,13 @@ function renderFraudWarnings(filtered) {
             <td style="white-space:nowrap;font-weight:600;">${escapeHtml(e.dateStr)}</td>
             <td style="font-weight:600;">${escapeHtml(e.name)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
-            <td style="font-family:monospace;font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
+            <td style="font-family:Calibri, sans-serif;font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
             <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
-            <td style="font-family:monospace;">${escapeHtml(e.hourStart || '—')}</td>
-            <td style="font-family:monospace;">${escapeHtml(e.hourEnd || '—')}</td>
+            <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.hourStart || '—')}</td>
+            <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.hourEnd || '—')}</td>
             <td style="font-weight:700;color:${otColor};">${escapeHtml(otDisplay)}</td>
-            <td style="font-family:monospace;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
-            <td style="font-family:monospace;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
+            <td style="font-family:Calibri, sans-serif;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
+            <td style="font-family:Calibri, sans-serif;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" style="color:var(--text);text-decoration:underline;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
             <td style="font-weight:700;color:${f.km < 0 || f.km > 200 ? 'var(--danger)' : 'var(--success)'};">${escapeHtml(String(kmDisplay))}</td>
             <td>${reasonBadges}</td>
             <td>${editLink}</td>
@@ -3317,10 +3317,10 @@ function renderTypoWarnings(filtered) {
                 <td style="white-space:nowrap;font-weight:600;">${e.dateStr}</td>
                 <td style="font-weight:600;">${escapeHtml(e.name)}</td>
                 <td><span class="badge badge-info">${e.code || '—'}</span></td>
-                <td style="font-family:monospace;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
+                <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
                 <td>${escapeHtml(e.shortWH)}</td>
-                <td style="font-family:monospace;">${e.kmStart}</td>
-                <td style="font-family:monospace;">${e.kmEnd}</td>
+                <td style="font-family:Calibri, sans-serif;">${e.kmStart}</td>
+                <td style="font-family:Calibri, sans-serif;">${e.kmEnd}</td>
                 <td style="font-weight:700;color:var(--danger);">⚠️ ${km.toLocaleString()}</td>
                 <td>${editLink}</td>
             </tr>`;
@@ -5026,10 +5026,10 @@ function renderNccTrip() {
                     return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
                 })() : escapeHtml(r.dateStr)}</td>
                 <td>${escapeHtml(r.ncc)}</td>
-                <td style="font-family:monospace; font-weight:700; color:#f0ad4e;">${escapeHtml(formatPlate(r.plate))}</td>
+                <td style="font-family:Calibri, sans-serif; font-weight:700; color:#f0ad4e;">${escapeHtml(formatPlate(r.plate))}</td>
                 <td><span class="badge" style="${whColor}">${escapeHtml(shortWH)}</span></td>
                 <td style="font-size:11px; max-width:120px; width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
-                <td style="font-family:monospace; font-weight:600;">${(() => {
+                <td style="font-family:Calibri, sans-serif; font-weight:600;">${(() => {
                     let finalDiff = null;
                     if (r.kmDiff !== undefined && r.kmDiff !== null && String(r.kmDiff).trim() !== '') {
                         let diffVal = parseFloat(String(r.kmDiff).replace(/[^\d.]/g, ''));
@@ -5055,14 +5055,14 @@ function renderNccTrip() {
                     if (color) return `<span style="color:${color};">${finalDiff}</span>`;
                     return finalDiff;
                 })()}</td>
-                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.kmOverFee)}</td>
-                <td style="font-family:monospace; white-space:nowrap;">${(() => {
+                <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.kmOverFee)}</td>
+                <td style="font-family:Calibri, sans-serif; white-space:nowrap;">${(() => {
                     const hs = formatTimeHM(r.hourStart);
                     const he = formatTimeHM(r.hourEnd);
                     if (!hs && !he) return '-';
                     return (hs || '-') + ' - ' + (he || '-');
                 })()}</td>
-                <td style="font-family:monospace;">${(() => {
+                <td style="font-family:Calibri, sans-serif;">${(() => {
                     // Kiểm tra otHours có giá trị thực không (loại bỏ 0, 0.00, 0,00)
                     const otVal = r.otHours ? String(r.otHours).trim() : '';
                     const otNum = otVal ? parseFloat(otVal.replace(',', '.')) : 0;
@@ -5086,12 +5086,12 @@ function renderNccTrip() {
                     }
                     return '-';
                 })()}</td>
-                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.otFee)}</td>
-                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.monthlyRate)}</td>
-                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.dailyRate)}</td>
-                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.tollFee)}</td>
-                <td style="text-align:right; font-family:monospace;">${formatMoneyCell(r.holidayFee)}</td>
-                <td style="text-align:right; font-family:monospace; font-weight:bold; color:#fbbf24;">${formatMoneyCell(r.totalCost)}</td>
+                <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.otFee)}</td>
+                <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.monthlyRate)}</td>
+                <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.dailyRate)}</td>
+                <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.tollFee)}</td>
+                <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.holidayFee)}</td>
+                <td style="text-align:right; font-family:Calibri, sans-serif; font-weight:bold; color:#fbbf24;">${formatMoneyCell(r.totalCost)}</td>
                 <td>${ghnHtml}</td>
                 <td style="font-weight:bold;">${statusHtml}</td>
                 <td><input type="text" class="form-control" style="font-size:12px; height:26px; padding:2px 6px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width:150px;" placeholder="Ghi chú..." onchange="updateNccTripNote(${r.originalIndex}, this.value)" value="${escapeHtml(r.note || '')}"></td>
@@ -5506,11 +5506,11 @@ async function loadLastmileData() {
         html += '<tr>';
         html += '<td>' + (m+1) + '</td>';
         html += '<td style="font-weight:600; white-space:nowrap;">' + (r.dateStr || '') + '</td>';
-        html += '<td style="font-family:monospace; font-size:13px; font-weight:bold;">' + (r.tripCode ? '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + r.tripCode + '" target="_blank" style="color:var(--success);text-decoration:underline;">' + r.tripCode + '</a>' : '') + '</td>';
-        html += '<td style="font-family:monospace; font-weight:700; color:#f0ad4e;">' + (typeof formatPlate === 'function' ? formatPlate(r.plate || '') : (r.plate || '')) + '</td>';
+        html += '<td style="font-family:Calibri, sans-serif; font-size:13px; font-weight:bold;">' + (r.tripCode ? '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + r.tripCode + '" target="_blank" style="color:var(--success);text-decoration:underline;">' + r.tripCode + '</a>' : '') + '</td>';
+        html += '<td style="font-family:Calibri, sans-serif; font-weight:700; color:#f0ad4e;">' + (typeof formatPlate === 'function' ? formatPlate(r.plate || '') : (r.plate || '')) + '</td>';
         html += '<td><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;' + whColor + '">' + (r.hubName || 'Khác') + '</span></td>';
-        html += '<td style="font-family:monospace; font-size:12px; color:var(--text-muted);">' + (r.startTime || '') + '</td>';
-        html += '<td style="font-family:monospace; font-size:12px; color:var(--text-muted);">' + (r.endTime || '') + '</td>';
+        html += '<td style="font-family:Calibri, sans-serif; font-size:12px; color:var(--text-muted);">' + (r.startTime || '') + '</td>';
+        html += '<td style="font-family:Calibri, sans-serif; font-size:12px; color:var(--text-muted);">' + (r.endTime || '') + '</td>';
         html += '<td style="font-weight:500;">' + (r.createdByName || '') + '</td>';
         html += '<td style="font-weight:700; color:var(--success); text-align:center;">' + (r.pickCount || 0) + '</td>';
         html += '<td style="font-weight:700; color:var(--primary); text-align:center;">' + (r.deliverCount || 0) + '</td>';
@@ -5518,9 +5518,9 @@ async function loadLastmileData() {
         html += '<td style="font-weight:600;">' + (r.driverName || '') + '</td>';
         
         if (_phoneUnlocked) {
-            html += '<td style="font-family:monospace; font-weight:500;">' + (r.driverPhone || '') + '</td>';
+            html += '<td style="font-family:Calibri, sans-serif; font-weight:500;">' + (r.driverPhone || '') + '</td>';
         } else {
-            html += '<td style="font-family:monospace; font-weight:500; cursor:pointer;" onclick="unlockPhoneColumn()" title="Nhấn để nhập mật khẩu xem SĐT"><span style="color:#94a3b8; font-size:11px;">🔒 ******</span></td>';
+            html += '<td style="font-family:Calibri, sans-serif; font-weight:500; cursor:pointer;" onclick="unlockPhoneColumn()" title="Nhấn để nhập mật khẩu xem SĐT"><span style="color:#94a3b8; font-size:11px;">🔒 ******</span></td>';
         }
         html += '<td style="font-size:12px; max-width:150px; white-space:normal;">' + (r.route ? escapeHtml(r.route) : '<span style="color:var(--text-muted);">—</span>') + '</td>';
         let isVirtual = r.tripCode && virtualTrips[r.tripCode];

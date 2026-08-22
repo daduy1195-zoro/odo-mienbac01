@@ -619,8 +619,7 @@
                     <option value="">Tất cả trạng thái</option>
                     <option value="khop">✅ Khớp</option>
                     <option value="khop_tay">📝 Khớp tay</option>
-                    <option value=\"da_chuyen\">🔄 Đa chuyến</option>
-                    <option value=\"da_chuyen\">🔄 Đa chuyến</option>
+                    <option value="da_chuyen">🔄 Đa chuyến</option>
                     <option value="thieu">⚠️ Thiếu mã</option>
                     <option value="ghn_off">⏸️ GHN OFF</option>
                     <option value="ncc_off">⏸️ NCC OFF</option>
@@ -4254,8 +4253,9 @@ async function loadNccTripData() {
                 if (tripCode) {
                     const normPlate = normalizeStr(e.plate);
                     const key = `${normPlate}_${e.dateStr}`;
-                    if (!ghnTripMap.has(key)) ghnTripMap.set(key, [tripCode]);
-                        else { let arr = ghnTripMap.get(key); if (!arr.includes(tripCode)) arr.push(tripCode); }
+                    const codesToAdd = Array.isArray(tripCode) ? tripCode : [tripCode];
+                    if (!ghnTripMap.has(key)) ghnTripMap.set(key, [...codesToAdd]);
+                    else { let arr = ghnTripMap.get(key); codesToAdd.forEach(c => { if (!arr.includes(c)) arr.push(c); }); }
                 }
             });
         }
@@ -4695,8 +4695,9 @@ function rematchNccTrips() {
             if (tripCode) {
                 const normPlate = normalizeStr(e.plate);
                 const key = `${normPlate}_${e.dateStr}`;
-                if (!ghnTripMap.has(key)) ghnTripMap.set(key, [tripCode]);
-                        else { let arr = ghnTripMap.get(key); if (!arr.includes(tripCode)) arr.push(tripCode); }
+                const codesToAdd = Array.isArray(tripCode) ? tripCode : [tripCode];
+                    if (!ghnTripMap.has(key)) ghnTripMap.set(key, [...codesToAdd]);
+                    else { let arr = ghnTripMap.get(key); codesToAdd.forEach(c => { if (!arr.includes(c)) arr.push(c); }); }
             }
         });
     }
@@ -4832,7 +4833,7 @@ function renderNccTrip() {
     html += '<option value="" style="color: #000;">Trạng thái (Tất cả)</option>';
     html += '<option value="khop" style="color: #000;" ' + (filterStatus === 'khop' ? 'selected' : '') + '>✅ Khớp</option>';
     html += '<option value="khop_tay" style="color: #000;" ' + (filterStatus === 'khop_tay' ? 'selected' : '') + '>📝 Khớp tay</option>';
-    html += '<option value=\"da_chuyen\" style=\"color: #000;\" ' + (filterStatus === 'da_chuyen' ? 'selected' : '') + '>🔄 Đa chuyến</option>';
+    html += '<option value="da_chuyen" style=\"color: #000;\" ' + (filterStatus === 'da_chuyen' ? 'selected' : '') + '>🔄 Đa chuyến</option>';
     html += '<option value="thieu" style="color: #000;" ' + (filterStatus === 'thieu' ? 'selected' : '') + '>⚠️ Thiếu</option>';
     html += '<option value="ghn_off" style="color: #000;" ' + (filterStatus === 'ghn_off' ? 'selected' : '') + '>⏸️ GHN OFF</option>';
     html += '<option value="ncc_off" style="color: #000;" ' + (filterStatus === 'ncc_off' ? 'selected' : '') + '>⏸️ NCC OFF</option>';

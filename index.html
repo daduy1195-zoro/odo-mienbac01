@@ -1589,20 +1589,13 @@ function renderNcc(pivotData) {
         
         let ratio = diff / margin; 
         
-        let r, g, b;
         if (ratio > 0) {
-            // White to Red (#ef4444)
-            r = Math.round(255 + (239 - 255) * ratio);
-            g = Math.round(255 + (68 - 255) * ratio);
-            b = Math.round(255 + (68 - 255) * ratio);
+            let pct = Math.round(ratio * 100);
+            return 'color-mix(in srgb, #ef4444 ' + pct + '%, var(--text-primary))';
         } else {
-            // White to Green (#10b981)
-            let negRatio = -ratio; 
-            r = Math.round(255 + (16 - 255) * negRatio);
-            g = Math.round(255 + (185 - 255) * negRatio);
-            b = Math.round(255 + (129 - 255) * negRatio);
+            let pct = Math.round(-ratio * 100);
+            return 'color-mix(in srgb, #10b981 ' + pct + '%, var(--text-primary))';
         }
-        return 'rgb(' + r + ', ' + g + ', ' + b + ')';
     }
 
     // Thêm dòng tổng vào HTML

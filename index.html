@@ -4467,6 +4467,33 @@ async function loadNccTripData() {
         
         for (const sheet of CONFIG.NCC_TRIP_SHEETS) {
             try {
+                if (sheet.ncc === 'ALL') {
+                    console.log(`⏩ Bỏ qua lấy tab name cho ALL sheet, tải trực tiếp bằng GID`);
+                    const rawData = await fetchSheetJSONP(sheet.id, sheet.gid);
+                    const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, '', sheet.gid);
+                    const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
+                    parsed.forEach(record => {
+                        const normPlate = normalizeStr(record.plate);
+                        const existingIdx = allNccData.findIndex(r => {
+                            if (r.dateStr !== record.dateStr) return false;
+                            if (r.ncc !== record.ncc) return false;
+                            const rTab = normalizeStr(r.tabName);
+                            const normTab = normalizeStr(record.tabName);
+                            if (normTab && rTab && (normTab === rTab || normTab.includes(rTab) || rTab.includes(normTab))) return true;
+                            if (normalizeStr(r.plate) === normPlate) return true;
+                            return false;
+                        });
+                        if (existingIdx !== -1) {
+                            allNccData[existingIdx] = record;
+                        } else {
+                            allNccData.push(record);
+                        }
+                    });
+                    totalTabs++;
+                    totalRows += parsed.length;
+                    continue;
+                }
+
                 // ★ Bước 1: Lấy danh sách tên tab + GID
                 { const _s = container.querySelector('span'); if (_s) _s.textContent = `Đang quét tabs NCC: ${sheet.ncc}...`; }
                 const tabInfos = await getSheetTabNames(sheet.id);

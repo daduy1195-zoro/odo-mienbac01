@@ -1491,12 +1491,12 @@ function renderNcc(pivotData) {
         <thead>
             <tr>
                 <th>Kho / Biển số xe</th>
-                <th style="text-align:right;color:#fbbf24;">Tổng chi phí<br>(trước thuế)</th>
-                <th style="text-align:right;color:#fbbf24;">Số KM phát sinh</th>
-                <th style="text-align:right;color:#fbbf24;">Phí vượt KM</th>
-                <th style="text-align:right;color:#fbbf24;">TG tăng ca<br>(h)</th>
-                <th style="text-align:right;color:#fbbf24;">Phí tăng ca</th>
-                <th style="text-align:right;color:#fbbf24;">Phí cầu đường</th>
+                <th style="text-align:right;color:var(--accent);">Tổng chi phí<br>(trước thuế)</th>
+                <th style="text-align:right;color:var(--accent);">Số KM phát sinh</th>
+                <th style="text-align:right;color:var(--accent);">Phí vượt KM</th>
+                <th style="text-align:right;color:var(--accent);">TG tăng ca<br>(h)</th>
+                <th style="text-align:right;color:var(--accent);">Phí tăng ca</th>
+                <th style="text-align:right;color:var(--accent);">Phí cầu đường</th>
             </tr>
         </thead>
         <tbody>`;
@@ -1525,10 +1525,13 @@ function renderNcc(pivotData) {
 
     function getColor(value, min, max) {
         if (!value || value <= 0) return 'var(--text-muted)';
-        if (max <= min) return '#fcd34d'; // yellow-300
+        if (max <= min) return 'var(--text-primary)';
         let ratio = (value - min) / (max - min);
-        // From Yellow (#fcd34d: 252, 211, 77) to Red (#ef4444: 239, 68, 68)
-        const r1 = 252, g1 = 211, b1 = 77;
+        // From Light Blue (#bae6fd: 186, 230, 253) to Pink/Red (#f43f5e: 244, 63, 94)
+        // Or just from White (#f8fafc: 248, 250, 252) to Red (#ef4444: 239, 68, 68)
+        // Let's use Cyan/Teal to Red since they like Teal (accent is #14b8a6)
+        // Accent: 20, 184, 166. Red: 239, 68, 68
+        const r1 = 20, g1 = 184, b1 = 166;
         const r2 = 239, g2 = 68, b2 = 68;
         const r = Math.round(r1 + (r2 - r1) * ratio);
         const g = Math.round(g1 + (g2 - g1) * ratio);
@@ -1576,12 +1579,12 @@ function renderNcc(pivotData) {
         html += `
             <tr style="background: rgba(20, 184, 166, 0.15); border-bottom: 2px solid rgba(20, 184, 166, 0.3);">
                 <td style="font-weight: bold; color: var(--accent); font-size: 14px;">${escapeHtml(kho)}</td>
-                <td style="text-align:right; font-weight: bold; color:#f59e0b; font-size: 14px;">${Math.round(subCost).toLocaleString('vi-VN')}</td>
-                <td style="text-align:right; font-weight: bold; color:#fbbf24;">${Math.round(subKm).toLocaleString('vi-VN')}</td>
-                <td style="text-align:right; font-weight: bold; color:#fbbf24;">${Math.round(subPhiVuot).toLocaleString('vi-VN')}</td>
-                <td style="text-align:right; font-weight: bold; color:#fbbf24;">${Number(subTgOt.toFixed(2)).toLocaleString('vi-VN')}</td>
-                <td style="text-align:right; font-weight: bold; color:#fbbf24;">${Math.round(subPhiOt).toLocaleString('vi-VN')}</td>
-                <td style="text-align:right; font-weight: bold; color:#fbbf24;">${Math.round(subPhiCau).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:var(--text-primary); font-size: 14px;">${Math.round(subCost).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:var(--text-primary);">${Math.round(subKm).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:var(--text-primary);">${Math.round(subPhiVuot).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:var(--text-primary);">${Number(subTgOt.toFixed(2)).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:var(--text-primary);">${Math.round(subPhiOt).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:var(--text-primary);">${Math.round(subPhiCau).toLocaleString('vi-VN')}</td>
             </tr>
             ${carRows}
         `;
@@ -5075,7 +5078,7 @@ function renderNccTrip() {
     html += '<th style="text-align:right">Đơn giá ngày</th>';
     html += '<th style="text-align:right">Phí cầu đường</th>';
     html += '<th style="text-align:right">Phí ngày lễ</th>';
-    html += '<th style="text-align:right; color:#fbbf24;">Tổng chi phí</th>';
+    html += '<th style="text-align:right; color:var(--accent);">Tổng chi phí</th>';
     html += '<th>Mã chuyến GHN</th>';
     html += '<th>';
     html += '<select onchange="document.getElementById(\'filterNccStatus\').value = this.value; renderNccTrip();" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer; outline: none;">';
@@ -5224,7 +5227,7 @@ function renderNccTrip() {
                 <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.dailyRate)}</td>
                 <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.tollFee)}</td>
                 <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.holidayFee)}</td>
-                <td style="text-align:right; font-family:Calibri, sans-serif; font-weight:bold; color:#fbbf24;">${formatMoneyCell(r.totalCost)}</td>
+                <td style="text-align:right; font-family:Calibri, sans-serif; font-weight:bold; color:var(--text-primary);">${formatMoneyCell(r.totalCost)}</td>
                 <td>${ghnHtml}</td>
                 <td style="font-weight:bold;">${statusHtml}</td>
                 <td><input type="text" class="form-control" style="font-size:12px; height:26px; padding:2px 6px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width:150px;" placeholder="Ghi chú..." onchange="updateNccTripNote(${r.originalIndex}, this.value)" value="${escapeHtml(r.note || '')}"></td>

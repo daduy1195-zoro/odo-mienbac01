@@ -4291,7 +4291,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             sheetId: sheetId || '',
             tabName: tabName || '',
             tabGid: tabGid || '',
-            sourceRow
+            sourceRow,
+            isAllSheet: (nccName === 'ALL')
         });
     }
     return results;
@@ -4359,19 +4360,24 @@ async function loadNccTripData() {
             console.warn('⚠️ Archive NCC Trips load failed:', e.message);
         }
         
-        // Deduplicate archive items by keeping longest route
-        const seenNccMap = new Map();
-        allNccData = allNccData.filter(r => {
+        // Lọc trùng (Deduplicate) thông minh:
+        // Nếu cùng 1 ngày, 1 xe, 1 NCC mà có dữ liệu từ file ALL và file lẻ -> Chỉ lấy của file ALL, vứt file lẻ.
+        // Giữ lại TẤT CẢ các chuyến của file được chọn (vì 1 xe có thể chạy 2 chuyến/ngày).
+        const groupMap = new Map();
+        allNccData.forEach(r => {
             const key = `${normalizeStr(r.dateStr)}_${normalizeStr(r.plate)}_${normalizeStr(r.ncc)}`;
-            if (!seenNccMap.has(key)) {
-                seenNccMap.set(key, r);
-                return true;
+            if (!groupMap.has(key)) groupMap.set(key, []);
+            groupMap.get(key).push(r);
+        });
+
+        allNccData = [];
+        groupMap.forEach(trips => {
+            const hasAllSheet = trips.some(t => t.isAllSheet);
+            if (hasAllSheet) {
+                allNccData.push(...trips.filter(t => t.isAllSheet));
+            } else {
+                allNccData.push(...trips);
             }
-            const existing = seenNccMap.get(key);
-            if ((r.route || '').length > (existing.route || '').length) {
-                existing.route = r.route;
-            }
-            return false;
         });
 
         allNccData.forEach(r => {

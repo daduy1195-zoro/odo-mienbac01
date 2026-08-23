@@ -5475,6 +5475,7 @@ async function loadLastmileData() {
           else delete virtuals[tripCode];
           localStorage.setItem('GHN_VIRTUAL_TRIPS', JSON.stringify(virtuals));
           showToast('success', (isChecked ? 'Đã đánh dấu chuyến ảo: ' : 'Đã bỏ chuyến ảo: ') + tripCode);
+          if (typeof renderLastmile === 'function') renderLastmile();
       } catch(e) {
           console.error('Error saving virtual trip:', e);
       }
@@ -5556,7 +5557,7 @@ async function loadLastmileData() {
             var isVirtualTrip = row.tripCode && virtualTrips[row.tripCode];
             if (filterStatus === 'khop' && !isMatched) continue;
             if (filterStatus === 'khop_tay' && !isManual) continue;
-            if (filterStatus === 'thieu' && isMatched) continue;
+            if (filterStatus === 'thieu' && (isMatched || isVirtualTrip)) continue;
             if (filterStatus === 'chuyen_ao' && !isVirtualTrip) continue;
             if (filterStatus === 'da_chuyen') { let c = (typeof nccTripData !== 'undefined') ? nccTripData.find(x => x.ghnTripCode && String(x.ghnTripCode).includes(row.tripCode) && String(x.ghnTripCode).includes('|')) : null; if (!c) continue; }
         }
@@ -5651,6 +5652,8 @@ async function loadLastmileData() {
             } else {
                 statusHtml = `<div style="display:flex;align-items:center;justify-content:center;gap:4px;"><span style="color:var(--success);">✅ Đã ĐS</span>${unmatchBtn}</div>`;
             }
+        } else if (isVirtual) {
+            statusHtml = '<span style="color:#a78bfa; font-weight:700;">👻 Chuyến ảo</span>';
         }
         html += '<td style="text-align:center;font-weight:bold;">' + statusHtml + '</td>';        html += '</tr>';
     }

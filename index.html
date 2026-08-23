@@ -1540,10 +1540,15 @@ function renderNcc(pivotData) {
 
     function getStats(arr) {
         const valid = arr.filter(x => x > 0);
-        if (valid.length === 0) return { avg: 0, std: 0 };
+        if (valid.length === 0) return { avg: 0, std: 0, median: 0 };
         const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
         const variance = valid.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / valid.length;
-        return { avg, std: Math.sqrt(variance) };
+        
+        valid.sort((a, b) => a - b);
+        const mid = Math.floor(valid.length / 2);
+        const median = valid.length % 2 !== 0 ? valid[mid] : (valid[mid - 1] + valid[mid]) / 2;
+        
+        return { avg, std: Math.sqrt(variance), median };
     }
 
     const khoStats = {};
@@ -1570,12 +1575,12 @@ function renderNcc(pivotData) {
         const sPhiCau = getStats(khoStats[k].phiCau);
 
         parsedKhoStats[k] = {
-            chiPhi: sChiPhi.avg, mChiPhi: 2000000,
-            km: sKm.avg, mKm: Math.max(sKm.std, sKm.avg * 0.1) || 100,
-            phiVuot: sPhiVuot.avg, mPhiVuot: Math.max(sPhiVuot.std, sPhiVuot.avg * 0.1) || 200000,
-            tgOt: sTgOt.avg, mTgOt: Math.max(sTgOt.std, sTgOt.avg * 0.1) || 5,
-            phiOt: sPhiOt.avg, mPhiOt: Math.max(sPhiOt.std, sPhiOt.avg * 0.1) || 200000,
-            phiCau: sPhiCau.avg, mPhiCau: Math.max(sPhiCau.std, sPhiCau.avg * 0.1) || 100000
+            chiPhi: sChiPhi.median, mChiPhi: 2000000,
+            km: sKm.median, mKm: Math.max(sKm.std, sKm.median * 0.1) || 100,
+            phiVuot: sPhiVuot.median, mPhiVuot: Math.max(sPhiVuot.std, sPhiVuot.median * 0.1) || 200000,
+            tgOt: sTgOt.median, mTgOt: Math.max(sTgOt.std, sTgOt.median * 0.1) || 5,
+            phiOt: sPhiOt.median, mPhiOt: Math.max(sPhiOt.std, sPhiOt.median * 0.1) || 200000,
+            phiCau: sPhiCau.median, mPhiCau: Math.max(sPhiCau.std, sPhiCau.median * 0.1) || 100000
         };
     });
 

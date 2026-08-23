@@ -1753,39 +1753,37 @@ function fetchSheetByNameJSONP(sheetId, sheetName) {
 // ====== HÀM TẢI TOÀN BỘ DỮ LIỆU ======
 function normalizeSupplierName(name) {
     if (!name) return '';
-    let clean = String(name).replace(/^[\\s:;]+/, '').trim();
+    let clean = String(name).replace(/^[\s:;]+/, '').trim();
     if (!clean) return '';
     
-    // Capitalize first letter of every word
     clean = clean.split(/\s+/).map(word => {
         if (!word) return '';
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     }).join(' ');
     
-    // Exact mapping for known suppliers to ensure exact matches
-    const noTones = typeof removeAccents === 'function' ? removeAccents(clean).toLowerCase() : norm(clean); // Fixed to actually remove tones
+    const noTones = typeof removeAccents === 'function' ? removeAccents(clean).toLowerCase() : clean.toLowerCase();
+    
+    if (noTones.includes('viet hung') || clean.toLowerCase().includes('việt hưng')) return 'Hoa Vinh';
+    
     const standardNames = {
         'thien phu': 'Thiên Phú',
         'duy phat': 'Duy Phát',
         'hoang minh': 'Hoàng Minh',
         'hoa vinh': 'Hoa Vinh',
-        'dao truong an': 'Đạo Trường An',
+        'dao truong an': 'Đào Trọng An',
         'dai minh': 'Đại Minh',
         'tal': 'TAL',
         'nak': 'NAK',
         'long thanh': 'Long Thành',
         'gach htc': 'Gạch HTC',
-        'tien phat': 'Tiến Phát'
+        'tien phat': 'Tiên Phát'
     };
     
-    for (const key in standardNames) { if (noTones.includes(key)) return standardNames[key]; }
-    if (standardNames[noTones]) return standardNames[noTones];
-    if (noTones === 'tal') return 'TAL';
-    if (noTones === 'nak') return 'NAK';
-    
-    // Fix edge case for acronyms
-    if (clean.toUpperCase() === 'TAL') return 'TAL';
-    if (clean.toUpperCase() === 'NAK') return 'NAK';
+    for (const key in standardNames) {
+        if (noTones.includes(key)) {
+            return standardNames[key];
+        }
+    }
     
     return clean;
 }

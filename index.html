@@ -19,6 +19,7 @@
         /*  CSS - PHẦN GIAO DIỆN (Không cần chỉnh sửa) */
         /* ============================================ */
         :root {
+            --row-zebra: rgba(255, 255, 255, 0.02);
             --bg-primary: #080d0f;
             --bg-secondary: #0d1517;
             --bg-card: #111b1e;
@@ -418,7 +419,22 @@
     a:visited {
             opacity: 0.4 !important;
         }
-    </style>
+    
+        :root.light-mode {
+            --row-zebra: rgba(0, 0, 0, 0.04);
+            --bg-primary: #f0f4f4;
+            --bg-secondary: #e0e8e8;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f8fafa;
+            --border: #d0dcdc;
+            --text-primary: #1a2b2b;
+            --text-secondary: #4a6666;
+            --text-muted: #88a3a3;
+            --accent: #0f8f81;
+            --accent-glow: rgba(15, 143, 129, 0.2);
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+</style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
@@ -426,9 +442,9 @@
 <body>
 
     <!-- Màn hình chờ tải dữ liệu toàn trang -->
-    <div id="globalLoading" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b1117; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease;">
+    <div id="globalLoading" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-primary); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease;">
         <img src="truck-image.png" alt="GHN Truck" style="width: 90%; max-width: 700px; border-radius: 8px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.7); margin-bottom: 25px;">
-        <div style="font-size: 22px; font-weight: bold; margin-bottom: 25px; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); color: #fff;">Khách hàng là người trả lương</div>
+        <div style="font-size: 22px; font-weight: bold; margin-bottom: 25px; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); color: var(--text-primary);">Khách hàng là người trả lương</div>
         <div style="width: 35px; height: 35px; border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: #00c2a8; border-radius: 50%; animation: spin 1s linear infinite;"></div>
     </div>
 <div class="container">
@@ -449,16 +465,21 @@
                 </div>
             </div>
         </div>
-        <div class="header-right">
-            <div id="onlineCounter" style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 20px; font-size: 11px; font-weight: 600; color: #10b981; cursor: help; margin-bottom: 4px;" title="Số người đang mở trang web này">
-                <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; animation: pulse-green 2s infinite;"></span>
-                <span id="onlineCountText">Đang truy cập: 1</span>
+        <div class="header-right" style="flex-direction: row; gap: 16px;">
+            <button id="themeToggleBtn" onclick="toggleTheme()" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 50%; width: 44px; height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-primary); transition: 0.3s; box-shadow: var(--shadow);">
+                <span id="themeIcon" style="font-size: 20px;">🌙</span>
+            </button>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                <div id="onlineCounter" style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 20px; font-size: 11px; font-weight: 600; color: #10b981; cursor: help; margin-bottom: 4px;" title="Số người đang mở trang web này">
+                    <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; animation: pulse-green 2s infinite;"></span>
+                    <span id="onlineCountText">Đang truy cập: 1</span>
+                </div>
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    <span id="lastRefresh">Đang tải...</span>
+                </div>
+                <span class="countdown" id="countdown"></span>
             </div>
-            <div class="status-badge">
-                <span class="status-dot"></span>
-                <span id="lastRefresh">Đang tải...</span>
-            </div>
-            <span class="countdown" id="countdown"></span>
         </div>
     </header>
 
@@ -681,6 +702,30 @@
 </div>
 
 <script>
+
+function toggleTheme() {
+    const root = document.documentElement;
+    const isLight = root.classList.toggle('light-mode');
+    const icon = document.getElementById('themeIcon');
+    if (isLight) {
+        icon.textContent = '☀️';
+        localStorage.setItem('odoTheme', 'light');
+    } else {
+        icon.textContent = '🌙';
+        localStorage.setItem('odoTheme', 'dark');
+    }
+}
+// Load theme on startup
+(function() {
+    if (localStorage.getItem('odoTheme') === 'light') {
+        document.documentElement.classList.add('light-mode');
+        window.addEventListener('DOMContentLoaded', () => {
+            const icon = document.getElementById('themeIcon');
+            if(icon) icon.textContent = '☀️';
+        });
+    }
+})();
+
 /* ==============================================
    JAVASCRIPT - PHẦN XỬ LÝ DỮ LIỆU
    
@@ -1514,7 +1559,7 @@ function renderNcc(pivotData) {
 
             carRows += `
                 <tr style="${bg}">
-                    <td style="padding-left: 32px; font-family:Calibri, sans-serif; font-weight:600; color: #cbd5e1;">${escapeHtml(bienSo)}</td>
+                    <td style="padding-left: 32px; font-family:Calibri, sans-serif; font-weight:600; color: var(--text-primary);">${escapeHtml(bienSo)}</td>
                     <td style="text-align:right;color:${getColor(data.chiPhi, minCost, maxCost)};font-weight:600;">${Math.round(data.chiPhi).toLocaleString('vi-VN')}</td>
                     <td style="text-align:right;color:${getColor(data.kmPhatSinh, 0, maxKm)};font-weight:500;">${Math.round(data.kmPhatSinh).toLocaleString('vi-VN')}</td>
                     <td style="text-align:right;color:${getColor(data.phiVuotKm, 0, maxPhiVuot)};font-weight:500;">${Math.round(data.phiVuotKm).toLocaleString('vi-VN')}</td>

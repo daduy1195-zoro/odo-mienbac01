@@ -1538,15 +1538,61 @@ function renderNcc(pivotData) {
     const totalEl = document.getElementById('nccTotalCost');
     if (totalEl) totalEl.innerText = Math.round(grandTotalCost).toLocaleString('vi-VN') + ' đ';
 
-    function getColor(value, min, max) {
+    function getStats(arr) {
+        const valid = arr.filter(x => x > 0);
+        if (valid.length === 0) return { avg: 0, std: 0 };
+        const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
+        const variance = valid.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / valid.length;
+        return { avg, std: Math.sqrt(variance) };
+    }
+
+    const chiPhiArr = [], kmArr = [], phiVuotArr = [], tgOtArr = [], phiOtArr = [], phiCauArr = [];
+    pivotData.forEach(d => {
+        if (d.chiPhi > 0) chiPhiArr.push(d.chiPhi);
+        if (d.kmPhatSinh > 0) kmArr.push(d.kmPhatSinh);
+        if (d.phiVuotKm > 0) phiVuotArr.push(d.phiVuotKm);
+        if (d.thoiGianTangCa > 0) tgOtArr.push(d.thoiGianTangCa);
+        if (d.phiTangCa > 0) phiOtArr.push(d.phiTangCa);
+        if (d.phiCauDuong > 0) phiCauArr.push(d.phiCauDuong);
+    });
+
+    const sChiPhi = getStats(chiPhiArr);
+    const sKm = getStats(kmArr);
+    const sPhiVuot = getStats(phiVuotArr);
+    const sTgOt = getStats(tgOtArr);
+    const sPhiOt = getStats(phiOtArr);
+    const sPhiCau = getStats(phiCauArr);
+
+    const mChiPhi = 2000000; // User requested 2M margin for cost
+    const mKm = Math.max(sKm.std, sKm.avg * 0.1) || 100;
+    const mPhiVuot = Math.max(sPhiVuot.std, sPhiVuot.avg * 0.1) || 200000;
+    const mTgOt = Math.max(sTgOt.std, sTgOt.avg * 0.1) || 5;
+    const mPhiOt = Math.max(sPhiOt.std, sPhiOt.avg * 0.1) || 200000;
+    const mPhiCau = Math.max(sPhiCau.std, sPhiCau.avg * 0.1) || 100000;
+
+    function getDivergingColor(value, avg, margin) {
         if (!value || value <= 0) return 'var(--text-muted)';
-        if (max <= min) return 'var(--text-primary)';
-        let ratio = (value - min) / (max - min);
-        const r1 = 20, g1 = 184, b1 = 166;
-        const r2 = 239, g2 = 68, b2 = 68;
-        const r = Math.round(r1 + (r2 - r1) * ratio);
-        const g = Math.round(g1 + (g2 - g1) * ratio);
-        const b = Math.round(b1 + (b2 - b1) * ratio);
+        if (!avg) return 'var(--text-primary)';
+        
+        let diff = value - avg;
+        if (diff > margin) diff = margin;
+        if (diff < -margin) diff = -margin;
+        
+        let ratio = diff / margin; 
+        
+        let r, g, b;
+        if (ratio > 0) {
+            // White to Red (#ef4444)
+            r = Math.round(255 + (239 - 255) * ratio);
+            g = Math.round(255 + (68 - 255) * ratio);
+            b = Math.round(255 + (68 - 255) * ratio);
+        } else {
+            // White to Green (#10b981)
+            let negRatio = -ratio; 
+            r = Math.round(255 + (16 - 255) * negRatio);
+            g = Math.round(255 + (185 - 255) * negRatio);
+            b = Math.round(255 + (129 - 255) * negRatio);
+        }
         return 'rgb(' + r + ', ' + g + ', ' + b + ')';
     }
 
@@ -1577,12 +1623,12 @@ function renderNcc(pivotData) {
                 '<td>' + khoBadge + '</td>\n' +
                 '<td style="font-size:12px; color:var(--text-primary);">' + escapeHtml(data.ncc) + '</td>\n' +
                 '<td style="font-family:Calibri, sans-serif; font-weight:700; font-size:15px; letter-spacing: 0.8px; color: var(--text-primary);">' + escapeHtml(data.bienSo) + '</td>\n' +
-                '<td style="text-align:right;color:' + getColor(data.chiPhi, minCost, maxCost) + ';font-weight:600;">' + Math.round(data.chiPhi).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getColor(data.kmPhatSinh, 0, maxKm) + ';font-weight:500;">' + Math.round(data.kmPhatSinh).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getColor(data.phiVuotKm, 0, maxPhiVuot) + ';font-weight:500;">' + Math.round(data.phiVuotKm).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getColor(data.thoiGianTangCa, 0, maxTgOt) + ';font-weight:500;">' + Number(data.thoiGianTangCa.toFixed(2)).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getColor(data.phiTangCa, 0, maxPhiOt) + ';font-weight:500;">' + Math.round(data.phiTangCa).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getColor(data.phiCauDuong, 0, maxPhiCau) + ';font-weight:500;">' + Math.round(data.phiCauDuong).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.chiPhi, sChiPhi.avg, mChiPhi) + ';font-weight:600;">' + Math.round(data.chiPhi).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.kmPhatSinh, sKm.avg, mKm) + ';font-weight:500;">' + Math.round(data.kmPhatSinh).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.phiVuotKm, sPhiVuot.avg, mPhiVuot) + ';font-weight:500;">' + Math.round(data.phiVuotKm).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.thoiGianTangCa, sTgOt.avg, mTgOt) + ';font-weight:500;">' + Number(data.thoiGianTangCa.toFixed(2)).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.phiTangCa, sPhiOt.avg, mPhiOt) + ';font-weight:500;">' + Math.round(data.phiTangCa).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.phiCauDuong, sPhiCau.avg, mPhiCau) + ';font-weight:500;">' + Math.round(data.phiCauDuong).toLocaleString('vi-VN') + '</td>\n' +
             '</tr>\n';
     });
 

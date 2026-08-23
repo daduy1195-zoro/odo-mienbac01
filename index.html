@@ -1783,7 +1783,7 @@ function normalizeSupplierName(name) {
     }).join(' ');
     
     // Exact mapping for known suppliers to ensure exact matches
-    const noTones = norm(clean); // norm() converts to lower case
+    const noTones = typeof removeAccents === 'function' ? removeAccents(clean).toLowerCase() : norm(clean); // Fixed to actually remove tones
     const standardNames = {
         'thien phu': 'Thiên Phú',
         'duy phat': 'Duy Phát',

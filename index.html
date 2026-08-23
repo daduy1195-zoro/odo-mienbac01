@@ -3976,11 +3976,26 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
       if (colOtFee === -1) colOtFee = 12;
       if (colKmOverFee === -1) colKmOverFee = 17;
       if (colKmOver === -1) colKmOver = 16;
-      if (colMonthlyRate === -1) colMonthlyRate = 20;
-    if (colDailyRate === -1) colDailyRate = 20;
-      if (colTollFee === -1) colTollFee = 18;
-      if (colHolidayFee === -1) colHolidayFee = 19;
-      if (colTotalCost === -1) colTotalCost = 24;
+      
+      // Fallback cho Tổng chi phí nếu chưa tìm thấy
+      if (colTotalCost === -1) {
+          // Thử tìm trong data row 1 hoặc 2
+          let tryRow = rawData[headerRowIdx > -1 ? headerRowIdx + 1 : 1];
+          if (!tryRow) tryRow = rawData[2];
+          if (tryRow) {
+              for (let tryCol = 28; tryCol >= 18; tryCol--) {
+                  const v = parseVietnameseNumber(tryRow[tryCol]);
+                  if (v > 100000) { colTotalCost = tryCol; break; }
+              }
+          }
+          if (colTotalCost === -1) colTotalCost = 24; // Ultimate fallback
+      }
+      
+      // Nếu các cột kia chưa tìm thấy, gán lùi từ colTotalCost
+      if (colHolidayFee === -1) colHolidayFee = colTotalCost - 1;
+      if (colTollFee === -1) colTollFee = colTotalCost - 2;
+      if (colDailyRate === -1) colDailyRate = colTotalCost - 3;
+      if (colMonthlyRate === -1) colMonthlyRate = colTotalCost - 4;
     
     // ★ Fix: nếu colTotalCost trùng với cột khác đã detect, dịch sang cột kế tiếp
     const usedCols = new Set([colOtHours, colOtRate, colOtFee, colKmOverFee, colMonthlyRate, colDailyRate, colTollFee, colHolidayFee]);
@@ -4207,6 +4222,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         let dailyRate = (colDailyRate > -1 ? row[colDailyRate] : '').toString().trim();
         let tollFee = (colTollFee > -1 ? row[colTollFee] : '').toString().trim();
         let holidayFee = (colHolidayFee > -1 ? row[colHolidayFee] : '').toString().trim();
+        if (actualNcc === 'NAK') {
+            console.log("DEBUG NAK:", { colMonthlyRate, colDailyRate, colTollFee, colHolidayFee, monthlyRate, dailyRate, tollFee, holidayFee });
+        }
         let totalCost = (colTotalCost > -1 ? row[colTotalCost] : '').toString().trim();
         if (i === startRow) {
             console.log("==> NCC:", nccName, "Tab:", tabName);

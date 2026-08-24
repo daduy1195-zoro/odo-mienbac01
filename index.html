@@ -1613,12 +1613,12 @@ function renderNcc(pivotData) {
     // Thêm dòng tổng vào HTML
     html += '<tr style="background: rgba(20, 184, 166, 0.15); border-bottom: 2px solid rgba(20, 184, 166, 0.3);">' +
                 '<td colspan="3" style="font-weight: bold; color: var(--accent); font-size: 14px; text-align: center; letter-spacing: 1px;">TỔNG CỘNG</td>' +
-                '<td style="text-align:right; font-weight: bold; color:var(--text-primary); font-size: 14px;">' + Math.round(grandTotalCost).toLocaleString('vi-VN') + '</td>' +
+                '<td style="text-align:right; font-weight: bold; color:var(--text-primary); font-size: 14px;">' + Math.round(grandTotalCost).toLocaleString('vi-VN') + ' đ</td>' +
                 '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandKm).toLocaleString('vi-VN') + '</td>' +
-                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiVuot).toLocaleString('vi-VN') + '</td>' +
+                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiVuot).toLocaleString('vi-VN') + ' đ</td>' +
                 '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Number(grandTgOt.toFixed(2)).toLocaleString('vi-VN') + '</td>' +
-                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiOt).toLocaleString('vi-VN') + '</td>' +
-                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiCau).toLocaleString('vi-VN') + '</td>' +
+                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiOt).toLocaleString('vi-VN') + ' đ</td>' +
+                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiCau).toLocaleString('vi-VN') + ' đ</td>' +
             '</tr>\n';
 
     // Sắp xếp: Kho -> NCC -> Biển số
@@ -1637,12 +1637,12 @@ function renderNcc(pivotData) {
                 '<td>' + khoBadge + '</td>\n' +
                 '<td style="font-size:13px; font-weight:700; color:var(--text-primary);">' + escapeHtml(data.ncc) + '</td>\n' +
                 '<td style="font-family:Calibri, sans-serif; font-weight:700; font-size:15px; letter-spacing: 0.8px; color: var(--text-primary);">' + escapeHtml(data.bienSo) + '</td>\n' +
-                '<td style="text-align:right;color:' + getCostColor(data.chiPhi) + ';font-weight:700;">' + Math.round(data.chiPhi).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getCostColor(data.chiPhi) + ';font-weight:700;">' + Math.round(data.chiPhi).toLocaleString('vi-VN') + ' đ</td>\n' +
                 '<td style="text-align:right;color:' + getDivergingColor(data.kmPhatSinh, parsedKhoStats[data.kho || 'Unknown'].km, parsedKhoStats[data.kho || 'Unknown'].mKm) + ';font-weight:700;">' + Math.round(data.kmPhatSinh).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.phiVuotKm, parsedKhoStats[data.kho || 'Unknown'].phiVuot, parsedKhoStats[data.kho || 'Unknown'].mPhiVuot) + ';font-weight:700;">' + Math.round(data.phiVuotKm).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.phiVuotKm, parsedKhoStats[data.kho || 'Unknown'].phiVuot, parsedKhoStats[data.kho || 'Unknown'].mPhiVuot) + ';font-weight:700;">' + Math.round(data.phiVuotKm).toLocaleString('vi-VN') + ' đ</td>\n' +
                 '<td style="text-align:right;color:' + getDivergingColor(data.thoiGianTangCa, parsedKhoStats[data.kho || 'Unknown'].tgOt, parsedKhoStats[data.kho || 'Unknown'].mTgOt) + ';font-weight:700;">' + Number(data.thoiGianTangCa.toFixed(2)).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.phiTangCa, parsedKhoStats[data.kho || 'Unknown'].phiOt, parsedKhoStats[data.kho || 'Unknown'].mPhiOt) + ';font-weight:700;">' + Math.round(data.phiTangCa).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.phiCauDuong, parsedKhoStats[data.kho || 'Unknown'].phiCau, parsedKhoStats[data.kho || 'Unknown'].mPhiCau) + ';font-weight:700;">' + Math.round(data.phiCauDuong).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.phiTangCa, parsedKhoStats[data.kho || 'Unknown'].phiOt, parsedKhoStats[data.kho || 'Unknown'].mPhiOt) + ';font-weight:700;">' + Math.round(data.phiTangCa).toLocaleString('vi-VN') + ' đ</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.phiCauDuong, parsedKhoStats[data.kho || 'Unknown'].phiCau, parsedKhoStats[data.kho || 'Unknown'].mPhiCau) + ';font-weight:700;">' + Math.round(data.phiCauDuong).toLocaleString('vi-VN') + ' đ</td>\n' +
             '</tr>\n';
     });
 

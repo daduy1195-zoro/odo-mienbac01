@@ -427,7 +427,7 @@
             --bg-card: #ffffff;
             --bg-card-hover: #f8fafa;
             --border: #d0dcdc;
-            --text-primary: #1a2b2b;
+            --text-primary: #000000;
             --text-secondary: #4a6666;
             --text-muted: #88a3a3;
             --accent: #0f8f81;
@@ -1635,14 +1635,14 @@ function renderNcc(pivotData) {
 
         html += '<tr style="' + bg + '">\n' +
                 '<td>' + khoBadge + '</td>\n' +
-                '<td style="font-size:12px; color:var(--text-primary);">' + escapeHtml(data.ncc) + '</td>\n' +
+                '<td style="font-size:13px; font-weight:700; color:var(--text-primary);">' + escapeHtml(data.ncc) + '</td>\n' +
                 '<td style="font-family:Calibri, sans-serif; font-weight:700; font-size:15px; letter-spacing: 0.8px; color: var(--text-primary);">' + escapeHtml(data.bienSo) + '</td>\n' +
-                '<td style="text-align:right;color:' + getCostColor(data.chiPhi) + ';font-weight:600;">' + Math.round(data.chiPhi).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.kmPhatSinh, parsedKhoStats[data.kho || 'Unknown'].km, parsedKhoStats[data.kho || 'Unknown'].mKm) + ';font-weight:500;">' + Math.round(data.kmPhatSinh).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.phiVuotKm, parsedKhoStats[data.kho || 'Unknown'].phiVuot, parsedKhoStats[data.kho || 'Unknown'].mPhiVuot) + ';font-weight:500;">' + Math.round(data.phiVuotKm).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.thoiGianTangCa, parsedKhoStats[data.kho || 'Unknown'].tgOt, parsedKhoStats[data.kho || 'Unknown'].mTgOt) + ';font-weight:500;">' + Number(data.thoiGianTangCa.toFixed(2)).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.phiTangCa, parsedKhoStats[data.kho || 'Unknown'].phiOt, parsedKhoStats[data.kho || 'Unknown'].mPhiOt) + ';font-weight:500;">' + Math.round(data.phiTangCa).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.phiCauDuong, parsedKhoStats[data.kho || 'Unknown'].phiCau, parsedKhoStats[data.kho || 'Unknown'].mPhiCau) + ';font-weight:500;">' + Math.round(data.phiCauDuong).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getCostColor(data.chiPhi) + ';font-weight:700;">' + Math.round(data.chiPhi).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.kmPhatSinh, parsedKhoStats[data.kho || 'Unknown'].km, parsedKhoStats[data.kho || 'Unknown'].mKm) + ';font-weight:700;">' + Math.round(data.kmPhatSinh).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.phiVuotKm, parsedKhoStats[data.kho || 'Unknown'].phiVuot, parsedKhoStats[data.kho || 'Unknown'].mPhiVuot) + ';font-weight:700;">' + Math.round(data.phiVuotKm).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.thoiGianTangCa, parsedKhoStats[data.kho || 'Unknown'].tgOt, parsedKhoStats[data.kho || 'Unknown'].mTgOt) + ';font-weight:700;">' + Number(data.thoiGianTangCa.toFixed(2)).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.phiTangCa, parsedKhoStats[data.kho || 'Unknown'].phiOt, parsedKhoStats[data.kho || 'Unknown'].mPhiOt) + ';font-weight:700;">' + Math.round(data.phiTangCa).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:' + getDivergingColor(data.phiCauDuong, parsedKhoStats[data.kho || 'Unknown'].phiCau, parsedKhoStats[data.kho || 'Unknown'].mPhiCau) + ';font-weight:700;">' + Math.round(data.phiCauDuong).toLocaleString('vi-VN') + '</td>\n' +
             '</tr>\n';
     });
 
@@ -2807,10 +2807,10 @@ function renderDailyTable(filtered) {
 
         html += `<tr>
             <td>${i + 1}</td>
-            <td style="white-space:nowrap; font-weight:600;">${escapeHtml(e.dateStr)}</td>
-            <td style="font-weight:600;">${escapeHtml(e.name)}</td>
+            <td style="white-space:nowrap; font-weight:700;">${escapeHtml(e.dateStr)}</td>
+            <td style="font-weight:700;">${escapeHtml(e.name)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
-            <td style="font-family:Calibri, sans-serif; font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
+            <td style="font-family:Calibri, sans-serif; font-weight:700;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
             <td style="font-size:12px;">${escapeHtml(e.supplier)}</td>
             <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:Calibri, sans-serif;white-space:nowrap;">${escapeHtml(e.hourStart || '—')}</td>
@@ -2818,7 +2818,7 @@ function renderDailyTable(filtered) {
             <td style="font-weight:700;color:${otColor};text-align:center;">${escapeHtml(otDisplay)}</td>
             <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
             <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
-            <td style="font-weight:600; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + escapeHtml(String(kmDisplay)) + ' (gõ sai!)' : escapeHtml(String(kmDisplay))}</td>
+            <td style="font-weight:700; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + escapeHtml(String(kmDisplay)) + ' (gõ sai!)' : escapeHtml(String(kmDisplay))}</td>
             <td style="font-size:12px; min-width: 250px; white-space: normal;">${routeHtml}</td>
             <td>${tripHtml}</td>
             <td><a href="${sheetUrl}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;white-space:nowrap;">Dòng ${e.sheetRow}</a></td>
@@ -3117,9 +3117,9 @@ function renderRanking(filtered, month, whFilter) {
 
                         return `<tr>
                             <td>${i + 1}</td>
-                            <td style="font-weight:600;">${escapeHtml(e.name)}</td>
+                            <td style="font-weight:700;">${escapeHtml(e.name)}</td>
                             <td>${e.code || '—'}</td>
-                            <td style="font-family:Calibri, sans-serif;font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
+                            <td style="font-family:Calibri, sans-serif;font-weight:700;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
                             <td style="text-align:center;">${e.uniqueDays}/${e.myExpectedDays}</td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:8px;">
@@ -3275,10 +3275,10 @@ function renderFraudWarnings(filtered) {
 
         html += `<tr>
             <td>${i + 1}</td>
-            <td style="white-space:nowrap;font-weight:600;">${escapeHtml(e.dateStr)}</td>
-            <td style="font-weight:600;">${escapeHtml(e.name)}</td>
+            <td style="white-space:nowrap;font-weight:700;">${escapeHtml(e.dateStr)}</td>
+            <td style="font-weight:700;">${escapeHtml(e.name)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
-            <td style="font-family:Calibri, sans-serif;font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
+            <td style="font-family:Calibri, sans-serif;font-weight:700;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
             <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.hourStart || '—')}</td>
             <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.hourEnd || '—')}</td>
@@ -3473,8 +3473,8 @@ function renderTypoWarnings(filtered) {
 
             html += `<tr>
                 <td>${i + 1}</td>
-                <td style="white-space:nowrap;font-weight:600;">${e.dateStr}</td>
-                <td style="font-weight:600;">${escapeHtml(e.name)}</td>
+                <td style="white-space:nowrap;font-weight:700;">${e.dateStr}</td>
+                <td style="font-weight:700;">${escapeHtml(e.name)}</td>
                 <td><span class="badge badge-info">${e.code || '—'}</span></td>
                 <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
                 <td>${escapeHtml(e.shortWH)}</td>
@@ -4857,7 +4857,7 @@ function showSuggestionPopup(originalIndex, buttonEl) {
             listHtml += `<div class="suggest-item" onclick="selectSuggestion(${originalIndex}, '${s.tripCode.replace(/'/g, "\\'")}', '${(s.plate || '').replace(/'/g, "\\'")}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <a href="https://nhanh.ghn.vn/lastmile/trip-detail/${s.tripCode}" target="_blank" onclick="event.stopPropagation()" style="font-weight:700;color:var(--success);font-size:13px;text-decoration:underline;" title="Xem chi tiết trên hệ thống Lastmile">${s.tripCode}</a>
-                    <span style="font-size:11px;color:${simColor};font-weight:600;">Biển: ${s.plate} (${simPercent}%)</span>
+                    <span style="font-size:11px;color:${simColor};font-weight:700;">Biển: ${s.plate} (${simPercent}%)</span>
                 </div>
                 <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
                     ${s.driver ? '👤 ' + s.driver + ' • ' : ''}${s.route ? '🛣️ ' + s.route.substring(0, 60) : ''}
@@ -5227,7 +5227,7 @@ function renderNccTrip() {
         html += `
             <tr>
                 <td>${i + 1}</td>
-                <td style="font-weight:600; white-space:nowrap;">${r.sheetId ? (() => {
+                <td style="font-weight:700; white-space:nowrap;">${r.sheetId ? (() => {
                     let sheetUrl = 'https://docs.google.com/spreadsheets/d/' + r.sheetId + '/edit';
                     if (r.tabGid) sheetUrl += '#gid=' + r.tabGid + '&range=B' + r.sourceRow;
                     return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
@@ -5236,7 +5236,7 @@ function renderNccTrip() {
                 <td style="font-family:Calibri, sans-serif; font-weight:700; color:#f0ad4e;">${escapeHtml(formatPlate(r.plate))}</td>
                 <td><span class="badge" style="${whColor}">${escapeHtml(shortWH)}</span></td>
                 <td style="font-size:11px; max-width:120px; width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
-                <td style="font-family:Calibri, sans-serif; font-weight:600;">${(() => {
+                <td style="font-family:Calibri, sans-serif; font-weight:700;">${(() => {
                     let finalDiff = null;
                     if (r.kmDiff !== undefined && r.kmDiff !== null && String(r.kmDiff).trim() !== '') {
                         let diffVal = parseFloat(String(r.kmDiff).replace(/[^\d.]/g, ''));
@@ -5715,22 +5715,22 @@ async function loadLastmileData() {
         var whColor = typeof warehouseColor === 'function' ? warehouseColor(r.hubName || 'Khác') : '';
         html += '<tr>';
         html += '<td>' + (m+1) + '</td>';
-        html += '<td style="font-weight:600; white-space:nowrap;">' + (r.dateStr || '') + '</td>';
+        html += '<td style="font-weight:700; white-space:nowrap;">' + (r.dateStr || '') + '</td>';
         html += '<td style="font-family:Calibri, sans-serif; font-size:13px; font-weight:bold;">' + (r.tripCode ? '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + r.tripCode + '" target="_blank" style="color:var(--success);text-decoration:underline;">' + r.tripCode + '</a>' : '') + '</td>';
         html += '<td style="font-family:Calibri, sans-serif; font-weight:700; color:#f0ad4e;">' + (typeof formatPlate === 'function' ? formatPlate(r.plate || '') : (r.plate || '')) + '</td>';
         html += '<td><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;' + whColor + '">' + (r.hubName || 'Khác') + '</span></td>';
         html += '<td style="font-family:Calibri, sans-serif; font-size:12px; color:var(--text-muted);">' + (r.startTime || '') + '</td>';
         html += '<td style="font-family:Calibri, sans-serif; font-size:12px; color:var(--text-muted);">' + (r.endTime || '') + '</td>';
-        html += '<td style="font-weight:500;">' + (r.createdByName || '') + '</td>';
+        html += '<td style="font-weight:700;">' + (r.createdByName || '') + '</td>';
         html += '<td style="font-weight:700; color:var(--success); text-align:center;">' + (r.pickCount || 0) + '</td>';
         html += '<td style="font-weight:700; color:var(--primary); text-align:center;">' + (r.deliverCount || 0) + '</td>';
         html += '<td style="font-weight:700; color:var(--danger); text-align:center;">' + (r.returnCount || 0) + '</td>';
-        html += '<td style="font-weight:600;">' + (r.driverName || '') + '</td>';
+        html += '<td style="font-weight:700;">' + (r.driverName || '') + '</td>';
         
         if (_phoneUnlocked) {
-            html += '<td style="font-family:Calibri, sans-serif; font-weight:500;">' + (r.driverPhone || '') + '</td>';
+            html += '<td style="font-family:Calibri, sans-serif; font-weight:700;">' + (r.driverPhone || '') + '</td>';
         } else {
-            html += '<td style="font-family:Calibri, sans-serif; font-weight:500; cursor:pointer;" onclick="unlockPhoneColumn()" title="Nhấn để nhập mật khẩu xem SĐT"><span style="color:#94a3b8; font-size:11px;">🔒 ******</span></td>';
+            html += '<td style="font-family:Calibri, sans-serif; font-weight:700; cursor:pointer;" onclick="unlockPhoneColumn()" title="Nhấn để nhập mật khẩu xem SĐT"><span style="color:#94a3b8; font-size:11px;">🔒 ******</span></td>';
         }
         html += '<td style="font-size:12px; max-width:150px; white-space:normal;">' + (r.route ? escapeHtml(r.route) : '<span style="color:var(--text-muted);">—</span>') + '</td>';
         let isVirtual = r.tripCode && virtualTrips[r.tripCode];
@@ -6106,7 +6106,7 @@ window.renderRecon3Way = function() {
     ];
     cards.forEach(function(c) {
         html += '<div style="flex:1;min-width:120px;padding:14px 16px;background:rgba(0,0,0,0.2);border-left:3px solid ' + c.color + ';border-radius:8px;">';
-        html += '<div style="font-size:12px;color:' + c.color + ';font-weight:600;">' + c.label + '</div>';
+        html += '<div style="font-size:12px;color:' + c.color + ';font-weight:700;">' + c.label + '</div>';
         html += '<div style="font-size:28px;font-weight:800;color:' + c.color + ';">' + c.count + '</div>';
         html += '</div>';
     });

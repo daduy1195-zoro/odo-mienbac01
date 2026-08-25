@@ -457,7 +457,7 @@
             <!-- Nút tiếp tục đăng nhập (cho người đã đăng nhập trước đó) -->
             <div id="authContinueBtn" style="display:none; margin-bottom: 16px;">
                 <button onclick="continueAsUser()" style="width:100%; padding: 12px 20px; background: linear-gradient(135deg, #00c2a8, #00a389); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.1s ease;">
-                    <img id="authContinueAvatar" src="" style="width:28px; height:28px; border-radius:50%;" referrerpolicy="no-referrer">
+                    <img id="authContinueAvatar" src="" style="width:28px; height:28px; border-radius:50%;" referrerpolicy="no-referrer" onerror="this.style.display='none'">
                     <span id="authContinueName">Tiếp tục đăng nhập</span>
                 </button>
             </div>

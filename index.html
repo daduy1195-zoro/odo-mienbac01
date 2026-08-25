@@ -4146,6 +4146,16 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     
     const startRow = headerRowIdx > -1 ? headerRowIdx + 1 : 0;
     
+
+    let overridesCache = {};
+    let notesCache = {};
+    let logsCache = {};
+    try {
+        overridesCache = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
+        notesCache = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_NOTES') || '{}');
+        logsCache = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
+    } catch(e) {}
+    
     for (let i = startRow; i < rawData.length; i++) {
         const row = rawData[i];
         if (!row || row.length < 5) continue;
@@ -4386,20 +4396,17 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         let isManualMatch = false;
         let actionLogs = [];
         try {
-            const overrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
-            if (overrides[finalKey] !== undefined) {
-                matchedTripCode = overrides[finalKey];
+            if (overridesCache[finalKey] !== undefined) {
+                matchedTripCode = overridesCache[finalKey];
                 if (matchedTripCode && !['GHN OFF', 'NCC OFF', 'OFF', 'Phạt', 'PHẠT', 'GHN_OFF', 'NCC_OFF'].includes(String(matchedTripCode).toUpperCase())) {
                     isManualMatch = true;
                 }
             }
-            const notes = JSON.parse(localStorage.getItem("GHN_NCC_TRIP_NOTES") || "{}");
-            if (notes[finalKey] !== undefined) {
-                tripNote = notes[finalKey];
+            if (notesCache[finalKey] !== undefined) {
+                tripNote = notesCache[finalKey];
             }
             try {
-                const logs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
-                if (logs[finalKey]) actionLogs = logs[finalKey];
+                if (logsCache[finalKey]) actionLogs = logsCache[finalKey];
             } catch(e) {}
 
         } catch(e) {}

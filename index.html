@@ -3190,18 +3190,19 @@ function renderRanking(filtered, month, whFilter) {
                     📤 Gửi lên Telegram
                 </button>
             </div>
-            <table class="ranking-table" style="width:100%;">
-                <thead><tr>
-                    <th style="width:40px;">#</th>
-                    <th>Họ và tên</th>
-                    <th style="width:80px;">Mã NV</th>
-                    <th style="width:120px;">Biển số xe</th>
-                    <th style="width:80px;">Số ngày ODO</th>
-                    <th style="width:160px;">% Hoàn thành</th>
-                    <th>Đi làm nhưng không báo cáo</th>
-                    <th>Ngày nghỉ</th>
-                    <th>Ghi chú</th>
-                </tr></thead>
+            <div style="overflow-x: auto; width: 100%;">
+            <table class="ranking-table" style="width:100%; min-width: 1200px;">
+            <thead><tr>
+                <th style="width:40px;">#</th>
+                <th style="width:160px;">Họ và tên</th>
+                <th style="width:80px;">Mã NV</th>
+                <th style="width:100px;">Biển số xe</th>
+                <th style="width:100px;">Số ngày ODO</th>
+                <th style="width:140px;">% Hoàn thành</th>
+                <th style="min-width:300px;">Đi làm nhưng không báo cáo</th>
+                <th style="min-width:200px;">Ngày nghỉ</th>
+                <th style="width:120px;">Ghi chú</th>
+            </tr></thead>
                 <tbody>
                     ${finalEmpList.map((e, i) => {
                         const isZeroDays = e.myExpectedDays === 0;
@@ -3246,8 +3247,8 @@ function renderRanking(filtered, month, whFilter) {
                         </tr>`;
                     }).join('')}
                 </tbody>
-            </table>
-        </div>`;
+                </table></div>
+            </div>`;
     });
 
     grid.innerHTML = html;

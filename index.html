@@ -2839,6 +2839,8 @@ function renderDailyTable(filtered) {
                 <th style="min-width:250px;">Tuyến đường</th>
                 <th>Mã chuyến đi</th>
                 <th style="width:60px;">Sửa</th>
+<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>
+<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>
             </tr>
         </thead>
         <tbody>`;
@@ -2919,6 +2921,8 @@ function renderDailyTable(filtered) {
             <td style="font-size:12px; min-width: 250px; white-space: normal;">${routeHtml}</td>
             <td>${tripHtml}</td>
             <td><a href="${sheetUrl}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;white-space:nowrap;">Dòng ${e.sheetRow}</a></td>
+<td style="text-align:center;"><span style="opacity:0.2">🕒</span></td>
+<td style="text-align:center;"><span style="opacity:0.2">🕒</span></td>
         </tr>`;
     });
 
@@ -3314,6 +3318,7 @@ function renderFraudWarnings(filtered) {
             <th>Km</th>
             <th>Lý do cảnh báo</th>
             <th>Sửa</th>
+<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>
         </tr></thead>
         <tbody>`;
 
@@ -3431,6 +3436,8 @@ function renderTypoWarnings(filtered) {
             <th>Kho</th>
             <th>Các ngày gõ sai</th>
             <th style="width:60px;">Sửa</th>
+<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>
+<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>
         </tr></thead><tbody>`;
 
         typos.forEach((t, i) => {
@@ -3474,6 +3481,7 @@ function renderTypoWarnings(filtered) {
             <th style="width:60px;">Số lần</th>
             <th>Các ngày</th>
             <th style="width:80px;">Sửa</th>
+<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>
         </tr></thead><tbody>`;
 
         filteredPlateTypos.forEach((t, i) => {
@@ -3511,6 +3519,7 @@ function renderTypoWarnings(filtered) {
             <th>Loại lỗi</th>
             <th style="width:60px;">Số lần</th>
             <th style="width:80px;">Sửa</th>
+<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>
         </tr></thead><tbody>`;
 
         masterMismatches.forEach((mm, i) => {
@@ -3562,6 +3571,7 @@ function renderTypoWarnings(filtered) {
             <th>ODO Về</th>
             <th>Km</th>
             <th style="width:80px;">Sửa</th>
+<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>
         </tr></thead><tbody>`;
 
         odoErrors.forEach((e, i) => {

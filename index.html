@@ -5251,8 +5251,8 @@ function renderNccTrip() {
     html += '<th style="text-align:right">Phí ngày lễ</th>';
     html += '<th style="text-align:right; color:var(--accent);">Tổng chi phí</th>';
     html += '<th>Mã chuyến GHN</th>';
-    html += '<th>';
-    html += '<select onchange="document.getElementById(\'filterNccStatus\').value = this.value; renderNccTrip();" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer; outline: none;">';
+        html += '<th style="width: 100px; text-align: center;">';
+    html += '<select onchange="document.getElementById(\'filterNccStatus\').value = this.value; renderNccTrip();" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px; padding: 2px; font-size: 11px; cursor: pointer; outline: none; width: 95px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">';
     html += '<option value="" style="color: #000;">Trạng thái (Tất cả)</option>';
     html += '<option value="khop" style="color: #000;" ' + (filterStatus === 'khop' ? 'selected' : '') + '>✅ Khớp</option>';
     html += '<option value="khop_tay" style="color: #000;" ' + (filterStatus === 'khop_tay' ? 'selected' : '') + '>📝 Khớp tay</option>';

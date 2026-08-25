@@ -5342,7 +5342,7 @@ function renderNccTrip(preserveScroll = false) {
         } else if (hasMatch) {
             const isMulti = String(r.ghnTripCode).includes('|');
             if (isMulti) {
-                statusHtml = '<span style="color:var(--info); font-weight:700;">🔄 Đa chuyến</span>';
+                statusHtml = r.isManualMatch ? '<span style="color:var(--info); font-weight:700;">🔄 Đa chuyến <small style="color:#f59e0b">(Khớp tay)</small></span>' : '<span style="color:var(--info); font-weight:700;">🔄 Đa chuyến</span>';
             } else if (r.isManualMatch) {
                 statusHtml = '<span style="color:#f59e0b; font-weight:700;">📝 Khớp tay</span>';
             } else {
@@ -5504,7 +5504,7 @@ function exportNccTripExcel() {
           "Phí ngày lễ": formatEmpty(r.holidayFee),
           "Tổng chi phí": formatEmpty(r.totalCost),
           "Mã chuyến đi GHN": r.ghnTripCode || "-",
-          "Trạng thái": (r.ghnTripCode === "GHN OFF" || r.ghnTripCode === "GHN_OFF") ? "GHN OFF" : ((r.ghnTripCode === "Phạt" || r.ghnTripCode === "PHẠT") ? "Phạt" : ((r.ghnTripCode === "NCC OFF" || r.ghnTripCode === "NCC_OFF" || r.ghnTripCode === "OFF") ? "NCC OFF" : (r.ghnTripCode ? (r.isManualMatch ? "Khớp tay" : "Đã khớp") : "Thiếu mã"))),
+          "Trạng thái": (r.ghnTripCode === "GHN OFF" || r.ghnTripCode === "GHN_OFF") ? "GHN OFF" : ((r.ghnTripCode === "Phạt" || r.ghnTripCode === "PHẠT") ? "Phạt" : ((r.ghnTripCode === "NCC OFF" || r.ghnTripCode === "NCC_OFF" || r.ghnTripCode === "OFF") ? "NCC OFF" : (r.ghnTripCode ? (String(r.ghnTripCode).includes('|') ? (r.isManualMatch ? "Đa chuyến (Khớp tay)" : "Đa chuyến") : (r.isManualMatch ? "Khớp tay" : "Đã khớp")) : "Thiếu mã"))),
           "Ghi chú": r.note || ""
       }));
       

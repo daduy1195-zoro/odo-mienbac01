@@ -451,9 +451,19 @@
 
     <!-- ========== MÀN HÌNH ĐĂNG NHẬP ========== -->
     <div id="authOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-primary); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s ease;">
-        <div style="background: var(--bg-card); padding: 40px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center; max-width: 400px; width: 90%;">
-            <div style="font-size: 32px; font-weight: 900; margin-bottom: 10px; color: var(--text-primary);">Odo Dashboard</div>
-            <p style="color: var(--text-secondary); margin-bottom: 30px; font-size: 14px;">Vui lòng đăng nhập bằng tài khoản Google (Gmail) để tiếp tục sử dụng hệ thống và định danh thao tác.</p>
+        <div style="background: var(--bg-card); padding: 40px 50px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center; max-width: 500px; width: 92%;">
+            <div style="font-size: 32px; font-weight: 900; margin-bottom: 8px; color: var(--text-primary);">Odo Dashboard</div>
+            <p style="color: var(--text-secondary); margin-bottom: 25px; font-size: 14px; line-height: 1.6;">Vui lòng đăng nhập bằng tài khoản Google (Gmail) để tiếp tục sử dụng hệ thống và định danh thao tác.</p>
+            <!-- Nút tiếp tục đăng nhập (cho người đã đăng nhập trước đó) -->
+            <div id="authContinueBtn" style="display:none; margin-bottom: 16px;">
+                <button onclick="continueAsUser()" style="width:100%; padding: 12px 20px; background: linear-gradient(135deg, #00c2a8, #00a389); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.1s ease;">
+                    <img id="authContinueAvatar" src="" style="width:28px; height:28px; border-radius:50%;" referrerpolicy="no-referrer">
+                    <span id="authContinueName">Tiếp tục đăng nhập</span>
+                </button>
+            </div>
+            <!-- Phân cách -->
+            <div id="authDivider" style="display:none; margin: 16px 0; color: var(--text-muted); font-size: 12px;">── hoặc đăng nhập tài khoản khác ──</div>
+            <!-- Nút đăng nhập Google -->
             <div id="g_id_onload"
                  data-client_id="854267293470-9pka8g6k8ksvft2n83o83vmh3qnbeu87.apps.googleusercontent.com"
                  data-context="signin"
@@ -467,7 +477,8 @@
                  data-theme="filled_black"
                  data-text="signin_with"
                  data-size="large"
-                 data-logo_alignment="left">
+                 data-logo_alignment="left"
+                 style="display: flex; justify-content: center;">
             </div>
         </div>
     </div>
@@ -6394,6 +6405,96 @@ window.exportRecon3WayExcel = function() {
             target.style.opacity = '0.5';
         }
     });
+
+
+// ==================== GOOGLE AUTHENTICATION ====================
+let currentUser = null;
+
+function parseJwt(token) {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
+}
+
+function dismissAuthOverlay() {
+    const overlay = document.getElementById('authOverlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(function() { overlay.style.display = 'none'; }, 300);
+    }
+}
+
+function handleGoogleLogin(response) {
+    const payload = parseJwt(response.credential);
+    if (payload && payload.email) {
+        currentUser = {
+            name: payload.name,
+            email: payload.email,
+            picture: payload.picture
+        };
+        localStorage.setItem('GHN_USER_INFO', JSON.stringify(currentUser));
+        dismissAuthOverlay();
+        showToast('✅', 'Đăng nhập thành công: ' + currentUser.name);
+        renderUserInfo();
+    }
+}
+
+function continueAsUser() {
+    try {
+        const saved = localStorage.getItem('GHN_USER_INFO');
+        if (saved) {
+            currentUser = JSON.parse(saved);
+            dismissAuthOverlay();
+            renderUserInfo();
+            showToast('✅', 'Xin chào, ' + currentUser.name + '!');
+        }
+    } catch(e) {}
+}
+
+function renderUserInfo() {
+    var userInfoEl = document.getElementById('userInfoDisplay');
+    if (!userInfoEl) {
+        userInfoEl = document.createElement('div');
+        userInfoEl.id = 'userInfoDisplay';
+        userInfoEl.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);';
+        var rightPanel = document.querySelector('.header-right');
+        if (rightPanel) {
+            rightPanel.insertBefore(userInfoEl, rightPanel.firstChild);
+        }
+    }
+    if (currentUser) {
+        userInfoEl.innerHTML = '<img src="' + currentUser.picture + '" style="width:24px;height:24px;border-radius:50%;" referrerpolicy="no-referrer"> <span>' + escapeHtml(currentUser.name) + '</span>';
+    }
+}
+
+// Kiểm tra đăng nhập khi trang load
+(function checkAuthOnLoad() {
+    try {
+        var saved = localStorage.getItem('GHN_USER_INFO');
+        if (saved) {
+            var user = JSON.parse(saved);
+            if (user && user.name && user.email) {
+                var continueBtn = document.getElementById('authContinueBtn');
+                var continueName = document.getElementById('authContinueName');
+                var continueAvatar = document.getElementById('authContinueAvatar');
+                var divider = document.getElementById('authDivider');
+                if (continueBtn && continueName) {
+                    continueName.textContent = 'Tiếp tục với ' + user.name;
+                    if (continueAvatar && user.picture) continueAvatar.src = user.picture;
+                    continueBtn.style.display = 'block';
+                    if (divider) divider.style.display = 'block';
+                }
+            }
+        }
+    } catch(e) {}
+})();
 
 </script>
 </body>

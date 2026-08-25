@@ -5737,6 +5737,16 @@ async function loadLastmileData() {
           if (isChecked) virtuals[tripCode] = true;
           else delete virtuals[tripCode];
           localStorage.setItem('GHN_VIRTUAL_TRIPS', JSON.stringify(virtuals));
+          if (typeof saveActionLog === 'function') {
+              const vKey = 'VIRTUAL_' + tripCode;
+              saveActionLog(vKey, isChecked ? 'Đánh dấu chuyến ảo' : 'Bỏ đánh dấu chuyến ảo', 'Lastmile');
+              try {
+                  const localLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
+                  if (typeof syncToCloud === 'function') {
+                      syncToCloud(vKey, isChecked ? 'VIRTUAL' : 'NOT_VIRTUAL', undefined, localLogs[vKey]);
+                  }
+              } catch(e) {}
+          }
           showToast('success', (isChecked ? 'Đã đánh dấu chuyến ảo: ' : 'Đã bỏ chuyến ảo: ') + tripCode);
           if (typeof renderLastmile === 'function') renderLastmile(true);
       } catch(e) {
@@ -5877,6 +5887,9 @@ async function loadLastmileData() {
     html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:110px">' + sdtHeader + '</th><th style="min-width:200px;">Tuyến đường</th><th style="width:80px; text-align:center;">Chuyến ảo</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th><th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>';
     html += '</tr></thead><tbody>';
     
+    let allLocalLogs = {};
+    try { allLocalLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}'); } catch(e) {}
+    
     for (var m = 0; m < filtered.length; m++) {
         var r = filtered[m];
         var whColor = typeof warehouseColor === 'function' ? warehouseColor(r.hubName || 'Khác') : '';
@@ -5926,12 +5939,20 @@ async function loadLastmileData() {
         html += '<td style="text-align:center;font-weight:bold;">' + statusHtml + '</td>';
         let logHtml = '<span style="opacity:0.2">🕒</span>';
         let logTitle = 'Chưa có thao tác nào';
+        let logs = [];
         if (isMatched && typeof tripToNccIndex !== 'undefined') {
             const nccIdx = tripToNccIndex.get(r.tripCode);
             if (nccIdx !== null && nccIdx !== undefined && typeof nccTripData !== 'undefined' && nccTripData[nccIdx].actionLogs && nccTripData[nccIdx].actionLogs.length > 0) {
-                logHtml = '🕒';
-                logTitle = escapeHtml(nccTripData[nccIdx].actionLogs.map(l => l.time + ' (' + (l.user||'Ẩn danh') + '): ' + l.action + ' - ' + l.details).join('\n'));
+                logs = logs.concat(nccTripData[nccIdx].actionLogs);
             }
+        }
+        const vKey = 'VIRTUAL_' + r.tripCode;
+        if (allLocalLogs[vKey] && allLocalLogs[vKey].length > 0) {
+            logs = logs.concat(allLocalLogs[vKey]);
+        }
+        if (logs.length > 0) {
+            logHtml = '🕒';
+            logTitle = escapeHtml(logs.map(l => l.time + ' (' + (l.user||'Ẩn danh') + '): ' + l.action + ' - ' + l.details).join('\n'));
         }
         html += '<td style="text-align:center; cursor:pointer;" title="' + logTitle + '">' + logHtml + '</td>';
         html += '</tr>';

@@ -5858,7 +5858,7 @@ async function loadLastmileData() {
         ? 'SĐT <span style="font-size:11px; color:var(--success);" title="Đã mở khóa">🔓</span>' 
         : 'SĐT <span onclick="unlockPhoneColumn()" style="cursor:pointer; font-size:11px; color:#fbbf24;" title="Nhấn để nhập mật khẩu xem SĐT">🔒</span>';
 
-    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:110px">' + sdtHeader + '</th><th style="min-width:200px;">Tuyến đường</th><th style="width:80px; text-align:center;">Chuyến ảo</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
+    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:110px">' + sdtHeader + '</th><th style="min-width:200px;">Tuyến đường</th><th style="width:80px; text-align:center;">Chuyến ảo</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th><th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>';
     html += '</tr></thead><tbody>';
     
     for (var m = 0; m < filtered.length; m++) {
@@ -5907,7 +5907,18 @@ async function loadLastmileData() {
         } else if (isVirtual) {
             statusHtml = '<span style="color:#a78bfa; font-weight:700;">👻 Chuyến ảo</span>';
         }
-        html += '<td style="text-align:center;font-weight:bold;">' + statusHtml + '</td>';        html += '</tr>';
+        html += '<td style="text-align:center;font-weight:bold;">' + statusHtml + '</td>';
+        let logHtml = '<span style="opacity:0.2">🕒</span>';
+        let logTitle = 'Chưa có thao tác nào';
+        if (isMatched && typeof tripToNccIndex !== 'undefined') {
+            const nccIdx = tripToNccIndex.get(r.tripCode);
+            if (nccIdx !== null && nccIdx !== undefined && typeof nccTripData !== 'undefined' && nccTripData[nccIdx].actionLogs && nccTripData[nccIdx].actionLogs.length > 0) {
+                logHtml = '🕒';
+                logTitle = escapeHtml(nccTripData[nccIdx].actionLogs.map(l => l.time + ' (' + (l.user||'Ẩn danh') + '): ' + l.action + ' - ' + l.details).join('\n'));
+            }
+        }
+        html += '<td style="text-align:center; cursor:pointer;" title="' + logTitle + '">' + logHtml + '</td>';
+        html += '</tr>';
     }
     html += '</tbody></table></div></div>';
     

@@ -1253,11 +1253,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tự động tính kỳ đối soát hiện tại (ngày < 26 → tháng trước, ngày >= 26 → tháng này)
     const now = new Date();
     let cycleYear = now.getFullYear();
-    let cycleMonth = now.getMonth(); // 0-indexed
-    if (now.getDate() < 26) {
-        cycleMonth -= 1;
-        if (cycleMonth < 0) { cycleMonth = 11; cycleYear -= 1; }
-    }
+    let cycleMonth = now.getMonth() - 1; // 0-indexed
+    if (cycleMonth < 0) { cycleMonth = 11; cycleYear -= 1; }
     const currentMonthStr = `${cycleYear}-${String(cycleMonth + 1).padStart(2, '0')}`;
 
     const monthSelect = document.getElementById('filterMonth');

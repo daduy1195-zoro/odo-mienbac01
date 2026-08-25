@@ -1283,7 +1283,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAll();
         loadNccData();
         if (typeof renderNccTrip === 'function') renderNccTrip();
-        if (typeof renderLastmile === 'function') renderLastmile();
+        if (typeof renderLastmile === 'function') renderLastmile(true);
         if (typeof renderRecon3Way === 'function') renderRecon3Way();
     };
     window.applyFilters = applyFilters; // Expose globally for HTML onchange
@@ -2444,7 +2444,7 @@ async function loadAllData() {
         renderAll();
         loadNccData();
         if (typeof renderNccTrip === 'function') renderNccTrip();
-        if (typeof renderLastmile === 'function') renderLastmile();
+        if (typeof renderLastmile === 'function') renderLastmile(true);
         if (typeof renderRecon3Way === 'function') renderRecon3Way();
 
         // Cập nhật thời gian refresh
@@ -5168,8 +5168,13 @@ function rematchNccTrips() {
     console.log(`🔄 rematchNccTrips: ${matched}/${nccTripData.length} trips matched with GHN Lastmile`);
 }
 
-function renderNccTrip() {
+function renderNccTrip(preserveScroll = false) {
     const container = document.getElementById('nccTripContainer');
+    let scrollPos = 0;
+    if (preserveScroll && container) {
+        const existingScroll = container.querySelector('.table-scroll');
+        if (existingScroll) scrollPos = existingScroll.scrollTop;
+    }
     if (!isNccTripLoaded) {
         container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 10px"></div>Đang tải dữ liệu chuyến NCC...</div>';
         return;
@@ -5459,6 +5464,12 @@ function renderNccTrip() {
     
     html += '</tbody></table></div></div>';
     container.innerHTML = html;
+    if (preserveScroll && scrollPos > 0) {
+        setTimeout(() => {
+            const newScroll = container.querySelector('.table-scroll');
+            if (newScroll) newScroll.scrollTop = scrollPos;
+        }, 0);
+    }
 }
 
 function exportNccTripExcel() {
@@ -5523,7 +5534,7 @@ function unlockPhoneColumn() {
     if (pw === _NCC_PASS) {
         _phoneUnlocked = true;
         showToast('✅', 'Đã mở khóa hiển thị cột SĐT!');
-        if (typeof renderLastmile === 'function') renderLastmile();
+        if (typeof renderLastmile === 'function') renderLastmile(true);
     } else if (pw !== null) {
         showToast('❌', 'Mật khẩu không đúng!');
     }
@@ -5714,7 +5725,7 @@ async function loadLastmileData() {
       let newValue = currentCodes.join(' | ');
       
       updateNccTripCode(nccIndex, newValue);
-      renderLastmile();
+      renderLastmile(true);
       showToast('success', 'Đã gỡ đối soát chuyến ' + tripCode);
   };
 
@@ -5727,15 +5738,20 @@ async function loadLastmileData() {
           else delete virtuals[tripCode];
           localStorage.setItem('GHN_VIRTUAL_TRIPS', JSON.stringify(virtuals));
           showToast('success', (isChecked ? 'Đã đánh dấu chuyến ảo: ' : 'Đã bỏ chuyến ảo: ') + tripCode);
-          if (typeof renderLastmile === 'function') renderLastmile();
+          if (typeof renderLastmile === 'function') renderLastmile(true);
       } catch(e) {
           console.error('Error saving virtual trip:', e);
       }
   };
 
-  function renderLastmile() {
+  function renderLastmile(preserveScroll = false) {
     console.log('🎨 renderLastmile called, isLoaded=' + isLastmileLoaded + ', data=' + lastmileData.length);
     var container = document.getElementById('lastmileContainer');
+    let scrollPos = 0;
+    if (preserveScroll && container) {
+        const existingScroll = container.querySelector('.table-scroll');
+        if (existingScroll) scrollPos = existingScroll.scrollTop;
+    }
     if (!container) { console.error('❌ container not found!'); return; }
     if (!isLastmileLoaded || lastmileData.length === 0) {
         container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Không có dữ liệu.</div>';
@@ -5924,6 +5940,12 @@ async function loadLastmileData() {
     
     console.log('✅ HTML built, length=' + html.length);
     container.innerHTML = '<div class="ranking-grid" style="grid-template-columns:1fr">' + html + '</div>';
+    if (preserveScroll && scrollPos > 0) {
+        setTimeout(() => {
+            const newScroll = container.querySelector('.table-scroll');
+            if (newScroll) newScroll.scrollTop = scrollPos;
+        }, 0);
+    }
     console.log('✅ renderLastmile done!');
 }
 function exportLastmileExcel() {
@@ -5960,7 +5982,7 @@ window.jumpToNccTrip = function(tripCode) {
     });
     
     switchTab('nccTrip', targetBtn);
-    if (typeof renderNccTrip === 'function') renderNccTrip();
+    if (typeof renderNccTrip === 'function') renderNccTrip(true);
 };
 
     window.clearFilters = function() {
@@ -6027,7 +6049,7 @@ window.jumpToNccTrip = function(tripCode) {
     }
     if (tab === 'lastmile') {
         if (!isLastmileLoaded) loadLastmileData();
-        else if (typeof renderLastmile === 'function') renderLastmile();
+        else if (typeof renderLastmile === 'function') renderLastmile(true);
     }
     if (tab === 'recon3Way' && (!isNccTripLoaded || !isLastmileLoaded)) {
         if (!isNccTripLoaded) loadNccTripData();

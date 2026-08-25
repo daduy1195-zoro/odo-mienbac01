@@ -4382,7 +4382,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         let tollFee = (colTollFee > -1 ? row[colTollFee] : '').toString().trim();
         let holidayFee = (colHolidayFee > -1 ? row[colHolidayFee] : '').toString().trim();
         if (actualNcc === 'NAK') {
-            console.log("DEBUG NAK:", { colMonthlyRate, colDailyRate, colTollFee, colHolidayFee, monthlyRate, dailyRate, tollFee, holidayFee });
+                // console.log("DEBUG NAK:", { colMonthlyRate, colDailyRate, colTollFee, colHolidayFee, monthlyRate, dailyRate, tollFee, holidayFee });
         }
         let totalCost = (colTotalCost > -1 ? row[colTotalCost] : '').toString().trim();
         if (i === startRow) {

@@ -4324,6 +4324,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         const finalKey = `${nccName}_${plate}_${dateStr}_${sourceRow}`;
         let tripNote = '';
         let isManualMatch = false;
+        let actionLogs = [];
         try {
             const overrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
             if (overrides[finalKey] !== undefined) {
@@ -4336,6 +4337,11 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             if (notes[finalKey] !== undefined) {
                 tripNote = notes[finalKey];
             }
+            try {
+                const logs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
+                if (logs[finalKey]) actionLogs = logs[finalKey];
+            } catch(e) {}
+
         } catch(e) {}
 
         results.push({
@@ -4349,6 +4355,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             ghnTripCode: matchedTripCode,
             isManualMatch: isManualMatch,
             note: tripNote,
+            actionLogs: actionLogs,
             sheetId: sheetId || '',
             tabName: tabName || '',
             tabGid: tabGid || '',
@@ -4691,6 +4698,11 @@ function updateNccTripNote(index, value) {
                 delete notes[key];
             }
             localStorage.setItem("GHN_NCC_TRIP_NOTES", JSON.stringify(notes));
+            saveActionLog(key, 'Sửa ghi chú', value || 'Xóa ghi chú');
+            if (nccTripData[index]) {
+                if (!nccTripData[index].actionLogs) nccTripData[index].actionLogs = [];
+                nccTripData[index].actionLogs.push({ time: new Date().toLocaleString('vi-VN'), action: 'Sửa ghi chú', details: value || 'Xóa ghi chú' });
+            }
         } catch(e) {}
     }
 }
@@ -4898,6 +4910,19 @@ function selectSuggestion(originalIndex, tripCode, suggestedPlate) {
     showToast('✅', `Đã ghép mã chuyến: ${tripCode}`);
 }
 
+function saveActionLog(key, action, details) {
+    try {
+        const logs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
+        if (!logs[key]) logs[key] = [];
+        logs[key].push({
+            time: new Date().toLocaleString('vi-VN'),
+            action: action,
+            details: details
+        });
+        localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(logs));
+    } catch(e) {}
+}
+
 function updateNccTripCode(index, value, suggestedPlate) {
     if (nccTripData[index]) {
         nccTripData[index].ghnTripCode = value;
@@ -4914,6 +4939,11 @@ function updateNccTripCode(index, value, suggestedPlate) {
                 delete overrides[key];
             }
             localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(overrides));
+            saveActionLog(key, 'Chốt mã chuyến', value || 'Xóa mã');
+            if (nccTripData[index]) {
+                if (!nccTripData[index].actionLogs) nccTripData[index].actionLogs = [];
+                nccTripData[index].actionLogs.push({ time: new Date().toLocaleString('vi-VN'), action: 'Chốt mã chuyến', details: value || 'Xóa mã' });
+            }
         } catch(e) {}
 
         // ★ Học hỏi mapping biển số: nếu user chọn gợi ý có biển khác → lưu mapping
@@ -5165,6 +5195,7 @@ function renderNccTrip() {
     html += '<option value="khong_chay" style="color: #000;" ' + (filterStatus === 'khong_chay' ? 'selected' : '') + '>🛑 Không chạy vẫn tính tiền</option>';
     html += '</select>';
     html += '</th>';
+    html += '<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>';
     html += '<th style="min-width:150px">Ghi chú</th>';
     html += '</tr></thead><tbody>';
 
@@ -5302,6 +5333,9 @@ function renderNccTrip() {
                 <td style="text-align:right; font-family:Calibri, sans-serif; font-weight:bold; color:var(--text-primary);">${formatMoneyCell(r.totalCost)}</td>
                 <td>${ghnHtml}</td>
                 <td style="font-weight:bold;">${statusHtml}</td>
+                <td style="text-align:center; cursor:pointer;" title="${r.actionLogs && r.actionLogs.length > 0 ? escapeHtml(r.actionLogs.map(l => l.time + ': ' + l.action + ' - ' + l.details).join('\n')) : 'Chưa có thao tác nào'}">
+                    ${r.actionLogs && r.actionLogs.length > 0 ? '🕒' : '<span style="opacity:0.2">🕒</span>'}
+                </td>
                 <td><input type="text" class="form-control" style="font-size:12px; height:26px; padding:2px 6px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width:150px;" placeholder="Ghi chú..." onchange="updateNccTripNote(${r.originalIndex}, this.value)" value="${escapeHtml(r.note || '')}"></td>
             </tr>
         `;

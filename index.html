@@ -6470,7 +6470,8 @@ function renderUserInfo() {
         }
     }
     if (currentUser) {
-        userInfoEl.innerHTML = '<img src="' + currentUser.picture + '" style="width:24px;height:24px;border-radius:50%;" referrerpolicy="no-referrer"> <span>' + escapeHtml(currentUser.name) + '</span>';
+        var avatarHtml = currentUser.picture ? '<img src="' + currentUser.picture + '" style="width:24px;height:24px;border-radius:50%;" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">' : '<span style="width:24px;height:24px;border-radius:50%;background:#00c2a8;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;color:#fff;">' + escapeHtml(currentUser.name.charAt(0).toUpperCase()) + '</span>';
+        userInfoEl.innerHTML = avatarHtml + ' <span>' + escapeHtml(currentUser.name) + '</span>';
     }
 }
 

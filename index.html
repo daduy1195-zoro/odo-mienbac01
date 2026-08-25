@@ -5308,8 +5308,8 @@ function renderNccTrip() {
     html += '<option value="khong_chay" style="color: #000;" ' + (filterStatus === 'khong_chay' ? 'selected' : '') + '>🛑 Không chạy vẫn tính tiền</option>';
     html += '</select>';
     html += '</th>';
-    html += '<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>';
     html += '<th style="min-width:150px">Ghi chú</th>';
+    html += '<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>';
     html += '</tr></thead><tbody>';
 
     filtered.forEach((r, i) => {
@@ -5446,10 +5446,10 @@ function renderNccTrip() {
                 <td style="text-align:right; font-family:Calibri, sans-serif; font-weight:bold; color:var(--text-primary);">${formatMoneyCell(r.totalCost)}</td>
                 <td>${ghnHtml}</td>
                 <td style="font-weight:bold;">${statusHtml}</td>
+                <td><input type="text" class="form-control" style="font-size:12px; height:26px; padding:2px 6px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width:150px;" placeholder="Ghi chú..." onchange="updateNccTripNote(${r.originalIndex}, this.value)" value="${escapeHtml(r.note || '')}"></td>
                 <td style="text-align:center; cursor:pointer;" title="${r.actionLogs && r.actionLogs.length > 0 ? escapeHtml(r.actionLogs.map(l => l.time + ' (' + (l.user||'Ẩn danh') + '): ' + l.action + ' - ' + l.details).join('\n')) : 'Chưa có thao tác nào'}">
                     ${r.actionLogs && r.actionLogs.length > 0 ? '🕒' : '<span style="opacity:0.2">🕒</span>'}
                 </td>
-                <td><input type="text" class="form-control" style="font-size:12px; height:26px; padding:2px 6px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width:150px;" placeholder="Ghi chú..." onchange="updateNccTripNote(${r.originalIndex}, this.value)" value="${escapeHtml(r.note || '')}"></td>
             </tr>
         `;
     });

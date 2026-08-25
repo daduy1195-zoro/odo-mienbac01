@@ -5397,12 +5397,12 @@ function renderNccTrip() {
                 <td style="font-family:Calibri, sans-serif; font-weight:700;">${(() => {
                     let finalDiff = null;
                     if (r.kmDiff !== undefined && r.kmDiff !== null && String(r.kmDiff).trim() !== '') {
-                        let diffVal = parseFloat(String(r.kmDiff).replace(/[^\d.]/g, ''));
+                        let diffVal = parseVietnameseNumber(r.kmDiff);
                         if (!isNaN(diffVal)) finalDiff = diffVal;
                         else return escapeHtml(r.kmDiff);
                     } else {
-                        let s = parseFloat(String(r.kmStart).replace(/[^\d.]/g, ''));
-                        let e = parseFloat(String(r.kmEnd).replace(/[^\d.]/g, ''));
+                        let s = parseVietnameseNumber(r.kmStart);
+                        let e = parseVietnameseNumber(r.kmEnd);
                         if (!isNaN(s) && !isNaN(e) && s > 1000 && e >= s) {
                             finalDiff = e - s;
                         } else if (!isNaN(e) && e > 0 && e < 1000) {

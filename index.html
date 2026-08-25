@@ -827,7 +827,7 @@ const CONFIG = {
     },
     
     // Google Apps Script Proxy URL (đọc sheet GHN khi bị chặn Gmail cá nhân - 24/7)
-    PROXY_API_URL: 'https://script.google.com/a/macros/ghn.vn/s/AKfycbzP3n4syyPtCXZgXf0jimHp9c37oRoTHHqUvBaQGMmj3Cde9t5KKoqB1miQkG5UEB8Y/exec'
+    PROXY_API_URL: '' // Disabled because user proxy is broken, fallback to Archive
 };
 Object.freeze(CONFIG);
 
@@ -2052,17 +2052,14 @@ async function loadAllData() {
                 // BỔ SUNG: Luôn kéo dữ liệu ODO từ Archive (public) phòng hờ HTMLView bị CORS
                 if (CONFIG.ARCHIVE_SHEET_ID) {
                     try {
-                        const gid1 = CONFIG.ARCHIVE_GIDS['odo_data'];
-                        const gid2 = CONFIG.ARCHIVE_GIDS['odo_data_2'];
-                        if (gid1) {
-                            const r1 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid1);
-                            r1.forEach((r, idx) => { if(r) { r._gid = (r[r.length-2] || '').toString(); r._sheetRow = parseInt(r[r.length-1]) || (idx+2); } });
-                            empRowsArrays.push(r1);
-                        }
-                        if (gid2) {
-                            const r2 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid2);
-                            r2.forEach((r, idx) => { if(r) { r._gid = (r[r.length-2] || '').toString(); r._sheetRow = parseInt(r[r.length-1]) || (idx+2); } });
-                            empRowsArrays.push(r2);
+                        const archTabs = await getSheetTabNames(CONFIG.ARCHIVE_SHEET_ID);
+                        const odoTabs = archTabs.filter(t => t.name.startsWith('odo_data'));
+                        for (const tab of odoTabs) {
+                            const r = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, tab.gid);
+                            if (r && r.length > 0) {
+                                r.forEach((row, idx) => { if(row) { row._gid = (row[row.length-2] || '').toString(); row._sheetRow = parseInt(row[row.length-1]) || (idx+2); } });
+                                empRowsArrays.push(r);
+                            }
                         }
                     } catch(e) { console.warn('Lỗi bổ sung archive:', e); }
                 }
@@ -2076,16 +2073,12 @@ async function loadAllData() {
         if (empRows0.length === 0 && CONFIG.ARCHIVE_SHEET_ID) {
             console.log('📡 Proxy + Direct đều fail → Đọc từ Archive Sheet (public)...');
             try {
-                const gid1 = CONFIG.ARCHIVE_GIDS['odo_data'];
-                const gid2 = CONFIG.ARCHIVE_GIDS['odo_data_2'];
                 let archiveEmpRows = [];
-                if (gid1) {
-                    const r1 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid1);
-                    if (r1 && r1.length > 0) archiveEmpRows = archiveEmpRows.concat(r1);
-                }
-                if (gid2) {
-                    const r2 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid2);
-                    if (r2 && r2.length > 0) archiveEmpRows = archiveEmpRows.concat(r2);
+                const archTabs = await getSheetTabNames(CONFIG.ARCHIVE_SHEET_ID);
+                const odoTabs = archTabs.filter(t => t.name.startsWith('odo_data'));
+                for (const tab of odoTabs) {
+                    const r = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, tab.gid);
+                    if (r && r.length > 0) archiveEmpRows = archiveEmpRows.concat(r);
                 }
                 
                 if (archiveEmpRows.length > 0) {

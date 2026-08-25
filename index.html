@@ -5330,16 +5330,31 @@ function renderNccTrip() {
         } else if (isPhat) {
             statusHtml = '<span style="color:#ef4444; font-weight:700;">⚠️ Phạt</span>';
         } else if (hasMatch) {
-              const codes = String(r.ghnTripCode).split('|').map(c => c.trim()).filter(c => c);
-              ghnHtml = `<div style="display:flex; gap: 6px; align-items:center; flex-wrap:wrap;">`;
-              codes.forEach((c, idx) => {
-                  ghnHtml += `<div style="display:flex;align-items:center;gap:2px;"><a href="https://nhanh.ghn.vn/lastmile/trip-detail/${c}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${c}</strong></a><button style="background:transparent;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 2px;" onclick="unmatchFromLastmile(${r.originalIndex}, '${c}')" title="Gỡ mã chuyến này">✖</button></div>`;
-                  if (idx < codes.length - 1) ghnHtml += `<span style="color:#64748b;">|</span>`;
-              });
-              if (r.isManualMatch) {
+            const isMulti = String(r.ghnTripCode).includes('|');
+            if (isMulti) {
+                statusHtml = '<span style="color:var(--info); font-weight:700;">🔄 Đa chuyến</span>';
+            } else if (r.isManualMatch) {
+                statusHtml = '<span style="color:#f59e0b; font-weight:700;">📝 Khớp tay</span>';
+            } else {
+                statusHtml = '<span style="color:var(--success); font-weight:700;">✅ Khớp</span>';
+            }
+            
+            const codes = String(r.ghnTripCode).split('|').map(c => c.trim()).filter(c => c);
+            ghnHtml = `<div style="display:flex; gap: 6px; align-items:center; flex-wrap:wrap;">`;
+            codes.forEach((c, idx) => {
+                ghnHtml += `<div style="display:flex;align-items:center;gap:2px;"><a href="https://nhanh.ghn.vn/lastmile/trip-detail/${c}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${c}</strong></a><button style="background:transparent;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 2px;" onclick="unmatchFromLastmile(${r.originalIndex}, '${c}')" title="Gỡ mã chuyến này">✖</button></div>`;
+                if (idx < codes.length - 1) ghnHtml += `<span style="color:#64748b;">|</span>`;
+            });
+            if (r.isManualMatch) {
                 ghnHtml += `<span class="badge" style="background:rgba(251,191,36,0.15);color:#f59e0b;font-size:10px;padding:2px 4px;border:1px solid rgba(251,191,36,0.3);" title="Được khớp bằng tay">📝 Khớp tay</span>`;
             }
             ghnHtml += `</div>`;
+        } else {
+            if (String(r.route || '').toLowerCase().includes('không chạy')) {
+                statusHtml = '<span style="color:#ef4444; font-weight:700;">🛑 Không chạy</span>';
+            } else {
+                statusHtml = '<span style="color:var(--warning); font-weight:700;">⚠️ Thiếu mã</span>';
+            }
         }
 
 

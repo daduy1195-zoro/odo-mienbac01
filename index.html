@@ -438,6 +438,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -447,6 +448,30 @@
         <div style="font-size: 22px; font-weight: bold; margin-bottom: 25px; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); color: var(--text-primary);">Khách hàng là người trả lương</div>
         <div style="width: 35px; height: 35px; border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: #00c2a8; border-radius: 50%; animation: spin 1s linear infinite;"></div>
     </div>
+
+    <!-- ========== MÀN HÌNH ĐĂNG NHẬP ========== -->
+    <div id="authOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-primary); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s ease;">
+        <div style="background: var(--bg-card); padding: 40px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center; max-width: 400px; width: 90%;">
+            <div style="font-size: 32px; font-weight: 900; margin-bottom: 10px; color: var(--text-primary);">Odo Dashboard</div>
+            <p style="color: var(--text-secondary); margin-bottom: 30px; font-size: 14px;">Vui lòng đăng nhập bằng tài khoản Google (Gmail) để tiếp tục sử dụng hệ thống và định danh thao tác.</p>
+            <div id="g_id_onload"
+                 data-client_id="854267293470-9pka8g6k8ksvft2n83o83vmh3qnbeu87.apps.googleusercontent.com"
+                 data-context="signin"
+                 data-ux_mode="popup"
+                 data-callback="handleGoogleLogin"
+                 data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-shape="rectangular"
+                 data-theme="filled_black"
+                 data-text="signin_with"
+                 data-size="large"
+                 data-logo_alignment="left">
+            </div>
+        </div>
+    </div>
+
 <div class="container">
     <!-- ========== HEADER ========== -->
     <header class="header" id="header">
@@ -4982,10 +5007,18 @@ function saveActionLog(key, action, details) {
     try {
         const logs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
         if (!logs[key]) logs[key] = [];
+        
+        // Get user info if available
+        let userName = 'Ẩn danh';
+        if (typeof currentUser !== 'undefined' && currentUser && currentUser.name) {
+            userName = currentUser.name;
+        }
+        
         logs[key].push({
             time: new Date().toLocaleString('vi-VN'),
             action: action,
-            details: details
+            details: details,
+            user: userName
         });
         localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(logs));
     } catch(e) {}
@@ -5402,7 +5435,7 @@ function renderNccTrip() {
                 <td style="text-align:right; font-family:Calibri, sans-serif; font-weight:bold; color:var(--text-primary);">${formatMoneyCell(r.totalCost)}</td>
                 <td>${ghnHtml}</td>
                 <td style="font-weight:bold;">${statusHtml}</td>
-                <td style="text-align:center; cursor:pointer;" title="${r.actionLogs && r.actionLogs.length > 0 ? escapeHtml(r.actionLogs.map(l => l.time + ': ' + l.action + ' - ' + l.details).join('\n')) : 'Chưa có thao tác nào'}">
+                <td style="text-align:center; cursor:pointer;" title="${r.actionLogs && r.actionLogs.length > 0 ? escapeHtml(r.actionLogs.map(l => l.time + ' (' + (l.user||'Ẩn danh') + '): ' + l.action + ' - ' + l.details).join('\n')) : 'Chưa có thao tác nào'}">
                     ${r.actionLogs && r.actionLogs.length > 0 ? '🕒' : '<span style="opacity:0.2">🕒</span>'}
                 </td>
                 <td><input type="text" class="form-control" style="font-size:12px; height:26px; padding:2px 6px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width:150px;" placeholder="Ghi chú..." onchange="updateNccTripNote(${r.originalIndex}, this.value)" value="${escapeHtml(r.note || '')}"></td>

@@ -540,7 +540,8 @@
         </div>
         <div class="filter-group" style="align-self: flex-end; display: flex; flex-direction: row; gap: 8px;">
             <button class="btn btn-primary" onclick="sendTelegramReport(event)" style="padding: 8px 12px; font-size: 12px;">📤 Gửi BC</button>
-            <button class="btn btn-success" onclick="loadAllData()" style="padding: 8px 12px; font-size: 12px;">🔄 Làm mới</button>
+                        <button class="btn btn-success" onclick="loadAllData()" style="padding: 8px 12px; font-size: 12px;">🔄 Làm mới</button>
+            <button class="btn" onclick="clearFilters()" style="padding: 8px 12px; font-size: 12px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">❌ Xóa bộ lọc</button>
         </div>
     </div>
 
@@ -5801,7 +5802,34 @@ window.jumpToNccTrip = function(tripCode) {
     if (typeof renderNccTrip === 'function') renderNccTrip();
 };
 
-function switchTab(tab, el) {
+    window.clearFilters = function() {
+        document.getElementById('filterDateFrom').value = '';
+        document.getElementById('filterDateTo').value = '';
+        document.getElementById('filterWarehouse').value = '';
+        document.getElementById('filterNcc').value = '';
+        
+        document.getElementById('filterEmployee').value = '';
+        const clearEmp = document.getElementById('clearEmp');
+        if (clearEmp) clearEmp.style.display = 'none';
+        
+        document.getElementById('filterPlate').value = '';
+        const clearPlate = document.getElementById('clearPlate');
+        if (clearPlate) clearPlate.style.display = 'none';
+
+        const filterNccStatus = document.getElementById('filterNccStatus');
+        if (filterNccStatus) filterNccStatus.value = '';
+
+        const monthSelect = document.getElementById('filterMonth');
+        if (monthSelect.options.length > 0) {
+            monthSelect.selectedIndex = 0;
+        }
+
+        if (typeof applyFilters === 'function') {
+            applyFilters();
+        }
+    };
+
+    function switchTab(tab, el) {
     // Yêu cầu password khi vào tab NCC
     if (tab === 'ncc' && !_nccUnlocked) {
         const pw = prompt('🔒 Nhập mật khẩu để xem Chi phí xe NCC:');

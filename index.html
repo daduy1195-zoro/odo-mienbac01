@@ -5715,7 +5715,7 @@ async function loadLastmileData() {
     }
 }
 
-  window.unmatchFromLastmile = function(nccIndex, tripCode) {
+  window.unmatchFromLastmile = function(nccIndex, tripCode, btnEl) {
       if (nccIndex === undefined || nccIndex === null) return;
       if (typeof nccTripData === 'undefined' || !nccTripData[nccIndex]) return;
       if (!confirm('Bạn có chắc muốn gỡ đối soát cho chuyến: ' + tripCode + ' ?')) return;
@@ -5730,7 +5730,7 @@ async function loadLastmileData() {
   };
 
   
-  window.toggleVirtualTrip = function(tripCode, isChecked) {
+  window.toggleVirtualTrip = function(tripCode, isChecked, checkboxEl) {
       if (!tripCode) return;
       try {
           var virtuals = JSON.parse(localStorage.getItem('GHN_VIRTUAL_TRIPS') || '{}');
@@ -5748,7 +5748,32 @@ async function loadLastmileData() {
               } catch(e) {}
           }
           showToast('success', (isChecked ? 'Đã đánh dấu chuyến ảo: ' : 'Đã bỏ chuyến ảo: ') + tripCode);
-          if (typeof renderLastmile === 'function') renderLastmile(true);
+          
+        if (checkboxEl) {
+            const tr = checkboxEl.closest('tr');
+            if (tr && tr.children.length >= 17) {
+                const statusCell = tr.children[15];
+                if (isChecked) {
+                    statusCell.innerHTML = '<span style="color:#a78bfa; font-weight:700;">👻 Chuyến ảo</span>';
+                } else {
+                    statusCell.innerHTML = '<span style="color:var(--warning);">⚠️ Chưa ĐS</span>';
+                }
+                
+                let localLogs = {};
+                try { localLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}'); } catch(e){}
+                let newLogs = localLogs['VIRTUAL_' + tripCode];
+                if (newLogs && newLogs.length > 0) {
+                    const logCell = tr.children[16];
+                    logCell.innerHTML = '🕒';
+                    const esc = (unsafe) => (unsafe||'').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+                    logCell.title = esc(newLogs.map(l => l.time + ' (' + (l.user||'Ẩn danh') + '): ' + l.action + ' - ' + l.details).join('\n'));
+                    logCell.style.opacity = '1';
+                }
+            }
+        } else {
+            if (typeof renderLastmile === 'function') renderLastmile(true);
+        }
+
       } catch(e) {
           console.error('Error saving virtual trip:', e);
       }
@@ -5914,7 +5939,7 @@ async function loadLastmileData() {
         }
         html += '<td style="font-size:12px; max-width:150px; white-space:normal;">' + (r.route ? escapeHtml(r.route) : '<span style="color:var(--text-muted);">—</span>') + '</td>';
         let isVirtual = r.tripCode && virtualTrips[r.tripCode];
-        html += '<td style="text-align:center;"><input type="checkbox" ' + (isVirtual ? 'checked' : '') + ' onchange="toggleVirtualTrip(\'' + r.tripCode + '\', this.checked)" style="cursor:pointer; width:16px; height:16px;"></td>';
+        html += '<td style="text-align:center;"><input type="checkbox" ' + (isVirtual ? 'checked' : '') + ' onchange="toggleVirtualTrip(\'' + r.tripCode + '\', this.checked, this)" style="cursor:pointer; width:16px; height:16px;"></td>';
         var isMatched = r.tripCode && matchedTripCodes.has(r.tripCode);
         var isManual = r.tripCode && typeof manualTripCodes !== 'undefined' && manualTripCodes.has(r.tripCode);
         
@@ -5926,7 +5951,7 @@ async function loadLastmileData() {
             const nccIdx = typeof tripToNccIndex !== 'undefined' ? tripToNccIndex.get(r.tripCode) : null;
             let unmatchBtn = '';
             if (nccIdx !== null && nccIdx !== undefined) {
-                unmatchBtn = ` <span style="color:var(--danger); cursor:pointer; padding:0 4px; font-weight:bold; user-select:none;" onclick="unmatchFromLastmile(${nccIdx}, '${r.tripCode}')" title="Gỡ đối soát">✕</span>`;
+                unmatchBtn = ` <span style="color:var(--danger); cursor:pointer; padding:0 4px; font-weight:bold; user-select:none;" onclick="unmatchFromLastmile(${nccIdx}, \'${r.tripCode}\', this)" title="Gỡ đối soát">✕</span>`;
             }
             if (isManual) {
                 statusHtml = `<div style="display:flex;align-items:center;justify-content:center;gap:4px;"><span class="badge" style="background:rgba(251,191,36,0.15);color:#f59e0b;font-size:10px;padding:2px 4px;border:1px solid rgba(251,191,36,0.3);" title="Được khớp bằng tay">🤲 Khớp tay</span>${unmatchBtn}</div>`;
@@ -6593,6 +6618,69 @@ function showAccessLogs() {
 }
 
 </script>
+
+<!-- Global Fast Tooltip Injected -->
+<script>
+document.addEventListener('mouseover', function(e) {
+    let target = e.target.closest('[title], [data-tooltip]');
+    if (!target) return;
+    
+    // If it has title, move to data-tooltip to prevent native browser tooltip
+    if (target.hasAttribute('title')) {
+        target.setAttribute('data-tooltip', target.getAttribute('title'));
+        target.removeAttribute('title');
+    }
+    
+    let text = target.getAttribute('data-tooltip');
+    if (!text || text === 'Chưa có thao tác nào') return;
+    
+    // create tooltip div if not exists
+    let tt = document.getElementById('global-fast-tooltip');
+    if (!tt) {
+        tt = document.createElement('div');
+        tt.id = 'global-fast-tooltip';
+        tt.style.cssText = 'position:fixed; background:rgba(15,23,42,0.95); color:#fff; padding:8px 12px; border-radius:6px; font-size:12px; z-index:999999; max-width:400px; white-space:pre-wrap; pointer-events:none; box-shadow:0 4px 15px rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); line-height:1.5; font-family:sans-serif; backdrop-filter:blur(4px); transition:opacity 0.1s; opacity:0;';
+        document.body.appendChild(tt);
+    }
+    
+    tt.innerText = text;
+    tt.style.opacity = '1';
+    
+    // Position
+    let x = e.clientX + 15;
+    let y = e.clientY + 15;
+    if (x + tt.offsetWidth > window.innerWidth) x = e.clientX - tt.offsetWidth - 15;
+    if (y + tt.offsetHeight > window.innerHeight) y = e.clientY - tt.offsetHeight - 15;
+    
+    tt.style.left = x + 'px';
+    tt.style.top = y + 'px';
+    
+    target._mousemoveHandler = function(ev) {
+        let nx = ev.clientX + 15;
+        let ny = ev.clientY + 15;
+        if (nx + tt.offsetWidth > window.innerWidth) nx = ev.clientX - tt.offsetWidth - 15;
+        if (ny + tt.offsetHeight > window.innerHeight) ny = ev.clientY - tt.offsetHeight - 15;
+        tt.style.left = nx + 'px';
+        tt.style.top = ny + 'px';
+    };
+    target.addEventListener('mousemove', target._mousemoveHandler);
+});
+
+document.addEventListener('mouseout', function(e) {
+    let target = e.target.closest('[data-tooltip]');
+    if (!target) return;
+    
+    let tt = document.getElementById('global-fast-tooltip');
+    if (tt) {
+        tt.style.opacity = '0';
+    }
+    
+    if (target._mousemoveHandler) {
+        target.removeEventListener('mousemove', target._mousemoveHandler);
+    }
+});
+</script>
+
 </body>
 </html>
 

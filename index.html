@@ -683,7 +683,8 @@
         <div class="section-header">
             <div class="section-title">🔗 Ghép chuyến đi NCC</div>
             <div style="display:flex;gap:8px;align-items:center;">
-                <select id="filterNccStatus" class="form-control" style="width: 160px; font-size: 13px;" onchange="renderNccTrip()">
+                <button class="btn btn-primary" onclick="copyThcpAC()" style="padding:6px 14px;font-size:13px;background:#10b981;border-color:#10b981;" title="Copy toàn bộ mã chuyến đi đã ghép để dán thẳng vào cột AC của file THCP">📋 Copy cột AC (THCP)</button>
+<select id="filterNccStatus" class="form-control" style="width: 160px; font-size: 13px;" onchange="renderNccTrip()">
                     <option value="">Tất cả trạng thái</option>
                     <option value="khop">✅ Khớp</option>
                     <option value="khop_tay">📝 Khớp tay</option>

@@ -5175,6 +5175,12 @@ function rematchNccTrips() {
     
     let matched = 0;
     nccTripData.forEach(r => {
+        // Ưu tiên trạng thái OFF/Phạt đã được lưu hoặc detect từ parseNccTabData
+        const currCode = String(r.ghnTripCode || '').toUpperCase();
+        if (['GHN OFF', 'GHN_OFF', 'NCC OFF', 'NCC_OFF', 'OFF', 'PHẠT', 'PHAT'].includes(currCode)) {
+            return;
+        }
+
         const routeLower = String(r.route || '').toLowerCase();
         if (routeLower.includes('ghn off')) {
             r.ghnTripCode = 'GHN OFF';

@@ -5348,11 +5348,7 @@ window.copyThcpAC = function(sheetId, label) {
     const textToCopy = copyArr.join('\n');
     
     navigator.clipboard.writeText(textToCopy).then(() => {
-        alert('✅ Đã copy ' + copyArr.length + ' dòng!
-
-Bây giờ hãy:
-1. Mở file ' + label + '
-2. Click chuột vào ô đầu tiên của cột AC (ô AC4)\n3. Ấn Ctrl+V để dán toàn bộ dữ liệu.');
+        alert('✅ Đã copy ' + copyArr.length + ' dòng!\\n\\nBây giờ hãy:\\n1. Mở file ' + label + '\\n2. Click chuột vào ô đầu tiên của cột AC (ô AC4)\\n3. Ấn Ctrl+V để dán toàn bộ dữ liệu AC và AD.');
     }).catch(err => {
         alert('Lỗi copy: ' + err);
     });

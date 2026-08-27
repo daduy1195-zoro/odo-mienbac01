@@ -4164,6 +4164,14 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         }
     }
     if (colKmEnd > -1 && colKmDiff === -1) colKmDiff = colKmEnd + 1;
+
+    // Fallback cho file THCP Tháng 8 (bị khuyết text ở dòng tiêu đề)
+    if (nccName === 'ALL') {
+        if (colDate === -1) colDate = 2;
+        if (colPlate === -1) colPlate = 3;
+        if (colRoute === -1) colRoute = 5;
+        if (colNcc === -1) colNcc = 1;
+    }
     // Fallback: nếu không tìm được trong header, thử scan data row đầu tiên
     // để phát hiện 2 cột liên tiếp có giá trị lớn (>1000) là odometer readings
     if (colKmStart === -1 || colKmEnd === -1) {

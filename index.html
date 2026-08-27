@@ -4463,7 +4463,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             matchedTripCode = 'Phạt';
         }
 
-        const finalKey = `${nccName}_${plate}_${dateStr}_${route}`;
+        const finalKey = `${actualNcc}_${plate}_${dateStr}_${route}`;
         let tripNote = '';
         let isManualMatch = false;
         let actionLogs = [];

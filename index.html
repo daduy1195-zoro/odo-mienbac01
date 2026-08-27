@@ -4484,7 +4484,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 `${actualNcc}_${sourceRow}`,
                 `${actualNcc}_${rawPlate}_${dateStr}_${route}`,
                 `${actualNcc}_${rawPlate.replace(/-/g, '')}_${dateStr}_${route}`,
-                `${nccName}_${plate}_${dateStr}_${route}`
+                `${nccName}_${plate}_${dateStr}_${route}`,
+                `${nccName}_${rawPlate}_${dateStr}_${route}`,
+                `${nccName}_${rawPlate.replace(/-/g, '')}_${dateStr}_${route}`
             ];
             
             for (const oldKey of oldKeys) {

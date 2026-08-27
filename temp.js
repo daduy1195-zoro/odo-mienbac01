@@ -3338,7 +3338,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
           colMonthlyRate = 20; colDailyRate = 21; 
           colTollFee = 22; colHolidayFee = 23; colTotalCost = 24; colKho = 27;
       }
-    else if (["NAK", "Thiên Phú", "Hoa Vinh", "Long Thành", "Đạo Trường An", "TAL"].includes(nccName) || tabGid === "1620536867" || tabGid === "1290293725" || tabGid === "73639881" || tabGid === "45442280" || tabGid === "1012425134" || tabGid === "2147444878") {
+else if (tabGid === "1620536867" || tabGid === "1290293725" || tabGid === "73639881" || tabGid === "45442280" || tabGid === "1012425134" || tabGid === "2147444878" || tabGid === "942983334") {
     colNcc = -1; colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 4;
     colOtHours = 9; colOtRate = 10; colOtFee = 11;
     colKmStart = 13; colKmEnd = 14; colKmDiff = 15;
@@ -3359,7 +3359,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 if (ri === headerRowIdx) {
                     if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
                     if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
-                    if (h.includes('km chạy') || h.includes('tổng km') || (h.includes('số km') && !h.includes('vào') && !h.includes('ra') && !h.includes('phát sinh') && !h.includes('/')) || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
+                    if (h.includes('km chạy') || h.includes('km phát sinh') || h.includes('tổng km') || h.includes('số km') || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
                     if (h === 'lộ trình' || h === 'tuyến đường' || h.includes('điểm giao') || h === 'tuyến') colRoute = ci;
                 if (h.includes('ngày') && h.includes('thực hiện')) colDate = ci;
                 if (h.includes('biển số')) colPlate = ci;
@@ -3494,16 +3494,10 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 if (!h) continue;
                 if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
                 if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
-                if (h.includes('km chạy') || h.includes('tổng km') || (h.includes('số km') && !h.includes('vào') && !h.includes('ra') && !h.includes('phát sinh') && !h.includes('/')) || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
+                if (h.includes('km chạy') || h.includes('km phát sinh') || h.includes('tổng km') || h.includes('số km') || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
                 if (h === 'lộ trình' || h === 'tuyến đường' || h.includes('điểm giao') || h === 'tuyến') colRoute = ci;
                 if (h.includes('ngày') && h.includes('thực hiện')) colDate = ci;
                 if (h.includes('biển số')) colPlate = ci;
-
-                        if (h.includes('phí tăng ca') || h.includes('tiền tăng ca')) colOtFee = ci;
-                        if (h.includes('vượt km') || h.includes('km vượt') || h.includes('phí vượt') || h.includes('vuot km')) colKmOverFee = ci;
-                        if (h.includes('thời gian tăng ca') || h.includes('số giờ tăng ca')) colOtHours = ci;
-                        if (h.includes('giá tăng ca')) colOtRate = ci;
-        
                 if (h === 'xe' || h.includes('loại xe')) colVehicle = ci;
                   if (h === 'kho' || h.includes('kho trạm') || h.includes('trạm')) colKho = ci;
                 if (h === 'chi' || h.includes('nhà cung cấp') || h === 'ncc') colNcc = ci;
@@ -3722,7 +3716,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             matchedTripCode = 'Phạt';
         }
 
-        const finalKey = `${nccName}_${plate}_${dateStr}_${route}`;
+        const finalKey = `${nccName}_${plate}_${dateStr}_${sourceRow}`;
         let tripNote = '';
         let isManualMatch = false;
         let actionLogs = [];
@@ -4089,7 +4083,7 @@ function updateNccTripNote(index, value) {
         try {
             const notes = JSON.parse(localStorage.getItem("GHN_NCC_TRIP_NOTES") || "{}");
             const r = nccTripData[index];
-            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.route}`;
+            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.sourceRow}`;
             if (value) {
                 notes[key] = value;
             } else {
@@ -4339,7 +4333,7 @@ function updateNccTripCode(index, value, suggestedPlate) {
         try {
             const overrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
             const r = nccTripData[index];
-            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.route}`;
+            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.sourceRow}`;
             if (value) {
                 overrides[key] = value;
             } else {

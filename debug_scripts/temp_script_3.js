@@ -42,8 +42,8 @@ const CONFIG = {
     SHEET_SUPPLIER_GID: '0',
 
     // Link Google Sheet danh sách NV chuẩn (master list)
-    SHEET_MASTER_ID: '1WK5bcOrB6sBBxu-ti8KIGFIwWUrhuGRkPf4q36Vx4yc',
-    SHEET_MASTER_GID: '2040812814',
+    SHEET_MASTER_ID: '1RMe38TNV-EoIAradnynYmk8mt7l9pNWqJELM9O84Wxc',
+    SHEET_MASTER_GID: '1254809645',
     EXCLUDED_CTV_IDS: ['3163445', '3169220', '3171087', '3178191'], // 4 cộng tác viên Hải Dương không hiển thị báo cáo lastmile
     
     // Cấu hình NCC Sheets
@@ -59,11 +59,9 @@ const CONFIG = {
         { id: '1ZjxQD5Hh3nW7zxg4DCeWRfe704zoaD4gAcA5_hQFqQA', gid: '1620536867', ncc: 'Hoa Vinh' },
         { id: '1Q0idCOo-S-8XzmNWsw-4r51Kjsxsj0OxgP9D2ApCwxc', gid: '1290293725', ncc: 'Long Thành' },
         { id: '1Q0idCOo-S-8XzmNWsw-4r51Kjsxsj0OxgP9D2ApCwxc', gid: '1620536867', ncc: 'Long Thành' },
-        { id: '1yqf8Bg6Tmq4v-qOzdpY9G4Y1OEnhQ5e7OURq017SiZI', gid: '2147444878', ncc: 'Đạo Trường An' },
+        { id: '1yqf8Bg6Tmq4v-qOzdpY9G4Y1OEnhQ5e7OURq017SiZI', gid: '2147444878', ncc: 'Đào Trọng An' },
         { id: '1T6Hj-tcabvxLARvF7YyUUI05SHpQmvcfjik_yPp4Mls', gid: '1012425134', ncc: 'TAL' },
         { id: '1aa_3Nwi0Z-SlGi-jZs1cNkU0v3Yt6p_9Fc4lr_oA5vY', gid: '942983334', ncc: 'Đại Minh' },
-        // THCP Tổng hợp 3 kỳ Hưng Yên (26/4 - 25/7)
-        { id: '1tATkbxYOtiBuJC1GRto3QI81q_fkGzKYylufz4WtuAA', gid: '1957064243', ncc: 'ALL' },
         // PUT 'ALL' SHEET LAST SO IT OVERWRITES INDIVIDUAL SHEETS IN DEDUPLICATION
         { id: '1jFaJutdZD8uhBYa9Hy9fH6tHVaSnEf-iyg4VUMniXl8', gid: '1482895796', ncc: 'ALL' }
     ],
@@ -89,7 +87,7 @@ const CONFIG = {
     },
     
     // Google Apps Script Proxy URL (đọc sheet GHN khi bị chặn Gmail cá nhân - 24/7)
-    PROXY_API_URL: '' // Disabled because user proxy is broken, fallback to Archive
+    PROXY_API_URL: 'https://script.google.com/a/macros/ghn.vn/s/AKfycbzP3n4syyPtCXZgXf0jimHp9c37oRoTHHqUvBaQGMmj3Cde9t5KKoqB1miQkG5UEB8Y/exec'
 };
 Object.freeze(CONFIG);
 
@@ -515,8 +513,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tự động tính kỳ đối soát hiện tại (ngày < 26 → tháng trước, ngày >= 26 → tháng này)
     const now = new Date();
     let cycleYear = now.getFullYear();
-    let cycleMonth = now.getMonth() - 1; // 0-indexed
-    if (cycleMonth < 0) { cycleMonth = 11; cycleYear -= 1; }
+    let cycleMonth = now.getMonth(); // 0-indexed
+    if (now.getDate() < 26) {
+        cycleMonth -= 1;
+        if (cycleMonth < 0) { cycleMonth = 11; cycleYear -= 1; }
+    }
     const currentMonthStr = `${cycleYear}-${String(cycleMonth + 1).padStart(2, '0')}`;
 
     const monthSelect = document.getElementById('filterMonth');
@@ -542,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAll();
         loadNccData();
         if (typeof renderNccTrip === 'function') renderNccTrip();
-        if (typeof renderLastmile === 'function') renderLastmile(true);
+        if (typeof renderLastmile === 'function') renderLastmile();
         if (typeof renderRecon3Way === 'function') renderRecon3Way();
     };
     window.applyFilters = applyFilters; // Expose globally for HTML onchange
@@ -589,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function initOnlineTracker() {
     try {
         const clientId = "odo_" + Math.random().toString(16).substr(2, 8);
-        const client = new Paho.MQTT.Client("mqtt.eclipseprojects.io", 443, "/mqtt", clientId);
+        const client = new Paho.MQTT.Client("broker.emqx.io", 8084, clientId);
         let onlineUsers = new Map();
         const topic = "ghn_odo_mienbac01_presence";
 
@@ -705,24 +706,24 @@ async function loadNccData() {
     const filterSelect = document.getElementById('filterWarehouse');
     const filterWarehouse = filterSelect ? filterSelect.value : '';
     const container = document.getElementById('nccTableContainer');
-
+    
     if(!container) return;
-
+    
     if (!isNccTripLoaded) {
-        container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 10px"></div>Đang tải dữ liệu chuyến đi NCC... Vui lòng đợi!</div>';
+        container.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 10px"></div>Đang tải dữ liệu chuyến đi NCC... Vui lòng đợi!</div>`;
         document.getElementById('nccTotalCost').innerText = '0 đ';
         return;
     }
-
+    
     if (typeof nccTripData === 'undefined' || nccTripData.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">📫</div><p>Chưa có dữ liệu chuyến đi NCC</p></div>';
+        container.innerHTML = `<div class="empty-state"><div class="icon">📫</div><p>Chưa có dữ liệu chuyến đi NCC</p></div>`;
         document.getElementById('nccTotalCost').innerText = '0 đ';
         return;
     }
-
-    let pivotMap = new Map();
+    
+    let pivotData = {};
     let hasData = false;
-
+    
     nccTripData.forEach(r => {
         const parts = String(r.dateStr || '').split('/');
         if (parts.length === 3) {
@@ -731,219 +732,162 @@ async function loadNccData() {
         } else if (month) {
             return;
         }
-
+        
         let kho = String(r.warehouse || '').trim();
         const bienSo = String(r.plate || '').trim();
-        const ncc = String(r.ncc || '').trim();
         if(!kho || !bienSo) return;
-
+        
         const shortWH = shortWarehouse(kho);
         if(filterWarehouse && shortWH !== filterWarehouse && filterWarehouse !== '') return;
-
+        
         let khoGroup = kho;
         const khoUpper = khoGroup.toUpperCase();
         if(khoUpper.includes('HẢI DƯƠNG') || khoUpper.includes('HAI DUONG')) khoGroup = 'Kho GXT Hải Dương';
         else if(khoUpper.includes('HẢI PHÒNG') || khoUpper.includes('HAI PHONG')) khoGroup = 'Kho GXT Hải Phòng';
         else if(khoUpper.includes('HƯNG YÊN') || khoUpper.includes('MIỀN BẮC') || khoUpper.includes('MIEN BAC')) khoGroup = 'Kho GXT Hưng Yên';
         else if(khoUpper.includes('THÁI BÌNH') || khoUpper.includes('THAI BINH')) khoGroup = 'Kho GXT Thái Bình';
-
-        const key = khoGroup + '|' + ncc + '|' + bienSo;
-        if (!pivotMap.has(key)) {
-            pivotMap.set(key, {
-                kho: khoGroup,
-                ncc: ncc,
-                bienSo: bienSo,
-                chiPhi: 0, kmPhatSinh: 0, phiVuotKm: 0,
+        
+        if(!pivotData[khoGroup]) pivotData[khoGroup] = {};
+        if(!pivotData[khoGroup][bienSo]) {
+            pivotData[khoGroup][bienSo] = {
+                chiPhi: 0, kmPhatSinh: 0, phiVuotKm: 0, 
                 thoiGianTangCa: 0, phiTangCa: 0, phiCauDuong: 0
-            });
+            };
         }
         
-        const data = pivotMap.get(key);
-
-        const tong = parseVietnameseNumber(r.totalCost);
-        const km = parseVietnameseNumber(r.kmOver);
-        const phiKm = parseVietnameseNumber(r.kmOverFee);
-        const tgOt = parseVietnameseNumber(r.otHours);
-        const phiOt = parseVietnameseNumber(r.otFee);
-        const phiCau = parseVietnameseNumber(r.tollFee);
-
-        data.chiPhi += tong;
-        data.kmPhatSinh += km;
-        data.phiVuotKm += phiKm;
-        data.thoiGianTangCa += tgOt;
-        data.phiTangCa += phiOt;
-        data.phiCauDuong += phiCau;
+        pivotData[khoGroup][bienSo].chiPhi += parseVietnameseNumber(r.totalCost);
+        pivotData[khoGroup][bienSo].kmPhatSinh += parseVietnameseNumber(r.kmOver);
+        pivotData[khoGroup][bienSo].phiVuotKm += parseVietnameseNumber(r.kmOverFee);
+        pivotData[khoGroup][bienSo].thoiGianTangCa += parseVietnameseNumber(r.otHours);
+        pivotData[khoGroup][bienSo].phiTangCa += parseVietnameseNumber(r.otFee);
+        pivotData[khoGroup][bienSo].phiCauDuong += parseVietnameseNumber(r.tollFee);
         
         hasData = true;
     });
-
-    const pivotData = Array.from(pivotMap.values());
+    
+    if (!hasData) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">📫</div><p>Chưa có dữ liệu chi phí xe NCC cho kỳ này</p></div>`;
+        document.getElementById('nccTotalCost').innerText = '0 đ';
+        return;
+    }
+    
     renderNcc(pivotData);
 }
 
 function renderNcc(pivotData) {
     const container = document.getElementById('nccTableContainer');
     if(!container) return;
-
-    if(!pivotData || pivotData.length === 0) {
+    
+    if(Object.keys(pivotData).length === 0) {
         container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Không có dữ liệu NCC</p></div>';
         document.getElementById('nccTotalCost').innerText = '0 đ';
         return;
     }
-
-    let html = '<table>\n' +
-        '<thead>\n' +
-            '<tr>\n' +
-                '<th>Kho</th>\n' +
-                '<th>NCC</th>\n' +
-                '<th>Biển số xe</th>\n' +
-                '<th style="text-align:right;color:var(--accent);">Tổng chi phí<br>(trước thuế)</th>\n' +
-                '<th style="text-align:right;color:var(--accent);">Số KM phát sinh</th>\n' +
-                '<th style="text-align:right;color:var(--accent);">Phí vượt KM</th>\n' +
-                '<th style="text-align:right;color:var(--accent);">TG tăng ca<br>(h)</th>\n' +
-                '<th style="text-align:right;color:var(--accent);">Phí tăng ca</th>\n' +
-                '<th style="text-align:right;color:var(--accent);">Phí cầu đường</th>\n' +
-            '</tr>\n' +
-        '</thead>\n' +
-        '<tbody>\n';
-
-    let grandTotalCost = 0, grandKm = 0, grandPhiVuot = 0, grandTgOt = 0, grandPhiOt = 0, grandPhiCau = 0;
+    
+    let html = `<table>
+        <thead>
+            <tr>
+                <th>Kho / Biển số xe</th>
+                <th style="text-align:right;color:#fbbf24;">Tổng chi phí<br>(trước thuế)</th>
+                <th style="text-align:right;color:#fbbf24;">Số KM phát sinh</th>
+                <th style="text-align:right;color:#fbbf24;">Phí vượt KM</th>
+                <th style="text-align:right;color:#fbbf24;">TG tăng ca<br>(h)</th>
+                <th style="text-align:right;color:#fbbf24;">Phí tăng ca</th>
+                <th style="text-align:right;color:#fbbf24;">Phí cầu đường</th>
+            </tr>
+        </thead>
+        <tbody>`;
+        
+    let grandTotalCost = 0;
+    
     let minCost = Infinity, maxCost = -Infinity;
     let maxKm = 0, maxPhiVuot = 0, maxTgOt = 0, maxPhiOt = 0, maxPhiCau = 0;
-
-    pivotData.forEach(d => {
-        grandTotalCost += d.chiPhi;
-        grandKm += d.kmPhatSinh;
-        grandPhiVuot += d.phiVuotKm;
-        grandTgOt += d.thoiGianTangCa;
-        grandPhiOt += d.phiTangCa;
-        grandPhiCau += d.phiCauDuong;
-
-        if (d.chiPhi < minCost) minCost = d.chiPhi;
-        if (d.chiPhi > maxCost) maxCost = d.chiPhi;
-        if (d.kmPhatSinh > maxKm) maxKm = d.kmPhatSinh;
-        if (d.phiVuotKm > maxPhiVuot) maxPhiVuot = d.phiVuotKm;
-        if (d.thoiGianTangCa > maxTgOt) maxTgOt = d.thoiGianTangCa;
-        if (d.phiTangCa > maxPhiOt) maxPhiOt = d.phiTangCa;
-        if (d.phiCauDuong > maxPhiCau) maxPhiCau = d.phiCauDuong;
-    });
-
+    const khoSubCost = {};
+    for (const k of Object.keys(pivotData)) {
+        khoSubCost[k] = 0;
+        for (const b of Object.keys(pivotData[k])) {
+            const d = pivotData[k][b];
+            khoSubCost[k] += d.chiPhi;
+            if (d.chiPhi < minCost) minCost = d.chiPhi;
+            if (d.chiPhi > maxCost) maxCost = d.chiPhi;
+            if (d.kmPhatSinh > maxKm) maxKm = d.kmPhatSinh;
+            if (d.phiVuotKm > maxPhiVuot) maxPhiVuot = d.phiVuotKm;
+            if (d.thoiGianTangCa > maxTgOt) maxTgOt = d.thoiGianTangCa;
+            if (d.phiTangCa > maxPhiOt) maxPhiOt = d.phiTangCa;
+            if (d.phiCauDuong > maxPhiCau) maxPhiCau = d.phiCauDuong;
+        }
+    }
     if (minCost === Infinity) minCost = 0;
     if (maxCost === -Infinity) maxCost = 0;
 
-    const totalEl = document.getElementById('nccTotalCost');
-    if (totalEl) totalEl.innerText = Math.round(grandTotalCost).toLocaleString('vi-VN') + ' đ';
-
-    function getStats(arr) {
-        const valid = arr.filter(x => x > 0);
-        if (valid.length === 0) return { avg: 0, std: 0, median: 0 };
-        const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
-        const variance = valid.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / valid.length;
-        
-        valid.sort((a, b) => a - b);
-        const mid = Math.floor(valid.length / 2);
-        const median = valid.length % 2 !== 0 ? valid[mid] : (valid[mid - 1] + valid[mid]) / 2;
-        
-        return { avg, std: Math.sqrt(variance), median };
-    }
-
-    const khoStats = {};
-    pivotData.forEach(d => {
-        const k = d.kho || 'Unknown';
-        if (!khoStats[k]) {
-            khoStats[k] = { chiPhi: [], km: [], phiVuot: [], tgOt: [], phiOt: [], phiCau: [] };
-        }
-        if (d.chiPhi > 0) khoStats[k].chiPhi.push(d.chiPhi);
-        if (d.kmPhatSinh > 0) khoStats[k].km.push(d.kmPhatSinh);
-        if (d.phiVuotKm > 0) khoStats[k].phiVuot.push(d.phiVuotKm);
-        if (d.thoiGianTangCa > 0) khoStats[k].tgOt.push(d.thoiGianTangCa);
-        if (d.phiTangCa > 0) khoStats[k].phiOt.push(d.phiTangCa);
-        if (d.phiCauDuong > 0) khoStats[k].phiCau.push(d.phiCauDuong);
-    });
-
-    const parsedKhoStats = {};
-    Object.keys(khoStats).forEach(k => {
-        const sChiPhi = getStats(khoStats[k].chiPhi);
-        const sKm = getStats(khoStats[k].km);
-        const sPhiVuot = getStats(khoStats[k].phiVuot);
-        const sTgOt = getStats(khoStats[k].tgOt);
-        const sPhiOt = getStats(khoStats[k].phiOt);
-        const sPhiCau = getStats(khoStats[k].phiCau);
-
-        parsedKhoStats[k] = {
-            chiPhi: sChiPhi.median, mChiPhi: 2000000,
-            km: sKm.median, mKm: Math.max(sKm.std, sKm.median * 0.1) || 100,
-            phiVuot: sPhiVuot.median, mPhiVuot: Math.max(sPhiVuot.std, sPhiVuot.median * 0.1) || 200000,
-            tgOt: sTgOt.median, mTgOt: Math.max(sTgOt.std, sTgOt.median * 0.1) || 5,
-            phiOt: sPhiOt.median, mPhiOt: Math.max(sPhiOt.std, sPhiOt.median * 0.1) || 200000,
-            phiCau: sPhiCau.median, mPhiCau: Math.max(sPhiCau.std, sPhiCau.median * 0.1) || 100000
-        };
-    });
-
-    function getCostColor(value) {
+    function getColor(value, min, max) {
         if (!value || value <= 0) return 'var(--text-muted)';
-        if (value < 30000000) return '#10b981';
-        if (value > 36000000) return '#ef4444';
-        return 'var(--text-primary)';
+        if (max <= min) return '#fcd34d'; // yellow-300
+        let ratio = (value - min) / (max - min);
+        // From Yellow (#fcd34d: 252, 211, 77) to Red (#ef4444: 239, 68, 68)
+        const r1 = 252, g1 = 211, b1 = 77;
+        const r2 = 239, g2 = 68, b2 = 68;
+        const r = Math.round(r1 + (r2 - r1) * ratio);
+        const g = Math.round(g1 + (g2 - g1) * ratio);
+        const b = Math.round(b1 + (b2 - b1) * ratio);
+        return `rgb(${r}, ${g}, ${b})`;
     }
 
-    function getDivergingColor(value, avg, margin) {
-        if (!value || value <= 0) return 'var(--text-muted)';
-        if (!avg) return 'var(--text-primary)';
+    const sortedKho = Object.keys(pivotData).sort((a, b) => khoSubCost[b] - khoSubCost[a]);
+
+    for(const kho of sortedKho) {
+        const xeList = pivotData[kho];
+        let subCost = 0, subKm = 0, subPhiVuot = 0, subTgOt = 0, subPhiOt = 0, subPhiCau = 0;
         
-        let diff = value - avg;
-        if (diff > margin) diff = margin;
-        if (diff < -margin) diff = -margin;
+        let carRows = '';
+        const sortedPlates = Object.keys(xeList).sort((a, b) => xeList[b].chiPhi - xeList[a].chiPhi);
+        let rowIndex = 0;
         
-        let ratio = diff / margin; 
-        
-        if (ratio > 0) {
-            let pct = Math.round(ratio * 100);
-            return 'color-mix(in srgb, #ef4444 ' + pct + '%, var(--text-primary))';
-        } else {
-            let pct = Math.round(-ratio * 100);
-            return 'color-mix(in srgb, #10b981 ' + pct + '%, var(--text-primary))';
+        for(const bienSo of sortedPlates) {
+            const data = xeList[bienSo];
+            subCost += data.chiPhi;
+            subKm += data.kmPhatSinh;
+            subPhiVuot += data.phiVuotKm;
+            subTgOt += data.thoiGianTangCa;
+            subPhiOt += data.phiTangCa;
+            subPhiCau += data.phiCauDuong;
+            
+            let bg = rowIndex % 2 === 0 ? 'background: rgba(255, 255, 255, 0.02);' : 'background: transparent;';
+            rowIndex++;
+
+            carRows += `
+                <tr style="${bg}">
+                    <td style="padding-left: 32px; font-family:Calibri, sans-serif; font-weight:600; color: var(--text-primary);">${escapeHtml(bienSo)}</td>
+                    <td style="text-align:right;color:${getColor(data.chiPhi, minCost, maxCost)};font-weight:600;">${Math.round(data.chiPhi).toLocaleString('vi-VN')}</td>
+                    <td style="text-align:right;color:${getColor(data.kmPhatSinh, 0, maxKm)};font-weight:500;">${Math.round(data.kmPhatSinh).toLocaleString('vi-VN')}</td>
+                    <td style="text-align:right;color:${getColor(data.phiVuotKm, 0, maxPhiVuot)};font-weight:500;">${Math.round(data.phiVuotKm).toLocaleString('vi-VN')}</td>
+                    <td style="text-align:right;color:${getColor(data.thoiGianTangCa, 0, maxTgOt)};font-weight:500;">${Number(data.thoiGianTangCa.toFixed(2)).toLocaleString('vi-VN')}</td>
+                    <td style="text-align:right;color:${getColor(data.phiTangCa, 0, maxPhiOt)};font-weight:500;">${Math.round(data.phiTangCa).toLocaleString('vi-VN')}</td>
+                    <td style="text-align:right;color:${getColor(data.phiCauDuong, 0, maxPhiCau)};font-weight:500;">${Math.round(data.phiCauDuong).toLocaleString('vi-VN')}</td>
+                </tr>
+            `;
         }
-    }
-
-    // Thêm dòng tổng vào HTML
-    html += '<tr style="background: rgba(20, 184, 166, 0.15); border-bottom: 2px solid rgba(20, 184, 166, 0.3);">' +
-                '<td colspan="3" style="font-weight: bold; color: var(--accent); font-size: 14px; text-align: center; letter-spacing: 1px;">TỔNG CỘNG</td>' +
-                '<td style="text-align:right; font-weight: bold; color:var(--text-primary); font-size: 14px;">' + Math.round(grandTotalCost).toLocaleString('vi-VN') + ' đ</td>' +
-                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandKm).toLocaleString('vi-VN') + '</td>' +
-                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiVuot).toLocaleString('vi-VN') + ' đ</td>' +
-                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandTgOt).toLocaleString('vi-VN') + '</td>' +
-                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiOt).toLocaleString('vi-VN') + ' đ</td>' +
-                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiCau).toLocaleString('vi-VN') + ' đ</td>' +
-            '</tr>\n';
-
-    // Sắp xếp: Kho -> NCC -> Biển số
-    pivotData.sort((a, b) => {
-        if (a.kho !== b.kho) return a.kho.localeCompare(b.kho);
-        if (a.ncc !== b.ncc) return a.ncc.localeCompare(b.ncc);
-        return a.bienSo.localeCompare(b.bienSo);
-    });
-
-    pivotData.forEach((data, index) => {
-        let bg = index % 2 === 0 ? 'background: rgba(255, 255, 255, 0.02);' : 'background: transparent;';
         
-        let khoBadge = '<span class="badge" style="' + (typeof warehouseColor === 'function' ? warehouseColor(shortWarehouse(data.kho)) : '') + '">' + escapeHtml(shortWarehouse(data.kho)) + '</span>';
-
-        html += '<tr style="' + bg + '">\n' +
-                '<td>' + khoBadge + '</td>\n' +
-                '<td style="font-size:13px; font-weight:700; color:var(--text-primary);">' + escapeHtml(data.ncc) + '</td>\n' +
-                '<td style="font-family:Calibri, sans-serif; font-weight:700; font-size:15px; letter-spacing: 0.8px; color: var(--text-primary);">' + escapeHtml(data.bienSo) + '</td>\n' +
-                '<td style="text-align:right;color:' + getCostColor(data.chiPhi) + ';font-weight:700;">' + Math.round(data.chiPhi).toLocaleString('vi-VN') + ' đ</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.kmPhatSinh, parsedKhoStats[data.kho || 'Unknown'].km, parsedKhoStats[data.kho || 'Unknown'].mKm) + ';font-weight:700;">' + Math.round(data.kmPhatSinh).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.phiVuotKm, parsedKhoStats[data.kho || 'Unknown'].phiVuot, parsedKhoStats[data.kho || 'Unknown'].mPhiVuot) + ';font-weight:700;">' + Math.round(data.phiVuotKm).toLocaleString('vi-VN') + ' đ</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.thoiGianTangCa, parsedKhoStats[data.kho || 'Unknown'].tgOt, parsedKhoStats[data.kho || 'Unknown'].mTgOt) + ';font-weight:700;">' + Math.round(data.thoiGianTangCa).toLocaleString('vi-VN') + '</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.phiTangCa, parsedKhoStats[data.kho || 'Unknown'].phiOt, parsedKhoStats[data.kho || 'Unknown'].mPhiOt) + ';font-weight:700;">' + Math.round(data.phiTangCa).toLocaleString('vi-VN') + ' đ</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.phiCauDuong, parsedKhoStats[data.kho || 'Unknown'].phiCau, parsedKhoStats[data.kho || 'Unknown'].mPhiCau) + ';font-weight:700;">' + Math.round(data.phiCauDuong).toLocaleString('vi-VN') + ' đ</td>\n' +
-            '</tr>\n';
-    });
-
-    html += '</tbody></table>';
+        grandTotalCost += subCost;
+        
+        html += `
+            <tr style="background: rgba(20, 184, 166, 0.15); border-bottom: 2px solid rgba(20, 184, 166, 0.3);">
+                <td style="font-weight: bold; color: var(--accent); font-size: 14px;">${escapeHtml(kho)}</td>
+                <td style="text-align:right; font-weight: bold; color:#f59e0b; font-size: 14px;">${Math.round(subCost).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:#fbbf24;">${Math.round(subKm).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:#fbbf24;">${Math.round(subPhiVuot).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:#fbbf24;">${Number(subTgOt.toFixed(2)).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:#fbbf24;">${Math.round(subPhiOt).toLocaleString('vi-VN')}</td>
+                <td style="text-align:right; font-weight: bold; color:#fbbf24;">${Math.round(subPhiCau).toLocaleString('vi-VN')}</td>
+            </tr>
+            ${carRows}
+        `;
+    }
+    
+    html += `</tbody></table>`;
     container.innerHTML = html;
+    
+    document.getElementById('nccTotalCost').innerText = Math.round(grandTotalCost).toLocaleString('vi-VN') + ' đ';
 }
 
 // ═══════════════════════════════════════
@@ -1126,18 +1070,17 @@ function fetchSheetByNameJSONP(sheetId, sheetName) {
 // ====== HÀM TẢI TOÀN BỘ DỮ LIỆU ======
 function normalizeSupplierName(name) {
     if (!name) return '';
-    let clean = String(name).replace(/^[\s:;]+/, '').trim();
+    let clean = String(name).replace(/^[\\s:;]+/, '').trim();
     if (!clean) return '';
     
+    // Capitalize first letter of every word
     clean = clean.split(/\s+/).map(word => {
         if (!word) return '';
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     }).join(' ');
     
-    const noTones = typeof removeAccents === 'function' ? removeAccents(clean).toLowerCase() : clean.toLowerCase();
-    
-    if (noTones.includes('viet hung') || clean.toLowerCase().includes('việt hưng')) return 'Hoa Vinh';
-    
+    // Exact mapping for known suppliers to ensure exact matches
+    const noTones = norm(clean); // norm() converts to lower case
     const standardNames = {
         'thien phu': 'Thiên Phú',
         'duy phat': 'Duy Phát',
@@ -1149,84 +1092,24 @@ function normalizeSupplierName(name) {
         'nak': 'NAK',
         'long thanh': 'Long Thành',
         'gach htc': 'Gạch HTC',
-        'tien phat': 'Tiên Phát'
+        'tien phat': 'Tiến Phát'
     };
     
-    for (const key in standardNames) {
-        if (noTones.includes(key)) {
-            return standardNames[key];
-        }
-    }
+    for (const key in standardNames) { if (noTones.includes(key)) return standardNames[key]; }
+    if (standardNames[noTones]) return standardNames[noTones];
+    if (noTones === 'tal') return 'TAL';
+    if (noTones === 'nak') return 'NAK';
+    
+    // Fix edge case for acronyms
+    if (clean.toUpperCase() === 'TAL') return 'TAL';
+    if (clean.toUpperCase() === 'NAK') return 'NAK';
     
     return clean;
-}
-
-// ====== ĐỒNG BỘ CLOUD ======
-const SYNC_API_URL = 'https://script.google.com/macros/s/AKfycbwJr2pgITDURfuT_H3zGUYXUEC2SzvM0V_JNSFPqLwexGLElVlGPSpzPXMXpmE4R25e4g/exec';
-
-async function syncToCloud(key, overrides, note, logs) {
-    if (!SYNC_API_URL) return;
-    try {
-        const payload = { key: key };
-        if (overrides !== undefined) payload.code = overrides;
-        if (note !== undefined) payload.note = note;
-        if (logs !== undefined) payload.logs = logs;
-
-        fetch(SYNC_API_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        }).catch(e => console.error('Lỗi đồng bộ cloud:', e));
-    } catch(e) {}
-}
-
-async function loadCloudData() {
-    if (!SYNC_API_URL) return;
-    try {
-        const res = await fetch(SYNC_API_URL);
-        const json = await res.json();
-        if (json.status === 'success' && json.data) {
-            const localOverrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
-            const localNotes = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_NOTES') || '{}');
-            const localLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
-            
-            const cloudOverrides = json.data.overrides || {};
-            const cloudNotes = json.data.notes || {};
-            const cloudLogs = json.data.logs || {};
-
-
-            const mergedOverrides = { ...localOverrides, ...cloudOverrides };
-            const mergedNotes = { ...localNotes, ...cloudNotes };
-            const mergedLogs = { ...localLogs, ...cloudLogs };
-
-            localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(mergedOverrides));
-            localStorage.setItem('GHN_NCC_TRIP_NOTES', JSON.stringify(mergedNotes));
-            localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(mergedLogs));
-            console.log('✅ Đã tải và hợp nhất dữ liệu đồng bộ từ Cloud thành công!');
-            
-            // Log access after loading data
-            if (typeof currentUser !== 'undefined' && currentUser && !sessionStorage.getItem('GHN_ACCESS_LOGGED')) {
-                sessionStorage.setItem('GHN_ACCESS_LOGGED', '1');
-                if (!mergedLogs['__ACCESS__']) mergedLogs['__ACCESS__'] = [];
-                mergedLogs['__ACCESS__'].unshift({
-                    time: new Date().toLocaleString('vi-VN'),
-                    user: currentUser.name,
-                    email: currentUser.email
-                });
-                if (mergedLogs['__ACCESS__'].length > 150) mergedLogs['__ACCESS__'].pop();
-                localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(mergedLogs));
-                syncToCloud('__ACCESS__', undefined, undefined, mergedLogs['__ACCESS__']);
-            }
-        }
-    } catch(e) {
-        console.error('Lỗi tải dữ liệu cloud:', e);
-    }
 }
 
 async function loadAllData() {
     showLoading(true);
     try {
-        await loadCloudData();
         let empRowsArrays, supRows, masterRowsGH, masterRowsPH, ctvRows;
         
         let proxySuccess = false;
@@ -1303,14 +1186,17 @@ async function loadAllData() {
                 // BỔ SUNG: Luôn kéo dữ liệu ODO từ Archive (public) phòng hờ HTMLView bị CORS
                 if (CONFIG.ARCHIVE_SHEET_ID) {
                     try {
-                        const archTabs = await getSheetTabNames(CONFIG.ARCHIVE_SHEET_ID);
-                        const odoTabs = archTabs.filter(t => t.name.startsWith('odo_data'));
-                        for (const tab of odoTabs) {
-                            const r = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, tab.gid);
-                            if (r && r.length > 0) {
-                                r.forEach((row, idx) => { if(row) { row._gid = (row[row.length-2] || '').toString(); row._sheetRow = parseInt(row[row.length-1]) || (idx+2); } });
-                                empRowsArrays.push(r);
-                            }
+                        const gid1 = CONFIG.ARCHIVE_GIDS['odo_data'];
+                        const gid2 = CONFIG.ARCHIVE_GIDS['odo_data_2'];
+                        if (gid1) {
+                            const r1 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid1);
+                            r1.forEach((r, idx) => { if(r) { r._gid = (r[r.length-2] || '').toString(); r._sheetRow = parseInt(r[r.length-1]) || (idx+2); } });
+                            empRowsArrays.push(r1);
+                        }
+                        if (gid2) {
+                            const r2 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid2);
+                            r2.forEach((r, idx) => { if(r) { r._gid = (r[r.length-2] || '').toString(); r._sheetRow = parseInt(r[r.length-1]) || (idx+2); } });
+                            empRowsArrays.push(r2);
                         }
                     } catch(e) { console.warn('Lỗi bổ sung archive:', e); }
                 }
@@ -1324,12 +1210,16 @@ async function loadAllData() {
         if (empRows0.length === 0 && CONFIG.ARCHIVE_SHEET_ID) {
             console.log('📡 Proxy + Direct đều fail → Đọc từ Archive Sheet (public)...');
             try {
+                const gid1 = CONFIG.ARCHIVE_GIDS['odo_data'];
+                const gid2 = CONFIG.ARCHIVE_GIDS['odo_data_2'];
                 let archiveEmpRows = [];
-                const archTabs = await getSheetTabNames(CONFIG.ARCHIVE_SHEET_ID);
-                const odoTabs = archTabs.filter(t => t.name.startsWith('odo_data'));
-                for (const tab of odoTabs) {
-                    const r = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, tab.gid);
-                    if (r && r.length > 0) archiveEmpRows = archiveEmpRows.concat(r);
+                if (gid1) {
+                    const r1 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid1);
+                    if (r1 && r1.length > 0) archiveEmpRows = archiveEmpRows.concat(r1);
+                }
+                if (gid2) {
+                    const r2 = await fetchSheetJSONP(CONFIG.ARCHIVE_SHEET_ID, gid2);
+                    if (r2 && r2.length > 0) archiveEmpRows = archiveEmpRows.concat(r2);
                 }
                 
                 if (archiveEmpRows.length > 0) {
@@ -1699,7 +1589,7 @@ async function loadAllData() {
         renderAll();
         loadNccData();
         if (typeof renderNccTrip === 'function') renderNccTrip();
-        if (typeof renderLastmile === 'function') renderLastmile(true);
+        if (typeof renderLastmile === 'function') renderLastmile();
         if (typeof renderRecon3Way === 'function') renderRecon3Way();
 
         // Cập nhật thời gian refresh
@@ -2159,10 +2049,10 @@ function renderDailyTable(filtered) {
 
         html += `<tr>
             <td>${i + 1}</td>
-            <td style="white-space:nowrap; font-weight:700;">${escapeHtml(e.dateStr)}</td>
-            <td style="font-weight:700;">${escapeHtml(e.name)}</td>
+            <td style="white-space:nowrap; font-weight:600;">${escapeHtml(e.dateStr)}</td>
+            <td style="font-weight:600;">${escapeHtml(e.name)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
-            <td style="font-family:Calibri, sans-serif; font-weight:700;">${escapeHtml(formatPlate(e.plate) || '-')}</td>
+            <td style="font-family:Calibri, sans-serif; font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
             <td style="font-size:12px;">${escapeHtml(e.supplier)}</td>
             <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:Calibri, sans-serif;white-space:nowrap;">${escapeHtml(e.hourStart || '—')}</td>
@@ -2170,7 +2060,7 @@ function renderDailyTable(filtered) {
             <td style="font-weight:700;color:${otColor};text-align:center;">${escapeHtml(otDisplay)}</td>
             <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
             <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
-            <td style="font-weight:700; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + escapeHtml(String(kmDisplay)) + ' (gõ sai!)' : escapeHtml(String(kmDisplay))}</td>
+            <td style="font-weight:600; color:${!isNaN(km) && km < 0 ? 'var(--danger)' : !isNaN(km) && km > 200 ? 'var(--danger)' : !isNaN(km) && km > 150 ? '#f0ad4e' : 'var(--success)'}">${!isNaN(km) && km < 0 ? '⚠️ ' + escapeHtml(String(kmDisplay)) + ' (gõ sai!)' : escapeHtml(String(kmDisplay))}</td>
             <td style="font-size:12px; min-width: 250px; white-space: normal;">${routeHtml}</td>
             <td>${tripHtml}</td>
             <td><a href="${sheetUrl}" target="_blank" style="color:var(--primary);text-decoration:underline;font-size:12px;white-space:nowrap;">Dòng ${e.sheetRow}</a></td>
@@ -2431,19 +2321,18 @@ function renderRanking(filtered, month, whFilter) {
                     📤 Gửi lên Telegram
                 </button>
             </div>
-            <div style="overflow-x: auto; width: 100%;">
-            <table class="ranking-table" style="width:100%; min-width: 1200px;">
-            <thead><tr>
-                <th style="width:40px;">#</th>
-                <th style="width:160px;">Họ và tên</th>
-                <th style="width:80px;">Mã NV</th>
-                <th style="width:100px;">Biển số xe</th>
-                <th style="width:100px;">Số ngày ODO</th>
-                <th style="width:140px;">% Hoàn thành</th>
-                <th style="min-width:300px;">Đi làm nhưng không báo cáo</th>
-                <th style="min-width:200px;">Ngày nghỉ</th>
-                <th style="width:120px;">Ghi chú</th>
-            </tr></thead>
+            <table class="ranking-table" style="width:100%;">
+                <thead><tr>
+                    <th style="width:40px;">#</th>
+                    <th>Họ và tên</th>
+                    <th style="width:80px;">Mã NV</th>
+                    <th style="width:120px;">Biển số xe</th>
+                    <th style="width:80px;">Số ngày ODO</th>
+                    <th style="width:160px;">% Hoàn thành</th>
+                    <th>Đi làm nhưng không báo cáo</th>
+                    <th>Ngày nghỉ</th>
+                    <th>Ghi chú</th>
+                </tr></thead>
                 <tbody>
                     ${finalEmpList.map((e, i) => {
                         const isZeroDays = e.myExpectedDays === 0;
@@ -2470,9 +2359,9 @@ function renderRanking(filtered, month, whFilter) {
 
                         return `<tr>
                             <td>${i + 1}</td>
-                            <td style="font-weight:700;">${escapeHtml(e.name)}</td>
+                            <td style="font-weight:600;">${escapeHtml(e.name)}</td>
                             <td>${e.code || '—'}</td>
-                            <td style="font-family:Calibri, sans-serif;font-weight:700;">${escapeHtml(formatPlate(e.plate) || '-')}</td>
+                            <td style="font-family:Calibri, sans-serif;font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
                             <td style="text-align:center;">${e.uniqueDays}/${e.myExpectedDays}</td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:8px;">
@@ -2488,8 +2377,8 @@ function renderRanking(filtered, month, whFilter) {
                         </tr>`;
                     }).join('')}
                 </tbody>
-                </table></div>
-            </div>`;
+            </table>
+        </div>`;
     });
 
     grid.innerHTML = html;
@@ -2628,10 +2517,10 @@ function renderFraudWarnings(filtered) {
 
         html += `<tr>
             <td>${i + 1}</td>
-            <td style="white-space:nowrap;font-weight:700;">${escapeHtml(e.dateStr)}</td>
-            <td style="font-weight:700;">${escapeHtml(e.name)}</td>
+            <td style="white-space:nowrap;font-weight:600;">${escapeHtml(e.dateStr)}</td>
+            <td style="font-weight:600;">${escapeHtml(e.name)}</td>
             <td><span class="badge badge-info">${escapeHtml(e.code) || '—'}</span></td>
-            <td style="font-family:Calibri, sans-serif;font-weight:700;">${escapeHtml(formatPlate(e.plate) || '-')}</td>
+            <td style="font-family:Calibri, sans-serif;font-weight:600;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
             <td><span class="badge" style="${warehouseColor(e.shortWH)}">${escapeHtml(e.shortWH)}</span></td>
             <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.hourStart || '—')}</td>
             <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.hourEnd || '—')}</td>
@@ -2826,10 +2715,10 @@ function renderTypoWarnings(filtered) {
 
             html += `<tr>
                 <td>${i + 1}</td>
-                <td style="white-space:nowrap;font-weight:700;">${e.dateStr}</td>
-                <td style="font-weight:700;">${escapeHtml(e.name)}</td>
+                <td style="white-space:nowrap;font-weight:600;">${e.dateStr}</td>
+                <td style="font-weight:600;">${escapeHtml(e.name)}</td>
                 <td><span class="badge badge-info">${e.code || '—'}</span></td>
-                <td style="font-family:Calibri, sans-serif;">${escapeHtml(formatPlate(e.plate) || '-')}</td>
+                <td style="font-family:Calibri, sans-serif;">${escapeHtml(e.plates && e.plates.size > 0 ? Array.from(e.plates).map(p => formatPlate(p)).join(', ') : (formatPlate(e.plate) || '-'))}</td>
                 <td>${escapeHtml(e.shortWH)}</td>
                 <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgStart && e.imgStart.startsWith('http')) ? `<a href="${e.imgStart}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO đi">${escapeHtml(String(e.kmStart))}</a>` : escapeHtml(String(e.kmStart))}</td>
                 <td style="font-family:Calibri, sans-serif; text-align:center;">${(e.imgEnd && e.imgEnd.startsWith('http')) ? `<a href="${e.imgEnd}" target="_blank" onclick="this.style.opacity='0.5'" style="color:var(--text);text-decoration:underline;cursor:pointer;" title="Xem ảnh ODO về">${escapeHtml(String(e.kmEnd))}</a>` : escapeHtml(String(e.kmEnd))}</td>
@@ -3258,43 +3147,18 @@ function normalizeToDDMMYYYY(dateStr) {
 
 function parseVietnameseNumber(str) {
     if (!str) return 0;
-    let s = String(str).trim().replace(/\s*(đ|vnđ|vnd)$/i, '').trim();
+    let s = String(str).trim().replace(/\s*đ$/i, '').trim();
     if (!s || s === '-' || s === '—') return 0;
-
-    // Nếu chứa cả phẩy và chấm: VD "35,147.27" (kiểu Mỹ) hoặc "35.147,27" (kiểu Việt)
-    if (s.includes(',') && s.includes('.')) {
-        const lastComma = s.lastIndexOf(',');
-        const lastDot = s.lastIndexOf('.');
-        if (lastComma > lastDot) {
-            // Dấu phẩy ở cuối -> phẩy là thập phân: "35.147,27"
-            s = s.replace(/\./g, '').replace(',', '.');
-        } else {
-            // Dấu chấm ở cuối -> chấm là thập phân: "35,147.27"
-            s = s.replace(/,/g, '');
-        }
-    } else if (s.includes(',')) {
-        // Chỉ có phẩy: "35,147,271" hoặc "35,14"
-        // Nếu có nhiều dấu phẩy HOẶC 3 số sau dấu phẩy cuối cùng -> phẩy là phần ngàn
-        const parts = s.split(',');
-        if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
-            s = s.replace(/,/g, '');
-        } else {
-            // "35,14" -> phẩy là thập phân
-            s = s.replace(/,/g, '.');
-        }
-    } else if (s.includes('.')) {
-        // Chỉ có chấm: "35.147.271" hoặc "35.14"
-        const parts = s.split('.');
-        if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
-            s = s.replace(/\./g, '');
-        }
-        // Giữ nguyên chấm nếu là "35.14"
+    
+    if (/^-?\d{1,3}(\.\d{3})+/.test(s)) {
+        s = s.replace(/\./g, '').replace(',', '.');
+    } else if (s.includes(',') && !s.includes('.')) {
+        s = s.replace(',', '.');
+    } else if (/^-?\d{1,3}\.\d{3}$/.test(s)) {
+        s = s.replace('.', '');
     } else {
         s = s.replace(/[^\d.-]/g, '');
     }
-    
-    // Xóa các ký tự không hợp lệ còn sót lại (chỉ giữ số, dấu trừ, dấu chấm)
-    s = s.replace(/[^\d.-]/g, '');
     const num = parseFloat(s);
     return isNaN(num) ? 0 : num;
 }
@@ -3331,21 +3195,13 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     let colKmStart = -1, colKmEnd = -1, colKmDiff = -1, colRoute = -1, colDate = 1, colPlate = 2, colVehicle = 3, colNcc = -1, colKho = -1;
       let colOtHours = -1, colOtRate = -1, colOtFee = -1, colKmOver = -1, colKmOverFee = -1, colMonthlyRate = -1, colDailyRate = -1, colTollFee = -1, colHolidayFee = -1, colTotalCost = -1;
       
-      if (tabGid === '1482895796' || tabGid === '1957064243' || (sheetId && (sheetId.includes('1jFaJutdZD8uhBYa9Hy9fH6tHVaSnEf-iyg4VUMniXl8') || sheetId.includes('1tATkbxYOtiBuJC1GRto3QI81q_fkGzKYylufz4WtuAA')))) {
+      if (tabGid === '1482895796' || (sheetId && sheetId.includes('1jFaJutdZD8uhBYa9Hy9fH6tHVaSnEf-iyg4VUMniXl8'))) {
           colNcc = 1; colDate = 2; colPlate = 3; colVehicle = 4; colRoute = 5; 
           colOtHours = 10; colOtFee = 12; colKmStart = 14; colKmEnd = 15; 
           colKmOver = 17; colKmOverFee = 19; 
           colMonthlyRate = 20; colDailyRate = 21; 
           colTollFee = 22; colHolidayFee = 23; colTotalCost = 24; colKho = 27;
       }
-    else if (["NAK", "Thiên Phú", "Hoa Vinh", "Long Thành", "Đạo Trường An", "TAL"].includes(nccName) || tabGid === "1620536867" || tabGid === "1290293725" || tabGid === "73639881" || tabGid === "45442280" || tabGid === "1012425134" || tabGid === "2147444878") {
-    colNcc = -1; colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 4;
-    colOtHours = 9; colOtRate = 10; colOtFee = 11;
-    colKmStart = 13; colKmEnd = 14; colKmDiff = 15;
-    colKmOver = 16; colKmOverFee = 18;
-    colMonthlyRate = 19; colDailyRate = 20;
-    colTollFee = 21; colHolidayFee = 22; colTotalCost = 23; colKho = 26;
-}
     if (headerRowIdx > -1) {
         // Scan nhiều dòng header (multi-row merged headers) cho cột tài chính
         const scanStart = Math.max(0, headerRowIdx - 3);
@@ -3359,7 +3215,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 if (ri === headerRowIdx) {
                     if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
                     if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
-                    if (h.includes('km chạy') || h.includes('tổng km') || (h.includes('số km') && !h.includes('vào') && !h.includes('ra') && !h.includes('phát sinh') && !h.includes('/')) || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
+                    if (h.includes('km chạy') || h.includes('km phát sinh') || h.includes('tổng km') || h.includes('số km') || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
                     if (h === 'lộ trình' || h === 'tuyến đường' || h.includes('điểm giao') || h === 'tuyến') colRoute = ci;
                 if (h.includes('ngày') && h.includes('thực hiện')) colDate = ci;
                 if (h.includes('biển số')) colPlate = ci;
@@ -3414,26 +3270,11 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
       if (colOtFee === -1) colOtFee = 12;
       if (colKmOverFee === -1) colKmOverFee = 17;
       if (colKmOver === -1) colKmOver = 16;
-      
-      // Fallback cho Tổng chi phí nếu chưa tìm thấy
-      if (colTotalCost === -1) {
-          // Thử tìm trong data row 1 hoặc 2
-          let tryRow = rawData[headerRowIdx > -1 ? headerRowIdx + 1 : 1];
-          if (!tryRow) tryRow = rawData[2];
-          if (tryRow) {
-              for (let tryCol = 28; tryCol >= 18; tryCol--) {
-                  const v = parseVietnameseNumber(tryRow[tryCol]);
-                  if (v > 100000) { colTotalCost = tryCol; break; }
-              }
-          }
-          if (colTotalCost === -1) colTotalCost = 24; // Ultimate fallback
-      }
-      
-      // Nếu các cột kia chưa tìm thấy, gán lùi từ colTotalCost
-      if (colHolidayFee === -1) colHolidayFee = colTotalCost - 1;
-      if (colTollFee === -1) colTollFee = colTotalCost - 2;
-      if (colDailyRate === -1) colDailyRate = colTotalCost - 3;
-      if (colMonthlyRate === -1) colMonthlyRate = colTotalCost - 4;
+      if (colMonthlyRate === -1) colMonthlyRate = 20;
+    if (colDailyRate === -1) colDailyRate = 20;
+      if (colTollFee === -1) colTollFee = 18;
+      if (colHolidayFee === -1) colHolidayFee = 19;
+      if (colTotalCost === -1) colTotalCost = 24;
     
     // ★ Fix: nếu colTotalCost trùng với cột khác đã detect, dịch sang cột kế tiếp
     const usedCols = new Set([colOtHours, colOtRate, colOtFee, colKmOverFee, colMonthlyRate, colDailyRate, colTollFee, colHolidayFee]);
@@ -3471,16 +3312,6 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     
     const startRow = headerRowIdx > -1 ? headerRowIdx + 1 : 0;
     
-
-    let overridesCache = {};
-    let notesCache = {};
-    let logsCache = {};
-    try {
-        overridesCache = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
-        notesCache = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_NOTES') || '{}');
-        logsCache = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
-    } catch(e) {}
-    
     for (let i = startRow; i < rawData.length; i++) {
         const row = rawData[i];
         if (!row || row.length < 5) continue;
@@ -3494,16 +3325,10 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 if (!h) continue;
                 if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
                 if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
-                if (h.includes('km chạy') || h.includes('tổng km') || (h.includes('số km') && !h.includes('vào') && !h.includes('ra') && !h.includes('phát sinh') && !h.includes('/')) || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
+                if (h.includes('km chạy') || h.includes('km phát sinh') || h.includes('tổng km') || h.includes('số km') || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
                 if (h === 'lộ trình' || h === 'tuyến đường' || h.includes('điểm giao') || h === 'tuyến') colRoute = ci;
                 if (h.includes('ngày') && h.includes('thực hiện')) colDate = ci;
                 if (h.includes('biển số')) colPlate = ci;
-
-                        if (h.includes('phí tăng ca') || h.includes('tiền tăng ca')) colOtFee = ci;
-                        if (h.includes('vượt km') || h.includes('km vượt') || h.includes('phí vượt') || h.includes('vuot km')) colKmOverFee = ci;
-                        if (h.includes('thời gian tăng ca') || h.includes('số giờ tăng ca')) colOtHours = ci;
-                        if (h.includes('giá tăng ca')) colOtRate = ci;
-        
                 if (h === 'xe' || h.includes('loại xe')) colVehicle = ci;
                   if (h === 'kho' || h.includes('kho trạm') || h.includes('trạm')) colKho = ci;
                 if (h === 'chi' || h.includes('nhà cung cấp') || h === 'ncc') colNcc = ci;
@@ -3556,8 +3381,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
 
             // Quét lên trước (ưu tiên biển số liền trước đó)
             for (let j = i - 1; j >= Math.max(0, i - 31); j--) {
-                if (!rawData[j] || !rawData[j][colDate > -1 ? colDate : 1] || !rawData[j][colDate > -1 ? colDate : 1].toString().match(/\d/)) continue;
-                let p = (rawData[j][colPlate > -1 ? colPlate : 2] || '').toString().trim().toUpperCase();
+                if (!rawData[j] || !rawData[j][1] || !rawData[j][1].toString().match(/\d{2}\/\d{2}\/\d{4}/)) continue;
+                let p = (rawData[j][2] || '').toString().trim().toUpperCase();
                 if (p && !p.includes('OFF') && !p.includes('NGHỈ') && !p.includes('NGHI') && p.length >= 6) {
                     inferred = p;
                     inferredWH = extractWHFromRow(rawData[j]);
@@ -3567,8 +3392,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             // Nếu không có, quét xuống
             if (!inferred) {
                 for (let j = i + 1; j <= Math.min(rawData.length - 1, i + 31); j++) {
-                    if (!rawData[j] || !rawData[j][colDate > -1 ? colDate : 1] || !rawData[j][colDate > -1 ? colDate : 1].toString().match(/\d/)) continue;
-                    let p = (rawData[j][colPlate > -1 ? colPlate : 2] || '').toString().trim().toUpperCase();
+                    if (!rawData[j] || !rawData[j][1] || !rawData[j][1].toString().match(/\d{2}\/\d{2}\/\d{4}/)) continue;
+                    let p = (rawData[j][2] || '').toString().trim().toUpperCase();
                     if (p && !p.includes('OFF') && !p.includes('NGHỈ') && !p.includes('NGHI') && p.length >= 6) {
                         inferred = p;
                         inferredWH = extractWHFromRow(rawData[j]);
@@ -3676,9 +3501,6 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         let dailyRate = (colDailyRate > -1 ? row[colDailyRate] : '').toString().trim();
         let tollFee = (colTollFee > -1 ? row[colTollFee] : '').toString().trim();
         let holidayFee = (colHolidayFee > -1 ? row[colHolidayFee] : '').toString().trim();
-        if (actualNcc === 'NAK') {
-                // console.log("DEBUG NAK:", { colMonthlyRate, colDailyRate, colTollFee, colHolidayFee, monthlyRate, dailyRate, tollFee, holidayFee });
-        }
         let totalCost = (colTotalCost > -1 ? row[colTotalCost] : '').toString().trim();
         if (i === startRow) {
             console.log("==> NCC:", nccName, "Tab:", tabName);
@@ -3715,31 +3537,33 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             otHours = '';
         }
 
-        // 5. Filters removed
+        // 5. Lọc bỏ đơn giá tăng ca (35k/h) và đơn giá KM (4k/km) bị nhận nhầm làm tổng phí
+        const otFeeNum = parseVietnameseNumber(otFee);
+        if (otFeeNum > 0 && otFeeNum <= 100000) otFee = '';
+
+        const kmOverNum = parseVietnameseNumber(kmOverFee);
+        if (kmOverNum > 0 && kmOverNum <= 10000) kmOverFee = '';
 
         // 6. Tự động đánh dấu Phạt nếu tổng chi phí âm
         if (!matchedTripCode && totVal < 0) {
             matchedTripCode = 'Phạt';
         }
 
-        const finalKey = `${nccName}_${plate}_${dateStr}_${route}`;
+        const finalKey = `${nccName}_${plate}_${dateStr}_${sourceRow}`;
         let tripNote = '';
         let isManualMatch = false;
-        let actionLogs = [];
         try {
-            if (overridesCache[finalKey] !== undefined) {
-                matchedTripCode = overridesCache[finalKey];
+            const overrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
+            if (overrides[finalKey] !== undefined) {
+                matchedTripCode = overrides[finalKey];
                 if (matchedTripCode && !['GHN OFF', 'NCC OFF', 'OFF', 'Phạt', 'PHẠT', 'GHN_OFF', 'NCC_OFF'].includes(String(matchedTripCode).toUpperCase())) {
                     isManualMatch = true;
                 }
             }
-            if (notesCache[finalKey] !== undefined) {
-                tripNote = notesCache[finalKey];
+            const notes = JSON.parse(localStorage.getItem("GHN_NCC_TRIP_NOTES") || "{}");
+            if (notes[finalKey] !== undefined) {
+                tripNote = notes[finalKey];
             }
-            try {
-                if (logsCache[finalKey]) actionLogs = logsCache[finalKey];
-            } catch(e) {}
-
         } catch(e) {}
 
         results.push({
@@ -3753,12 +3577,10 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             ghnTripCode: matchedTripCode,
             isManualMatch: isManualMatch,
             note: tripNote,
-            actionLogs: actionLogs,
             sheetId: sheetId || '',
             tabName: tabName || '',
             tabGid: tabGid || '',
-            sourceRow,
-            isAllSheet: (nccName === 'ALL')
+            sourceRow
         });
     }
     return results;
@@ -3826,24 +3648,19 @@ async function loadNccTripData() {
             console.warn('⚠️ Archive NCC Trips load failed:', e.message);
         }
         
-        // Lọc trùng (Deduplicate) thông minh:
-        // Nếu cùng 1 ngày, 1 xe, 1 NCC mà có dữ liệu từ file ALL và file lẻ -> Chỉ lấy của file ALL, vứt file lẻ.
-        // Giữ lại TẤT CẢ các chuyến của file được chọn (vì 1 xe có thể chạy 2 chuyến/ngày).
-        const groupMap = new Map();
-        allNccData.forEach(r => {
+        // Deduplicate archive items by keeping longest route
+        const seenNccMap = new Map();
+        allNccData = allNccData.filter(r => {
             const key = `${normalizeStr(r.dateStr)}_${normalizeStr(r.plate)}_${normalizeStr(r.ncc)}`;
-            if (!groupMap.has(key)) groupMap.set(key, []);
-            groupMap.get(key).push(r);
-        });
-
-        allNccData = [];
-        groupMap.forEach(trips => {
-            const hasAllSheet = trips.some(t => t.isAllSheet);
-            if (hasAllSheet) {
-                allNccData.push(...trips.filter(t => t.isAllSheet));
-            } else {
-                allNccData.push(...trips);
+            if (!seenNccMap.has(key)) {
+                seenNccMap.set(key, r);
+                return true;
             }
+            const existing = seenNccMap.get(key);
+            if ((r.route || '').length > (existing.route || '').length) {
+                existing.route = r.route;
+            }
+            return false;
         });
 
         allNccData.forEach(r => {
@@ -3947,33 +3764,6 @@ async function loadNccTripData() {
         
         for (const sheet of CONFIG.NCC_TRIP_SHEETS) {
             try {
-                if (sheet.ncc === 'ALL') {
-                    console.log(`⏩ Bỏ qua lấy tab name cho ALL sheet, tải trực tiếp bằng GID`);
-                    const rawData = await fetchSheetJSONP(sheet.id, sheet.gid);
-                    const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, '', sheet.gid);
-                    const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
-                    parsed.forEach(record => {
-                        const normPlate = normalizeStr(record.plate);
-                        const existingIdx = allNccData.findIndex(r => {
-                            if (r.dateStr !== record.dateStr) return false;
-                            if (r.ncc !== record.ncc) return false;
-                            const rTab = normalizeStr(r.tabName);
-                            const normTab = normalizeStr(record.tabName);
-                            if (normTab && rTab && (normTab === rTab || normTab.includes(rTab) || rTab.includes(normTab))) return true;
-                            if (normalizeStr(r.plate) === normPlate) return true;
-                            return false;
-                        });
-                        if (existingIdx !== -1) {
-                            allNccData[existingIdx] = record;
-                        } else {
-                            allNccData.push(record);
-                        }
-                    });
-                    totalTabs++;
-                    totalRows += parsed.length;
-                    continue;
-                }
-
                 // ★ Bước 1: Lấy danh sách tên tab + GID
                 { const _s = container.querySelector('span'); if (_s) _s.textContent = `Đang quét tabs NCC: ${sheet.ncc}...`; }
                 const tabInfos = await getSheetTabNames(sheet.id);
@@ -4089,19 +3879,13 @@ function updateNccTripNote(index, value) {
         try {
             const notes = JSON.parse(localStorage.getItem("GHN_NCC_TRIP_NOTES") || "{}");
             const r = nccTripData[index];
-            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.route}`;
+            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.sourceRow}`;
             if (value) {
                 notes[key] = value;
             } else {
                 delete notes[key];
             }
             localStorage.setItem("GHN_NCC_TRIP_NOTES", JSON.stringify(notes));
-            saveActionLog(key, 'Sửa ghi chú', value || 'Xóa ghi chú');
-            if (nccTripData[index]) {
-                if (!nccTripData[index].actionLogs) nccTripData[index].actionLogs = [];
-                nccTripData[index].actionLogs.push({ time: new Date().toLocaleString('vi-VN'), action: 'Sửa ghi chú', details: value || 'Xóa ghi chú', user: (typeof currentUser !== 'undefined' && currentUser ? currentUser.name : 'Ẩn danh') });
-            }
-            syncToCloud(key, undefined, value, nccTripData[index]?.actionLogs);
         } catch(e) {}
     }
 }
@@ -4269,7 +4053,7 @@ function showSuggestionPopup(originalIndex, buttonEl) {
             listHtml += `<div class="suggest-item" onclick="selectSuggestion(${originalIndex}, '${s.tripCode.replace(/'/g, "\\'")}', '${(s.plate || '').replace(/'/g, "\\'")}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <a href="https://nhanh.ghn.vn/lastmile/trip-detail/${s.tripCode}" target="_blank" onclick="event.stopPropagation()" style="font-weight:700;color:var(--success);font-size:13px;text-decoration:underline;" title="Xem chi tiết trên hệ thống Lastmile">${s.tripCode}</a>
-                    <span style="font-size:11px;color:${simColor};font-weight:700;">Biển: ${s.plate} (${simPercent}%)</span>
+                    <span style="font-size:11px;color:${simColor};font-weight:600;">Biển: ${s.plate} (${simPercent}%)</span>
                 </div>
                 <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
                     ${s.driver ? '👤 ' + s.driver + ' • ' : ''}${s.route ? '🛣️ ' + s.route.substring(0, 60) : ''}
@@ -4309,27 +4093,6 @@ function selectSuggestion(originalIndex, tripCode, suggestedPlate) {
     showToast('✅', `Đã ghép mã chuyến: ${tripCode}`);
 }
 
-function saveActionLog(key, action, details) {
-    try {
-        const logs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
-        if (!logs[key]) logs[key] = [];
-        
-        // Get user info if available
-        let userName = 'Ẩn danh';
-        if (typeof currentUser !== 'undefined' && currentUser && currentUser.name) {
-            userName = currentUser.name;
-        }
-        
-        logs[key].push({
-            time: new Date().toLocaleString('vi-VN'),
-            action: action,
-            details: details,
-            user: userName
-        });
-        localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(logs));
-    } catch(e) {}
-}
-
 function updateNccTripCode(index, value, suggestedPlate) {
     if (nccTripData[index]) {
         nccTripData[index].ghnTripCode = value;
@@ -4339,20 +4102,13 @@ function updateNccTripCode(index, value, suggestedPlate) {
         try {
             const overrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
             const r = nccTripData[index];
-            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.route}`;
+            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.sourceRow}`;
             if (value) {
                 overrides[key] = value;
             } else {
                 delete overrides[key];
             }
             localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(overrides));
-            saveActionLog(key, 'Chốt mã chuyến', value || 'Xóa mã');
-            if (nccTripData[index]) {
-                if (!nccTripData[index].actionLogs) nccTripData[index].actionLogs = [];
-                nccTripData[index].actionLogs.push({ time: new Date().toLocaleString('vi-VN'), action: 'Chốt mã chuyến', details: value || 'Xóa mã', user: (typeof currentUser !== 'undefined' && currentUser ? currentUser.name : 'Ẩn danh') });
-            }
-            syncToCloud(key, value, undefined, nccTripData[index]?.actionLogs);
-
         } catch(e) {}
 
         // ★ Học hỏi mapping biển số: nếu user chọn gợi ý có biển khác → lưu mapping
@@ -4438,12 +4194,6 @@ function rematchNccTrips() {
     
     let matched = 0;
     nccTripData.forEach(r => {
-        // Ưu tiên trạng thái OFF/Phạt đã được lưu hoặc detect từ parseNccTabData
-        const currCode = String(r.ghnTripCode || '').toUpperCase();
-        if (['GHN OFF', 'GHN_OFF', 'NCC OFF', 'NCC_OFF', 'OFF', 'PHẠT', 'PHAT'].includes(currCode)) {
-            return;
-        }
-
         const routeLower = String(r.route || '').toLowerCase();
         if (routeLower.includes('ghn off')) {
             r.ghnTripCode = 'GHN OFF';
@@ -4470,58 +4220,8 @@ function rematchNccTrips() {
     console.log(`🔄 rematchNccTrips: ${matched}/${nccTripData.length} trips matched with GHN Lastmile`);
 }
 
-
-// ==========================================
-// COPY CỘT AC CHO FILE THCP
-// ==========================================
-window.copyThcpAC = function() {
-    if (typeof nccTripData === 'undefined' || !nccTripData || nccTripData.length === 0) {
-        if(typeof showToast === 'function') showToast('error', 'Chưa có dữ liệu, vui lòng đợi tải xong!');
-        return;
-    }
-    
-    // Lọc các dòng thuộc file THCP
-    const thcpTrips = nccTripData.filter(r => String(r.sheetId || '') === '1tATkbxYOtiBuJC1GRto3QI81q_fkGzKYylufz4WtuAA');
-    if (thcpTrips.length === 0) {
-        if(typeof showToast === 'function') showToast('error', 'Không tìm thấy dữ liệu của file THCP!');
-        return;
-    }
-    
-    let maxRow = 0;
-    thcpTrips.forEach(r => {
-        if (r.sourceRow > maxRow) maxRow = r.sourceRow;
-    });
-    
-    // Mảng chứa dữ liệu cột AC, mặc định rỗng
-    const colData = new Array(maxRow + 1).fill('');
-    
-    thcpTrips.forEach(r => {
-        let code = r.ghnTripCode || '';
-        if (code === 'NCC OFF' || code === 'GHN OFF' || code === 'Phạt') {
-            // Giữ nguyên trạng thái để paste vào sheet
-        }
-        colData[r.sourceRow] = code;
-    });
-    
-    // Data thật bắt đầu từ sheet row 4 (tức là sourceRow = 3)
-    // Cắt mảng từ index 3 đến hết
-    const copyArr = colData.slice(3);
-    const textToCopy = copyArr.join('\n');
-    
-    navigator.clipboard.writeText(textToCopy).then(() => {
-        alert('✅ Đã copy ' + copyArr.length + ' dòng!\n\nBây giờ hãy:\n1. Mở file THCP\n2. Click chuột vào ô đầu tiên của cột AC (ô AC4)\n3. Ấn Ctrl+V để dán toàn bộ dữ liệu.');
-    }).catch(err => {
-        alert('Lỗi copy: ' + err);
-    });
-}
-
-function renderNccTrip(preserveScroll = false) {
+function renderNccTrip() {
     const container = document.getElementById('nccTripContainer');
-    let scrollPos = 0;
-    if (preserveScroll && container) {
-        const existingScroll = container.querySelector('.table-scroll');
-        if (existingScroll) scrollPos = existingScroll.scrollTop;
-    }
     if (!isNccTripLoaded) {
         container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 10px"></div>Đang tải dữ liệu chuyến NCC...</div>';
         return;
@@ -4645,11 +4345,22 @@ function renderNccTrip(preserveScroll = false) {
     html += '<th style="text-align:right">Đơn giá ngày</th>';
     html += '<th style="text-align:right">Phí cầu đường</th>';
     html += '<th style="text-align:right">Phí ngày lễ</th>';
-    html += '<th style="text-align:right; color:var(--accent);">Tổng chi phí</th>';
+    html += '<th style="text-align:right; color:#fbbf24;">Tổng chi phí</th>';
     html += '<th>Mã chuyến GHN</th>';
-    html += '<th style="width: 120px; min-width: 120px; white-space: nowrap; text-align: center;">Trạng thái</th>';
-    html += '<th style="width:100px">Ghi chú</th>';
-    html += '<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>';
+    html += '<th>';
+    html += '<select onchange="document.getElementById(\'filterNccStatus\').value = this.value; renderNccTrip();" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer; outline: none;">';
+    html += '<option value="" style="color: #000;">Trạng thái (Tất cả)</option>';
+    html += '<option value="khop" style="color: #000;" ' + (filterStatus === 'khop' ? 'selected' : '') + '>✅ Khớp</option>';
+    html += '<option value="khop_tay" style="color: #000;" ' + (filterStatus === 'khop_tay' ? 'selected' : '') + '>📝 Khớp tay</option>';
+    html += '<option value="da_chuyen" style=\"color: #000;\" ' + (filterStatus === 'da_chuyen' ? 'selected' : '') + '>🔄 Đa chuyến</option>';
+    html += '<option value="thieu" style="color: #000;" ' + (filterStatus === 'thieu' ? 'selected' : '') + '>⚠️ Thiếu</option>';
+    html += '<option value="ghn_off" style="color: #000;" ' + (filterStatus === 'ghn_off' ? 'selected' : '') + '>⏸️ GHN OFF</option>';
+    html += '<option value="ncc_off" style="color: #000;" ' + (filterStatus === 'ncc_off' ? 'selected' : '') + '>⏸️ NCC OFF</option>';
+    html += '<option value="phat" style="color: #000;" ' + (filterStatus === 'phat' ? 'selected' : '') + '>⚠️ Phạt</option>';
+    html += '<option value="khong_chay" style="color: #000;" ' + (filterStatus === 'khong_chay' ? 'selected' : '') + '>🛑 Không chạy vẫn tính tiền</option>';
+    html += '</select>';
+    html += '</th>';
+    html += '<th style="min-width:150px">Ghi chú</th>';
     html += '</tr></thead><tbody>';
 
     filtered.forEach((r, i) => {
@@ -4682,31 +4393,16 @@ function renderNccTrip(preserveScroll = false) {
         } else if (isPhat) {
             statusHtml = '<span style="color:#ef4444; font-weight:700;">⚠️ Phạt</span>';
         } else if (hasMatch) {
-            const isMulti = String(r.ghnTripCode).includes('|');
-            if (isMulti) {
-                statusHtml = r.isManualMatch ? '<span style="color:var(--info); font-weight:700;">🔄 Đa chuyến <small style="color:#f59e0b">(Khớp tay)</small></span>' : '<span style="color:var(--info); font-weight:700;">🔄 Đa chuyến</span>';
-            } else if (r.isManualMatch) {
-                statusHtml = '<span style="color:#f59e0b; font-weight:700;">📝 Khớp tay</span>';
-            } else {
-                statusHtml = '<span style="color:var(--success); font-weight:700;">✅ Khớp</span>';
-            }
-            
-            const codes = String(r.ghnTripCode).split('|').map(c => c.trim()).filter(c => c);
-            ghnHtml = `<div style="display:flex; gap: 6px; align-items:center; flex-wrap:wrap;">`;
-            codes.forEach((c, idx) => {
-                ghnHtml += `<div style="display:flex;align-items:center;gap:2px;"><a href="https://nhanh.ghn.vn/lastmile/trip-detail/${c}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${c}</strong></a><button style="background:transparent;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 2px;" onclick="unmatchFromLastmile(${r.originalIndex}, '${c}')" title="Gỡ mã chuyến này">✖</button></div>`;
-                if (idx < codes.length - 1) ghnHtml += `<span style="color:#64748b;">|</span>`;
-            });
-            if (r.isManualMatch) {
+              const codes = String(r.ghnTripCode).split('|').map(c => c.trim()).filter(c => c);
+              ghnHtml = `<div style="display:flex; gap: 6px; align-items:center; flex-wrap:wrap;">`;
+              codes.forEach((c, idx) => {
+                  ghnHtml += `<div style="display:flex;align-items:center;gap:2px;"><a href="https://nhanh.ghn.vn/lastmile/trip-detail/${c}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${c}</strong></a><button style="background:transparent;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 2px;" onclick="unmatchFromLastmile(${r.originalIndex}, '${c}')" title="Gỡ mã chuyến này">✖</button></div>`;
+                  if (idx < codes.length - 1) ghnHtml += `<span style="color:#64748b;">|</span>`;
+              });
+              if (r.isManualMatch) {
                 ghnHtml += `<span class="badge" style="background:rgba(251,191,36,0.15);color:#f59e0b;font-size:10px;padding:2px 4px;border:1px solid rgba(251,191,36,0.3);" title="Được khớp bằng tay">📝 Khớp tay</span>`;
             }
             ghnHtml += `</div>`;
-        } else {
-            if (String(r.route || '').toLowerCase().includes('không chạy')) {
-                statusHtml = '<span style="color:#ef4444; font-weight:700;">🛑 Không chạy</span>';
-            } else {
-                statusHtml = '<span style="color:var(--warning); font-weight:700;">⚠️ Thiếu mã</span>';
-            }
         }
 
 
@@ -4727,7 +4423,7 @@ function renderNccTrip(preserveScroll = false) {
         html += `
             <tr>
                 <td>${i + 1}</td>
-                <td style="font-weight:700; white-space:nowrap;">${r.sheetId ? (() => {
+                <td style="font-weight:600; white-space:nowrap;">${r.sheetId ? (() => {
                     let sheetUrl = 'https://docs.google.com/spreadsheets/d/' + r.sheetId + '/edit';
                     if (r.tabGid) sheetUrl += '#gid=' + r.tabGid + '&range=B' + r.sourceRow;
                     return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
@@ -4736,15 +4432,15 @@ function renderNccTrip(preserveScroll = false) {
                 <td style="font-family:Calibri, sans-serif; font-weight:700; color:#f0ad4e;">${escapeHtml(formatPlate(r.plate))}</td>
                 <td><span class="badge" style="${whColor}">${escapeHtml(shortWH)}</span></td>
                 <td style="font-size:11px; max-width:120px; width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
-                <td style="font-family:Calibri, sans-serif; font-weight:700;">${(() => {
+                <td style="font-family:Calibri, sans-serif; font-weight:600;">${(() => {
                     let finalDiff = null;
                     if (r.kmDiff !== undefined && r.kmDiff !== null && String(r.kmDiff).trim() !== '') {
-                        let diffVal = parseVietnameseNumber(r.kmDiff);
+                        let diffVal = parseFloat(String(r.kmDiff).replace(/[^\d.]/g, ''));
                         if (!isNaN(diffVal)) finalDiff = diffVal;
                         else return escapeHtml(r.kmDiff);
                     } else {
-                        let s = parseVietnameseNumber(r.kmStart);
-                        let e = parseVietnameseNumber(r.kmEnd);
+                        let s = parseFloat(String(r.kmStart).replace(/[^\d.]/g, ''));
+                        let e = parseFloat(String(r.kmEnd).replace(/[^\d.]/g, ''));
                         if (!isNaN(s) && !isNaN(e) && s > 1000 && e >= s) {
                             finalDiff = e - s;
                         } else if (!isNaN(e) && e > 0 && e < 1000) {
@@ -4798,25 +4494,16 @@ function renderNccTrip(preserveScroll = false) {
                 <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.dailyRate)}</td>
                 <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.tollFee)}</td>
                 <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.holidayFee)}</td>
-                <td style="text-align:right; font-family:Calibri, sans-serif; font-weight:bold; color:var(--text-primary);">${formatMoneyCell(r.totalCost)}</td>
+                <td style="text-align:right; font-family:Calibri, sans-serif; font-weight:bold; color:#fbbf24;">${formatMoneyCell(r.totalCost)}</td>
                 <td>${ghnHtml}</td>
-                <td style="font-weight:bold; white-space: nowrap; text-align: center;">${statusHtml}</td>
-                <td><input type="text" class="form-control" style="font-size:12px; height:26px; padding:2px 6px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width:100px;" title="${escapeHtml(r.note || '')}" placeholder="Ghi chú..." onchange="updateNccTripNote(${r.originalIndex}, this.value)" value="${escapeHtml(r.note || '')}"></td>
-                <td style="text-align:center; cursor:pointer;" title="${r.actionLogs && r.actionLogs.length > 0 ? escapeHtml(r.actionLogs.map(l => '- ' + l.time + ' (' + (l.user||'Ẩn danh') + '): ' + l.action + ' - ' + l.details).join('\n')) : 'Chưa có thao tác nào'}">
-                    ${r.actionLogs && r.actionLogs.length > 0 ? '🕒' : '<span style="opacity:0.2">🕒</span>'}
-                </td>
+                <td style="font-weight:bold;">${statusHtml}</td>
+                <td><input type="text" class="form-control" style="font-size:12px; height:26px; padding:2px 6px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width:150px;" placeholder="Ghi chú..." onchange="updateNccTripNote(${r.originalIndex}, this.value)" value="${escapeHtml(r.note || '')}"></td>
             </tr>
         `;
     });
     
     html += '</tbody></table></div></div>';
     container.innerHTML = html;
-    if (preserveScroll && scrollPos > 0) {
-        setTimeout(() => {
-            const newScroll = container.querySelector('.table-scroll');
-            if (newScroll) newScroll.scrollTop = scrollPos;
-        }, 0);
-    }
 }
 
 function exportNccTripExcel() {
@@ -4846,7 +4533,7 @@ function exportNccTripExcel() {
           "Phí ngày lễ": formatEmpty(r.holidayFee),
           "Tổng chi phí": formatEmpty(r.totalCost),
           "Mã chuyến đi GHN": r.ghnTripCode || "-",
-          "Trạng thái": (r.ghnTripCode === "GHN OFF" || r.ghnTripCode === "GHN_OFF") ? "GHN OFF" : ((r.ghnTripCode === "Phạt" || r.ghnTripCode === "PHẠT") ? "Phạt" : ((r.ghnTripCode === "NCC OFF" || r.ghnTripCode === "NCC_OFF" || r.ghnTripCode === "OFF") ? "NCC OFF" : (r.ghnTripCode ? (String(r.ghnTripCode).includes('|') ? (r.isManualMatch ? "Đa chuyến (Khớp tay)" : "Đa chuyến") : (r.isManualMatch ? "Khớp tay" : "Đã khớp")) : "Thiếu mã"))),
+          "Trạng thái": (r.ghnTripCode === "GHN OFF" || r.ghnTripCode === "GHN_OFF") ? "GHN OFF" : ((r.ghnTripCode === "Phạt" || r.ghnTripCode === "PHẠT") ? "Phạt" : ((r.ghnTripCode === "NCC OFF" || r.ghnTripCode === "NCC_OFF" || r.ghnTripCode === "OFF") ? "NCC OFF" : (r.ghnTripCode ? (r.isManualMatch ? "Khớp tay" : "Đã khớp") : "Thiếu mã"))),
           "Ghi chú": r.note || ""
       }));
       
@@ -4881,7 +4568,7 @@ function unlockPhoneColumn() {
     if (pw === _NCC_PASS) {
         _phoneUnlocked = true;
         showToast('✅', 'Đã mở khóa hiển thị cột SĐT!');
-        if (typeof renderLastmile === 'function') renderLastmile(true);
+        if (typeof renderLastmile === 'function') renderLastmile();
     } else if (pw !== null) {
         showToast('❌', 'Mật khẩu không đúng!');
     }
@@ -4889,45 +4576,6 @@ function unlockPhoneColumn() {
 
 
 // ====== LASTMILE REPORT ======
-
-// BỔ SUNG BIỂN SỐ XE TỪ LINK T5
-async function fetchSupplementaryPlates() {
-    return new Promise((resolve) => {
-        const map = new Map();
-        let loaded = 0;
-        const urls = ['1iwCBlTN3fEspMvkKpeXRnhcUO8suWIyTj2SdkCNxx2k', '1nuYvpAKTgZoW50o9PcLLNmAI2K76eAU5w6AQgX1DBrc'];
-        
-        urls.forEach((sheetId, idx) => {
-            const cbName = '_plateCB_' + idx + '_' + Date.now();
-            window[cbName] = function(data) {
-                delete window[cbName];
-                if (data && data.table && data.table.rows) {
-                    data.table.rows.forEach(r => {
-                        if (r.c && r.c[0] && r.c[0].v && r.c[1] && r.c[1].v) {
-                            let plate = String(r.c[1].v).trim();
-                            if (typeof formatPlate === 'function') plate = formatPlate(plate);
-                            map.set(String(r.c[0].v).trim(), plate);
-                        }
-                    });
-                }
-                loaded++;
-                if (loaded === urls.length) resolve(map);
-            };
-            const script = document.createElement('script');
-            const q = encodeURIComponent('SELECT D, MAX(M) WHERE D is not null GROUP BY D');
-            script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${cbName}&tq=${q}`;
-            document.body.appendChild(script);
-        });
-        
-        setTimeout(() => {
-            if (loaded < urls.length) {
-                loaded = urls.length;
-                resolve(map);
-            }
-        }, 15000); // 15s timeout
-    });
-}
-
 async function loadLastmileData() {
     if (isLastmileLoaded) return;
     var container = document.getElementById('lastmileContainer');
@@ -5065,26 +4713,7 @@ async function loadLastmileData() {
             lastmileData.forEach(r => { if(r.plate) r.plate = formatPlate(r.plate); });
         }
         
-        
-    // Tích hợp bổ sung biển số xe tháng 5 từ link ngoài
-    console.log('🔄 Đang nạp bổ sung biển số xe tháng 5...');
-    try {
-        const pMap = await fetchSupplementaryPlates();
-        if (pMap.size > 0) {
-            let filledCount = 0;
-            lastmileData.forEach(r => {
-                if (!r.plate && r.tripCode && pMap.has(r.tripCode)) {
-                    r.plate = pMap.get(r.tripCode);
-                    filledCount++;
-                }
-            });
-            console.log('✅ Đã bổ sung thành công ' + filledCount + ' biển số từ 2 link phụ!');
-        }
-    } catch(e) {
-        console.error('Lỗi nạp biển số phụ:', e);
-    }
-    
-    tripsData = lastmileData; // Use lastmileData directly as the source of truth for all trip matching
+        tripsData = lastmileData; // Use lastmileData directly as the source of truth for all trip matching
         lastmileData.sort(function(a, b) {
             var da = a.dateStr ? String(a.dateStr).split('/').reverse().join('') : '';
             var db = b.dateStr ? String(b.dateStr).split('/').reverse().join('') : '';
@@ -5120,7 +4749,7 @@ async function loadLastmileData() {
     }
 }
 
-  window.unmatchFromLastmile = function(nccIndex, tripCode, btnEl) {
+  window.unmatchFromLastmile = function(nccIndex, tripCode) {
       if (nccIndex === undefined || nccIndex === null) return;
       if (typeof nccTripData === 'undefined' || !nccTripData[nccIndex]) return;
       if (!confirm('Bạn có chắc muốn gỡ đối soát cho chuyến: ' + tripCode + ' ?')) return;
@@ -5130,68 +4759,27 @@ async function loadLastmileData() {
       let newValue = currentCodes.join(' | ');
       
       updateNccTripCode(nccIndex, newValue);
-      renderLastmile(true);
+      renderLastmile();
       showToast('success', 'Đã gỡ đối soát chuyến ' + tripCode);
   };
 
   
-  window.toggleVirtualTrip = function(tripCode, isChecked, checkboxEl) {
+  window.toggleVirtualTrip = function(tripCode, isChecked) {
       if (!tripCode) return;
       try {
           var virtuals = JSON.parse(localStorage.getItem('GHN_VIRTUAL_TRIPS') || '{}');
           if (isChecked) virtuals[tripCode] = true;
           else delete virtuals[tripCode];
           localStorage.setItem('GHN_VIRTUAL_TRIPS', JSON.stringify(virtuals));
-          if (typeof saveActionLog === 'function') {
-              const vKey = 'VIRTUAL_' + tripCode;
-              saveActionLog(vKey, isChecked ? 'Đánh dấu chuyến ảo' : 'Bỏ đánh dấu chuyến ảo', 'Lastmile');
-              try {
-                  const localLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
-                  if (typeof syncToCloud === 'function') {
-                      syncToCloud(vKey, isChecked ? 'VIRTUAL' : 'NOT_VIRTUAL', undefined, localLogs[vKey]);
-                  }
-              } catch(e) {}
-          }
           showToast('success', (isChecked ? 'Đã đánh dấu chuyến ảo: ' : 'Đã bỏ chuyến ảo: ') + tripCode);
-          
-        if (checkboxEl) {
-            const tr = checkboxEl.closest('tr');
-            if (tr && tr.children.length >= 17) {
-                const statusCell = tr.children[15];
-                if (isChecked) {
-                    statusCell.innerHTML = '<span style="color:#a78bfa; font-weight:700;">👻 Chuyến ảo</span>';
-                } else {
-                    statusCell.innerHTML = '<span style="color:var(--warning);">⚠️ Chưa ĐS</span>';
-                }
-                
-                let localLogs = {};
-                try { localLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}'); } catch(e){}
-                let newLogs = localLogs['VIRTUAL_' + tripCode];
-                if (newLogs && newLogs.length > 0) {
-                    const logCell = tr.children[16];
-                    logCell.innerHTML = '🕒';
-                    const esc = (unsafe) => (unsafe||'').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-                    logCell.title = esc(newLogs.map(l => '- ' + l.time + ' (' + (l.user||'Ẩn danh') + '): ' + l.action + ' - ' + l.details).join('\n'));
-                    logCell.style.opacity = '1';
-                }
-            }
-        } else {
-            if (typeof renderLastmile === 'function') renderLastmile(true);
-        }
-
       } catch(e) {
           console.error('Error saving virtual trip:', e);
       }
   };
 
-  function renderLastmile(preserveScroll = false) {
+  function renderLastmile() {
     console.log('🎨 renderLastmile called, isLoaded=' + isLastmileLoaded + ', data=' + lastmileData.length);
     var container = document.getElementById('lastmileContainer');
-    let scrollPos = 0;
-    if (preserveScroll && container) {
-        const existingScroll = container.querySelector('.table-scroll');
-        if (existingScroll) scrollPos = existingScroll.scrollTop;
-    }
     if (!container) { console.error('❌ container not found!'); return; }
     if (!isLastmileLoaded || lastmileData.length === 0) {
         container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Không có dữ liệu.</div>';
@@ -5265,7 +4853,7 @@ async function loadLastmileData() {
             var isVirtualTrip = row.tripCode && virtualTrips[row.tripCode];
             if (filterStatus === 'khop' && !isMatched) continue;
             if (filterStatus === 'khop_tay' && !isManual) continue;
-            if (filterStatus === 'thieu' && (isMatched || isVirtualTrip)) continue;
+            if (filterStatus === 'thieu' && isMatched) continue;
             if (filterStatus === 'chuyen_ao' && !isVirtualTrip) continue;
             if (filterStatus === 'da_chuyen') { let c = (typeof nccTripData !== 'undefined') ? nccTripData.find(x => x.ghnTripCode && String(x.ghnTripCode).includes(row.tripCode) && String(x.ghnTripCode).includes('|')) : null; if (!c) continue; }
         }
@@ -5314,37 +4902,34 @@ async function loadLastmileData() {
         ? 'SĐT <span style="font-size:11px; color:var(--success);" title="Đã mở khóa">🔓</span>' 
         : 'SĐT <span onclick="unlockPhoneColumn()" style="cursor:pointer; font-size:11px; color:#fbbf24;" title="Nhấn để nhập mật khẩu xem SĐT">🔒</span>';
 
-    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:110px">' + sdtHeader + '</th><th style="min-width:200px;">Tuyến đường</th><th style="width:80px; text-align:center;">Chuyến ảo</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th><th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>';
+    html += '<th style="width:40px">#</th><th style="width:90px">Ngày</th><th>Mã chuyến</th><th style="width:120px">Biển số</th><th style="width:100px">Kho</th><th style="width:130px">Bắt đầu</th><th style="width:130px">Kết thúc</th><th>Người tạo</th><th style="width:60px">Lấy</th><th style="width:60px">Giao</th><th style="width:60px">Trả</th><th>NVGH</th><th style="width:110px">' + sdtHeader + '</th><th style="min-width:200px;">Tuyến đường</th><th style="width:80px; text-align:center;">Chuyến ảo</th><th style="width:130px; white-space:nowrap;">Đối soát NCC</th>';
     html += '</tr></thead><tbody>';
-    
-    let allLocalLogs = {};
-    try { allLocalLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}'); } catch(e) {}
     
     for (var m = 0; m < filtered.length; m++) {
         var r = filtered[m];
         var whColor = typeof warehouseColor === 'function' ? warehouseColor(r.hubName || 'Khác') : '';
         html += '<tr>';
         html += '<td>' + (m+1) + '</td>';
-        html += '<td style="font-weight:700; white-space:nowrap;">' + (r.dateStr || '') + '</td>';
+        html += '<td style="font-weight:600; white-space:nowrap;">' + (r.dateStr || '') + '</td>';
         html += '<td style="font-family:Calibri, sans-serif; font-size:13px; font-weight:bold;">' + (r.tripCode ? '<a href="https://nhanh.ghn.vn/lastmile/trip-detail/' + r.tripCode + '" target="_blank" style="color:var(--success);text-decoration:underline;">' + r.tripCode + '</a>' : '') + '</td>';
         html += '<td style="font-family:Calibri, sans-serif; font-weight:700; color:#f0ad4e;">' + (typeof formatPlate === 'function' ? formatPlate(r.plate || '') : (r.plate || '')) + '</td>';
         html += '<td><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold;' + whColor + '">' + (r.hubName || 'Khác') + '</span></td>';
         html += '<td style="font-family:Calibri, sans-serif; font-size:12px; color:var(--text-muted);">' + (r.startTime || '') + '</td>';
         html += '<td style="font-family:Calibri, sans-serif; font-size:12px; color:var(--text-muted);">' + (r.endTime || '') + '</td>';
-        html += '<td style="font-weight:700;">' + (r.createdByName || '') + '</td>';
+        html += '<td style="font-weight:500;">' + (r.createdByName || '') + '</td>';
         html += '<td style="font-weight:700; color:var(--success); text-align:center;">' + (r.pickCount || 0) + '</td>';
         html += '<td style="font-weight:700; color:var(--primary); text-align:center;">' + (r.deliverCount || 0) + '</td>';
         html += '<td style="font-weight:700; color:var(--danger); text-align:center;">' + (r.returnCount || 0) + '</td>';
-        html += '<td style="font-weight:700;">' + (r.driverName || '') + '</td>';
+        html += '<td style="font-weight:600;">' + (r.driverName || '') + '</td>';
         
         if (_phoneUnlocked) {
-            html += '<td style="font-family:Calibri, sans-serif; font-weight:700;">' + (r.driverPhone || '') + '</td>';
+            html += '<td style="font-family:Calibri, sans-serif; font-weight:500;">' + (r.driverPhone || '') + '</td>';
         } else {
-            html += '<td style="font-family:Calibri, sans-serif; font-weight:700; cursor:pointer;" onclick="unlockPhoneColumn()" title="Nhấn để nhập mật khẩu xem SĐT"><span style="color:#94a3b8; font-size:11px;">🔒 ******</span></td>';
+            html += '<td style="font-family:Calibri, sans-serif; font-weight:500; cursor:pointer;" onclick="unlockPhoneColumn()" title="Nhấn để nhập mật khẩu xem SĐT"><span style="color:#94a3b8; font-size:11px;">🔒 ******</span></td>';
         }
         html += '<td style="font-size:12px; max-width:150px; white-space:normal;">' + (r.route ? escapeHtml(r.route) : '<span style="color:var(--text-muted);">—</span>') + '</td>';
         let isVirtual = r.tripCode && virtualTrips[r.tripCode];
-        html += '<td style="text-align:center;"><input type="checkbox" ' + (isVirtual ? 'checked' : '') + ' onchange="toggleVirtualTrip(\'' + r.tripCode + '\', this.checked, this)" style="cursor:pointer; width:16px; height:16px;"></td>';
+        html += '<td style="text-align:center;"><input type="checkbox" ' + (isVirtual ? 'checked' : '') + ' onchange="toggleVirtualTrip(\'' + r.tripCode + '\', this.checked)" style="cursor:pointer; width:16px; height:16px;"></td>';
         var isMatched = r.tripCode && matchedTripCodes.has(r.tripCode);
         var isManual = r.tripCode && typeof manualTripCodes !== 'undefined' && manualTripCodes.has(r.tripCode);
         
@@ -5356,47 +4941,20 @@ async function loadLastmileData() {
             const nccIdx = typeof tripToNccIndex !== 'undefined' ? tripToNccIndex.get(r.tripCode) : null;
             let unmatchBtn = '';
             if (nccIdx !== null && nccIdx !== undefined) {
-                unmatchBtn = ` <span style="color:var(--danger); cursor:pointer; padding:0 4px; font-weight:bold; user-select:none;" onclick="unmatchFromLastmile(${nccIdx}, \'${r.tripCode}\', this)" title="Gỡ đối soát">✕</span>`;
+                unmatchBtn = ` <span style="color:var(--danger); cursor:pointer; padding:0 4px; font-weight:bold; user-select:none;" onclick="unmatchFromLastmile(${nccIdx}, '${r.tripCode}')" title="Gỡ đối soát">✕</span>`;
             }
             if (isManual) {
                 statusHtml = `<div style="display:flex;align-items:center;justify-content:center;gap:4px;"><span class="badge" style="background:rgba(251,191,36,0.15);color:#f59e0b;font-size:10px;padding:2px 4px;border:1px solid rgba(251,191,36,0.3);" title="Được khớp bằng tay">🤲 Khớp tay</span>${unmatchBtn}</div>`;
             } else {
                 statusHtml = `<div style="display:flex;align-items:center;justify-content:center;gap:4px;"><span style="color:var(--success);">✅ Đã ĐS</span>${unmatchBtn}</div>`;
             }
-        } else if (isVirtual) {
-            statusHtml = '<span style="color:#a78bfa; font-weight:700;">👻 Chuyến ảo</span>';
         }
-        html += '<td style="text-align:center;font-weight:bold;">' + statusHtml + '</td>';
-        let logHtml = '<span style="opacity:0.2">🕒</span>';
-        let logTitle = 'Chưa có thao tác nào';
-        let logs = [];
-        if (isMatched && typeof tripToNccIndex !== 'undefined') {
-            const nccIdx = tripToNccIndex.get(r.tripCode);
-            if (nccIdx !== null && nccIdx !== undefined && typeof nccTripData !== 'undefined' && nccTripData[nccIdx].actionLogs && nccTripData[nccIdx].actionLogs.length > 0) {
-                logs = logs.concat(nccTripData[nccIdx].actionLogs);
-            }
-        }
-        const vKey = 'VIRTUAL_' + r.tripCode;
-        if (allLocalLogs[vKey] && allLocalLogs[vKey].length > 0) {
-            logs = logs.concat(allLocalLogs[vKey]);
-        }
-        if (logs.length > 0) {
-            logHtml = '🕒';
-            logTitle = escapeHtml(logs.map(l => '- ' + l.time + ' (' + (l.user||'Ẩn danh') + '): ' + l.action + ' - ' + l.details).join('\n'));
-        }
-        html += '<td style="text-align:center; cursor:pointer;" title="' + logTitle + '">' + logHtml + '</td>';
-        html += '</tr>';
+        html += '<td style="text-align:center;font-weight:bold;">' + statusHtml + '</td>';        html += '</tr>';
     }
     html += '</tbody></table></div></div>';
     
     console.log('✅ HTML built, length=' + html.length);
     container.innerHTML = '<div class="ranking-grid" style="grid-template-columns:1fr">' + html + '</div>';
-    if (preserveScroll && scrollPos > 0) {
-        setTimeout(() => {
-            const newScroll = container.querySelector('.table-scroll');
-            if (newScroll) newScroll.scrollTop = scrollPos;
-        }, 0);
-    }
     console.log('✅ renderLastmile done!');
 }
 function exportLastmileExcel() {
@@ -5433,37 +4991,10 @@ window.jumpToNccTrip = function(tripCode) {
     });
     
     switchTab('nccTrip', targetBtn);
-    if (typeof renderNccTrip === 'function') renderNccTrip(true);
+    if (typeof renderNccTrip === 'function') renderNccTrip();
 };
 
-    window.clearFilters = function() {
-        document.getElementById('filterDateFrom').value = '';
-        document.getElementById('filterDateTo').value = '';
-        document.getElementById('filterWarehouse').value = '';
-        document.getElementById('filterNcc').value = '';
-        
-        document.getElementById('filterEmployee').value = '';
-        const clearEmp = document.getElementById('clearEmp');
-        if (clearEmp) clearEmp.style.display = 'none';
-        
-        document.getElementById('filterPlate').value = '';
-        const clearPlate = document.getElementById('clearPlate');
-        if (clearPlate) clearPlate.style.display = 'none';
-
-        const filterNccStatus = document.getElementById('filterNccStatus');
-        if (filterNccStatus) filterNccStatus.value = '';
-
-        const monthSelect = document.getElementById('filterMonth');
-        if (monthSelect.options.length > 0) {
-            monthSelect.selectedIndex = 0;
-        }
-
-        if (typeof applyFilters === 'function') {
-            applyFilters();
-        }
-    };
-
-    function switchTab(tab, el) {
+function switchTab(tab, el) {
     // Yêu cầu password khi vào tab NCC
     if (tab === 'ncc' && !_nccUnlocked) {
         const pw = prompt('🔒 Nhập mật khẩu để xem Chi phí xe NCC:');
@@ -5500,7 +5031,7 @@ window.jumpToNccTrip = function(tripCode) {
     }
     if (tab === 'lastmile') {
         if (!isLastmileLoaded) loadLastmileData();
-        else if (typeof renderLastmile === 'function') renderLastmile(true);
+        else if (typeof renderLastmile === 'function') renderLastmile();
     }
     if (tab === 'recon3Way' && (!isNccTripLoaded || !isLastmileLoaded)) {
         if (!isNccTripLoaded) loadNccTripData();
@@ -5768,7 +5299,7 @@ window.renderRecon3Way = function() {
     ];
     cards.forEach(function(c) {
         html += '<div style="flex:1;min-width:120px;padding:14px 16px;background:rgba(0,0,0,0.2);border-left:3px solid ' + c.color + ';border-radius:8px;">';
-        html += '<div style="font-size:12px;color:' + c.color + ';font-weight:700;">' + c.label + '</div>';
+        html += '<div style="font-size:12px;color:' + c.color + ';font-weight:600;">' + c.label + '</div>';
         html += '<div style="font-size:28px;font-weight:800;color:' + c.color + ';">' + c.count + '</div>';
         html += '</div>';
     });
@@ -5893,195 +5424,3 @@ window.exportRecon3WayExcel = function() {
         }
     });
 
-
-// ==================== GOOGLE AUTHENTICATION ====================
-let currentUser = null;
-
-function parseJwt(token) {
-    try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        return JSON.parse(jsonPayload);
-    } catch (e) {
-        return null;
-    }
-}
-
-function dismissAuthOverlay() {
-    const overlay = document.getElementById('authOverlay');
-    if (overlay) {
-        overlay.style.opacity = '0';
-        setTimeout(function() { overlay.style.display = 'none'; }, 300);
-    }
-}
-
-function handleGoogleLogin(response) {
-    const payload = parseJwt(response.credential);
-    if (payload && payload.email) {
-        currentUser = {
-            name: payload.name,
-            email: payload.email,
-            picture: payload.picture
-        };
-        localStorage.setItem('GHN_USER_INFO', JSON.stringify(currentUser));
-        dismissAuthOverlay();
-        showToast('✅', 'Đăng nhập thành công: ' + currentUser.name);
-        renderUserInfo();
-    }
-}
-
-function continueAsUser() {
-    try {
-        const saved = localStorage.getItem('GHN_USER_INFO');
-        if (saved) {
-            currentUser = JSON.parse(saved);
-            dismissAuthOverlay();
-            renderUserInfo();
-            showToast('✅', 'Xin chào, ' + currentUser.name + '!');
-        }
-    } catch(e) {}
-}
-
-function renderUserInfo() {
-    var userInfoEl = document.getElementById('userInfoDisplay');
-    if (!userInfoEl) {
-        userInfoEl = document.createElement('div');
-        userInfoEl.id = 'userInfoDisplay';
-        userInfoEl.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);';
-        var rightPanel = document.querySelector('.header-right');
-        if (rightPanel) {
-            rightPanel.insertBefore(userInfoEl, rightPanel.firstChild);
-        }
-    }
-    if (currentUser) {
-        var avatarHtml = currentUser.picture ? '<img src="' + currentUser.picture + '" style="width:28px;height:28px;border-radius:50%;" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">' : '<span style="width:28px;height:28px;border-radius:50%;background:#00c2a8;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;color:#fff;">' + escapeHtml(currentUser.name.charAt(0).toUpperCase()) + '</span>';
-        var adminBtn = (currentUser.email === 'daduy1195@gmail.com') ? '<button onclick="showAccessLogs()" style="background:none;border:none;color:#00c2a8;cursor:pointer;font-size:11px;padding:0;text-decoration:underline;">Lịch sử truy cập</button>' : '';
-        userInfoEl.innerHTML = avatarHtml + ' <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;"><span style="font-weight:bold;color:#fff;">' + escapeHtml(currentUser.name) + '</span>' + adminBtn + '</div>';
-    }
-}
-
-// Kiểm tra đăng nhập khi trang load
-(function checkAuthOnLoad() {
-    try {
-        var saved = localStorage.getItem('GHN_USER_INFO');
-        if (saved) {
-            var user = JSON.parse(saved);
-            if (user && user.name && user.email) {
-                var continueBtn = document.getElementById('authContinueBtn');
-                var continueName = document.getElementById('authContinueName');
-                var continueAvatar = document.getElementById('authContinueAvatar');
-                var divider = document.getElementById('authDivider');
-                if (continueBtn && continueName) {
-                    continueName.textContent = 'Tiếp tục với ' + user.name;
-                    if (continueAvatar && user.picture) continueAvatar.src = user.picture;
-                    continueBtn.style.display = 'block';
-                    if (divider) divider.style.display = 'block';
-                }
-            }
-        }
-    } catch(e) {}
-})();
-
-
-function showAccessLogs() {
-    let modal = document.getElementById('accessLogModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'accessLogModal';
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10001;display:flex;align-items:center;justify-content:center;';
-        document.body.appendChild(modal);
-    }
-    
-    const logs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}')['__ACCESS__'] || [];
-    let html = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;width:90%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,0.5);">';
-    html += '<div style="padding:15px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">';
-    html += '<h3 style="margin:0;color:var(--text-primary);font-size:18px;">🔒 Lịch sử truy cập hệ thống</h3>';
-    html += '<button onclick="document.getElementById(\'accessLogModal\').style.display=\'none\'" style="background:none;border:none;color:var(--text-secondary);font-size:24px;cursor:pointer;">&times;</button>';
-    html += '</div>';
-    html += '<div style="padding:0;overflow-y:auto;flex:1;">';
-    
-    if (logs.length === 0) {
-        html += '<div style="padding:30px;text-align:center;color:var(--text-muted);">Chưa có dữ liệu truy cập.</div>';
-    } else {
-        html += '<table class="data-table" style="width:100%;">';
-        html += '<thead><tr><th>Thời gian</th><th>Người truy cập</th><th>Email</th></tr></thead><tbody>';
-        logs.forEach(l => {
-            html += '<tr>';
-            html += '<td style="white-space:nowrap;color:var(--text-secondary);">' + escapeHtml(l.time) + '</td>';
-            html += '<td style="font-weight:bold;color:var(--text-primary);">' + escapeHtml(l.user) + '</td>';
-            html += '<td><span class="badge badge-info">' + escapeHtml(l.email) + '</span></td>';
-            html += '</tr>';
-        });
-        html += '</tbody></table>';
-    }
-    html += '</div></div>';
-    
-    modal.innerHTML = html;
-    modal.style.display = 'flex';
-}
-
-</script>
-
-<!-- Global Fast Tooltip Injected -->
-<script>
-document.addEventListener('mouseover', function(e) {
-    let target = e.target.closest('[title], [data-tooltip]');
-    if (!target) return;
-    
-    // If it has title, move to data-tooltip to prevent native browser tooltip
-    if (target.hasAttribute('title')) {
-        target.setAttribute('data-tooltip', target.getAttribute('title'));
-        target.removeAttribute('title');
-    }
-    
-    let text = target.getAttribute('data-tooltip');
-    if (!text || text === 'Chưa có thao tác nào') return;
-    
-    // create tooltip div if not exists
-    let tt = document.getElementById('global-fast-tooltip');
-    if (!tt) {
-        tt = document.createElement('div');
-        tt.id = 'global-fast-tooltip';
-        tt.style.cssText = 'position:fixed; background:rgba(15,23,42,0.95); color:#fff; padding:8px 12px; border-radius:6px; font-size:12px; z-index:999999; max-width:600px; min-width:300px; white-space:pre-wrap; pointer-events:none; box-shadow:0 4px 15px rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); line-height:1.5; font-family:sans-serif; backdrop-filter:blur(4px); transition:opacity 0.1s; opacity:0;';
-        document.body.appendChild(tt);
-    }
-    
-    tt.innerText = text;
-    tt.style.opacity = '1';
-    
-    // Position
-    let x = e.clientX + 15;
-    let y = e.clientY + 15;
-    if (x + tt.offsetWidth > window.innerWidth) x = e.clientX - tt.offsetWidth - 15;
-    if (y + tt.offsetHeight > window.innerHeight) y = e.clientY - tt.offsetHeight - 15;
-    
-    tt.style.left = x + 'px';
-    tt.style.top = y + 'px';
-    
-    target._mousemoveHandler = function(ev) {
-        let nx = ev.clientX + 15;
-        let ny = ev.clientY + 15;
-        if (nx + tt.offsetWidth > window.innerWidth) nx = ev.clientX - tt.offsetWidth - 15;
-        if (ny + tt.offsetHeight > window.innerHeight) ny = ev.clientY - tt.offsetHeight - 15;
-        tt.style.left = nx + 'px';
-        tt.style.top = ny + 'px';
-    };
-    target.addEventListener('mousemove', target._mousemoveHandler);
-});
-
-document.addEventListener('mouseout', function(e) {
-    let target = e.target.closest('[data-tooltip]');
-    if (!target) return;
-    
-    let tt = document.getElementById('global-fast-tooltip');
-    if (tt) {
-        tt.style.opacity = '0';
-    }
-    
-    if (target._mousemoveHandler) {
-        target.removeEventListener('mousemove', target._mousemoveHandler);
-    }
-});

@@ -4322,6 +4322,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             else continue; // Không thể tìm ra biển số thực sự
         }
         
+        if (typeof formatPlate === "function") plate = formatPlate(plate);
         if (!dateStr.match(/\d{2}\/\d{2}\/\d{4}/)) continue;
         if (stt && isNaN(stt) && !stt.match(/^\d/)) continue;
 

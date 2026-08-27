@@ -683,7 +683,7 @@
         <div class="section-header">
             <div class="section-title">🔗 Ghép chuyến đi NCC</div>
             <div style="display:flex;gap:8px;align-items:center;">
-                <button class="btn btn-primary" onclick="copyThcpAC()" style="padding:6px 14px;font-size:13px;background:#10b981;border-color:#10b981;" title="Copy toàn bộ mã chuyến đi đã ghép để dán thẳng vào cột AC của file THCP">📋 Copy cột AC (THCP)</button>
+                <button class="btn btn-primary" onclick="copyThcpAC()" style="padding:6px 14px;font-size:13px;background:#10b981;border-color:#10b981;" title="Copy toàn bộ mã chuyến đi và ghi chú để dán thẳng vào cột AC, AD của file THCP">📋 Copy cột AC, AD (THCP)</button>
 <select id="filterNccStatus" class="form-control" style="width: 160px; font-size: 13px;" onchange="renderNccTrip()">
                     <option value="">Tất cả trạng thái</option>
                     <option value="khop">✅ Khớp</option>
@@ -806,7 +806,8 @@ const CONFIG = {
         // THCP Tổng hợp 3 kỳ Hưng Yên (26/4 - 25/7)
         { id: '1tATkbxYOtiBuJC1GRto3QI81q_fkGzKYylufz4WtuAA', gid: '1957064243', ncc: 'ALL' },
         // PUT 'ALL' SHEET LAST SO IT OVERWRITES INDIVIDUAL SHEETS IN DEDUPLICATION
-        { id: '1jFaJutdZD8uhBYa9Hy9fH6tHVaSnEf-iyg4VUMniXl8', gid: '1482895796', ncc: 'ALL' }
+        { id: '1jFaJutdZD8uhBYa9Hy9fH6tHVaSnEf-iyg4VUMniXl8', gid: '1482895796', ncc: 'ALL' },
+        { id: '1uzpRdyDq-ayFgpos6rWXDcJDC7OL3r5fzct_E4mMYgo', gid: '0', ncc: 'ALL' }
     ],
 
     // Telegram Proxy (token ẩn trên server Google Apps Script)
@@ -5317,7 +5318,7 @@ window.copyThcpAC = function() {
     }
     
     // Lọc các dòng thuộc file THCP
-    const thcpTrips = nccTripData.filter(r => String(r.sheetId || '') === '1tATkbxYOtiBuJC1GRto3QI81q_fkGzKYylufz4WtuAA');
+    const thcpTrips = nccTripData.filter(r => r.isAllSheet);
     if (thcpTrips.length === 0) {
         if(typeof showToast === 'function') showToast('error', 'Không tìm thấy dữ liệu của file THCP!');
         return;
@@ -5329,14 +5330,15 @@ window.copyThcpAC = function() {
     });
     
     // Mảng chứa dữ liệu cột AC, mặc định rỗng
-    const colData = new Array(maxRow + 1).fill('');
+    const colData = new Array(maxRow + 1).fill('\t');
     
     thcpTrips.forEach(r => {
         let code = r.ghnTripCode || '';
         if (code === 'NCC OFF' || code === 'GHN OFF' || code === 'Phạt') {
             // Giữ nguyên trạng thái để paste vào sheet
         }
-        colData[r.sourceRow] = code;
+        let note = r.note || '';
+        colData[r.sourceRow] = code + '\t' + note;
     });
     
     // Data thật bắt đầu từ sheet row 4 (tức là sourceRow = 3)

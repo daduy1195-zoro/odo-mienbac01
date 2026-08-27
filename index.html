@@ -1940,6 +1940,17 @@ async function loadCloudData() {
             const mergedNotes = { ...localNotes, ...cloudNotes };
             const mergedLogs = { ...localLogs, ...cloudLogs };
             
+            // Đồng bộ Chuyến Ảo (Virtual Trips)
+            if (cloudOverrides['__VIRTUAL_TRIPS__']) {
+                try {
+                    const localVirtuals = JSON.parse(localStorage.getItem('GHN_VIRTUAL_TRIPS') || '{}');
+                    let parsedCloudVirtuals = cloudOverrides['__VIRTUAL_TRIPS__'];
+                    if (typeof parsedCloudVirtuals === 'string') parsedCloudVirtuals = JSON.parse(parsedCloudVirtuals);
+                    const mergedVirtuals = { ...localVirtuals, ...parsedCloudVirtuals };
+                    localStorage.setItem('GHN_VIRTUAL_TRIPS', JSON.stringify(mergedVirtuals));
+                } catch(e) {}
+            }
+            
             // Đồng bộ Plate Mapping (Học biển số)
             if (cloudOverrides['__PLATE_MAPPING__']) {
                 try {
@@ -1948,6 +1959,14 @@ async function loadCloudData() {
                     if (typeof parsedCloud === 'string') parsedCloud = JSON.parse(parsedCloud);
                     const mergedMapping = { ...localMapping, ...parsedCloud };
                     localStorage.setItem('GHN_PLATE_MAPPING', JSON.stringify(mergedMapping));
+                    
+                    // Nếu từ điển nội bộ của user này nhiều hơn trên Cloud (do học từ phiên bản trước),
+                    // tự động đẩy nó lên Cloud để mọi người cùng nhận được
+                    if (Object.keys(localMapping).length > Object.keys(parsedCloud || {}).length) {
+                        if (typeof syncToCloud === 'function') {
+                            syncToCloud('__PLATE_MAPPING__', JSON.stringify(mergedMapping), undefined, undefined);
+                        }
+                    }
                 } catch(e) {}
             }
 
@@ -5944,6 +5963,9 @@ async function loadLastmileData() {
           if (isChecked) virtuals[tripCode] = true;
           else delete virtuals[tripCode];
           localStorage.setItem('GHN_VIRTUAL_TRIPS', JSON.stringify(virtuals));
+        if (typeof syncToCloud === 'function') {
+            syncToCloud('__VIRTUAL_TRIPS__', JSON.stringify(virtuals), undefined, undefined);
+        }
           if (typeof saveActionLog === 'function') {
               const vKey = 'VIRTUAL_' + tripCode;
               saveActionLog(vKey, isChecked ? 'Đánh dấu chuyến ảo' : 'Bỏ đánh dấu chuyến ảo', 'Lastmile');

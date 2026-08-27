@@ -4457,7 +4457,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             matchedTripCode = 'Phạt';
         }
 
-        const finalKey = `${nccName}_${plate}_${dateStr}_${sourceRow}`;
+        const finalKey = `${nccName}_${plate}_${dateStr}_${route}`;
         let tripNote = '';
         let isManualMatch = false;
         let actionLogs = [];
@@ -4824,7 +4824,7 @@ function updateNccTripNote(index, value) {
         try {
             const notes = JSON.parse(localStorage.getItem("GHN_NCC_TRIP_NOTES") || "{}");
             const r = nccTripData[index];
-            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.sourceRow}`;
+            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.route}`;
             if (value) {
                 notes[key] = value;
             } else {
@@ -5074,7 +5074,7 @@ function updateNccTripCode(index, value, suggestedPlate) {
         try {
             const overrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
             const r = nccTripData[index];
-            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.sourceRow}`;
+            const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.route}`;
             if (value) {
                 overrides[key] = value;
             } else {

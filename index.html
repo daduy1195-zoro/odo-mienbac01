@@ -1939,6 +1939,17 @@ async function loadCloudData() {
             const mergedOverrides = { ...localOverrides, ...cloudOverrides };
             const mergedNotes = { ...localNotes, ...cloudNotes };
             const mergedLogs = { ...localLogs, ...cloudLogs };
+            
+            // Đồng bộ Plate Mapping (Học biển số)
+            if (cloudOverrides['__PLATE_MAPPING__']) {
+                try {
+                    const localMapping = JSON.parse(localStorage.getItem('GHN_PLATE_MAPPING') || '{}');
+                    let parsedCloud = cloudOverrides['__PLATE_MAPPING__'];
+                    if (typeof parsedCloud === 'string') parsedCloud = JSON.parse(parsedCloud);
+                    const mergedMapping = { ...localMapping, ...parsedCloud };
+                    localStorage.setItem('GHN_PLATE_MAPPING', JSON.stringify(mergedMapping));
+                } catch(e) {}
+            }
 
             localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(mergedOverrides));
             localStorage.setItem('GHN_NCC_TRIP_NOTES', JSON.stringify(mergedNotes));
@@ -5152,6 +5163,9 @@ function updateNccTripCode(index, value, suggestedPlate) {
                     const mapping = JSON.parse(localStorage.getItem('GHN_PLATE_MAPPING') || '{}');
                     mapping[nccPlate] = realPlate;
                     localStorage.setItem('GHN_PLATE_MAPPING', JSON.stringify(mapping));
+                    if (typeof syncToCloud === 'function') {
+                        syncToCloud('__PLATE_MAPPING__', JSON.stringify(mapping), undefined, undefined);
+                    }
                     console.log(`🧠 Đã học mapping biển số: ${nccPlate} → ${realPlate}`);
                 } catch(e) {}
             }

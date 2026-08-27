@@ -4802,7 +4802,22 @@ async function loadNccTripData() {
                     console.log(`⚠️ ${sheet.ncc}: Không lấy được tab names, dùng GID ${sheet.gid}`);
                     const rawData = await fetchSheetJSONP(sheet.id, sheet.gid);
                     const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, '', sheet.gid);
-                    allNccData.push(...parsed);
+                    const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
+            parsed.forEach(record => {
+                const normPlate = normalizeStr(record.plate);
+                const normNcc = normalizeStr(record.ncc);
+                const normDate = normalizeStr(record.dateStr);
+                const normTab = normalizeStr(record.tabName || record.vehicleCode || '');
+                const existingIdx = allNccData.findIndex(r => {
+                    if (normalizeStr(r.ncc) !== normNcc || normalizeStr(r.dateStr) !== normDate) return false;
+                    const rTab = normalizeStr(r.tabName || r.vehicleCode || '');
+                    if (normTab && rTab && (normTab === rTab || normTab.includes(rTab) || rTab.includes(normTab))) return true;
+                    if (normalizeStr(r.plate) === normPlate) return true;
+                    return false;
+                });
+                if (existingIdx !== -1) allNccData[existingIdx] = record;
+                else allNccData.push(record);
+            });
                     totalTabs++;
                     totalRows += parsed.length;
                     continue;

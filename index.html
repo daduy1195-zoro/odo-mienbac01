@@ -4476,6 +4476,42 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         let tripNote = '';
         let isManualMatch = false;
         let actionLogs = [];
+        
+        try {
+            // Migration: recover old keys
+            const rawPlate = colPlate > -1 ? (row[colPlate] || '').toString().trim() : plate;
+            const oldKeys = [
+                `${actualNcc}_${sourceRow}`,
+                `${actualNcc}_${rawPlate}_${dateStr}_${route}`,
+                `${actualNcc}_${rawPlate.replace(/-/g, '')}_${dateStr}_${route}`,
+                `${nccName}_${plate}_${dateStr}_${route}`
+            ];
+            
+            for (const oldKey of oldKeys) {
+                let migrated = false;
+                
+                if (overridesCache[finalKey] === undefined && overridesCache[oldKey] !== undefined) {
+                    overridesCache[finalKey] = overridesCache[oldKey];
+                    localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(overridesCache));
+                    migrated = true;
+                }
+                if (notesCache[finalKey] === undefined && notesCache[oldKey] !== undefined) {
+                    notesCache[finalKey] = notesCache[oldKey];
+                    localStorage.setItem('GHN_NCC_TRIP_NOTES', JSON.stringify(notesCache));
+                    migrated = true;
+                }
+                if (logsCache[finalKey] === undefined && logsCache[oldKey] !== undefined) {
+                    logsCache[finalKey] = logsCache[oldKey];
+                    localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(logsCache));
+                    migrated = true;
+                }
+                
+                if (migrated && typeof syncToCloud === 'function') {
+                    syncToCloud(finalKey, overridesCache[finalKey], notesCache[finalKey], logsCache[finalKey]);
+                    break;
+                }
+            }
+        } catch(e) {}
         try {
             if (overridesCache[finalKey] !== undefined) {
                 matchedTripCode = overridesCache[finalKey];

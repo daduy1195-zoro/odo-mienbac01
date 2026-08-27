@@ -1926,7 +1926,7 @@ async function syncToCloud(key, overrides, note, logs) {
 async function loadCloudData() {
     if (!SYNC_API_URL) return;
     try {
-        const res = await fetch(SYNC_API_URL);
+        const res = await fetch(SYNC_API_URL + '?t=' + new Date().getTime(), { cache: 'no-store' });
         const json = await res.json();
         if (json.status === 'success' && json.data) {
             const localOverrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');

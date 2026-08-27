@@ -1935,17 +1935,6 @@ async function loadCloudData() {
             const cloudNotes = json.data.notes || {};
             const cloudLogs = json.data.logs || {};
 
-            const allLocalKeys = new Set([...Object.keys(localOverrides), ...Object.keys(localNotes)]);
-            for (let key of allLocalKeys) {
-                const lCode = localOverrides[key];
-                const cCode = cloudOverrides[key];
-                const lNote = localNotes[key];
-                const cNote = cloudNotes[key];
-                
-                if ((lCode && !cCode) || (lNote && !cNote)) {
-                    syncToCloud(key, lCode, lNote, localLogs[key]);
-                }
-            }
 
             const mergedOverrides = { ...localOverrides, ...cloudOverrides };
             const mergedNotes = { ...localNotes, ...cloudNotes };

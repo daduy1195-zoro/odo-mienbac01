@@ -4079,13 +4079,14 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
           colMonthlyRate = 20; colDailyRate = 21; 
           colTollFee = 22; colHolidayFee = 23; colTotalCost = 24; colKho = 27;
       }
-} else if (tabGid === "1620536867" || tabGid === "1290293725" || tabGid === "73639881" || tabGid === "45442280" || tabGid === "1012425134" || tabGid === "2147444878" || tabGid === "942983334") {
+else if (tabGid === "1620536867" || tabGid === "1290293725" || tabGid === "73639881" || tabGid === "45442280" || tabGid === "1012425134" || tabGid === "2147444878" || tabGid === "942983334") {
     colNcc = -1; colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 4;
     colOtHours = 9; colOtRate = 10; colOtFee = 11;
     colKmStart = 13; colKmEnd = 14; colKmDiff = 15;
     colKmOver = 16; colKmOverFee = 18;
     colMonthlyRate = 19; colDailyRate = 20;
     colTollFee = 21; colHolidayFee = 22; colTotalCost = 23; colKho = 26;
+}
     if (headerRowIdx > -1) {
         // Scan nhiều dòng header (multi-row merged headers) cho cột tài chính
         const scanStart = Math.max(0, headerRowIdx - 3);

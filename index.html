@@ -526,12 +526,18 @@
             <select id="filterMonth"></select>
         </div>
         <div class="filter-group">
-            <span class="filter-label">Từ ngày</span>
-            <input type="date" id="filterDateFrom" onchange="applyFilters()">
-        </div>
-        <div class="filter-group">
-            <span class="filter-label">Đến ngày</span>
-            <input type="date" id="filterDateTo" onchange="applyFilters()">
+            <select id="dateFilterMode" style="font-size:11px;height:24px;padding:0 4px;background:var(--card-bg);color:var(--text-muted);border:1px solid var(--border-color);border-radius:4px;margin-bottom:2px;" onchange="toggleDateMode()">
+                <option value="single">📅 Đơn ngày</option>
+                <option value="range">📅 Khoảng ngày</option>
+            </select>
+            <div id="dateFilterSingle" style="display:flex;gap:4px;align-items:center;">
+                <input type="date" id="filterDateSingle" onchange="applySingleDate()">
+            </div>
+            <div id="dateFilterRange" style="display:none;gap:4px;align-items:center;">
+                <input type="date" id="filterDateFrom" onchange="applyFilters()" style="width:130px;">
+                <span style="color:var(--text-muted);font-size:11px;">→</span>
+                <input type="date" id="filterDateTo" onchange="applyFilters()" style="width:130px;">
+            </div>
         </div>
         <div class="filter-group">
             <span class="filter-label">Kho</span>
@@ -572,6 +578,13 @@
                 <input type="text" id="filterPlate" list="listPlate" placeholder="Tất cả BS" autocomplete="off" class="search-filter" style="width: 120px; padding-right: 28px;" oninput="document.getElementById('clearPlate').style.display = this.value ? 'block' : 'none'">
                 <span id="clearPlate" onclick="document.getElementById('filterPlate').value=''; document.getElementById('filterPlate').dispatchEvent(new Event('input'));" style="position: absolute; right: 28px; cursor: pointer; color: #94a3b8; display: none; font-size: 16px; font-weight: bold; line-height: 1; padding: 4px; border-radius: 50%;">✕</span>
                 <datalist id="listPlate"></datalist>
+            </div>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Mã chuyến</span>
+            <div style="position: relative; display: inline-flex; align-items: center;">
+                <input type="text" id="filterTripCode" placeholder="Tất cả" autocomplete="off" class="search-filter" style="width: 140px; padding-right: 28px;" oninput="document.getElementById('clearTripCode').style.display = this.value ? 'block' : 'none'; applyFilters();">
+                <span id="clearTripCode" onclick="document.getElementById('filterTripCode').value=''; document.getElementById('filterTripCode').dispatchEvent(new Event('input'));" style="position: absolute; right: 8px; cursor: pointer; color: #94a3b8; display: none; font-size: 16px; font-weight: bold; line-height: 1; padding: 4px; border-radius: 50%;">✕</span>
             </div>
         </div>
         <div class="filter-group" style="align-self: flex-end; display: flex; flex-direction: row; gap: 8px;">
@@ -1276,6 +1289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         optionsHtml += `<option value="${val}">📅 ${startStr} → ${endStr}</option>`;
     }
+    optionsHtml = '<option value="">📋 Tất cả kỳ</option>' + optionsHtml;
     monthSelect.innerHTML = optionsHtml;
     monthSelect.value = currentMonthStr;
 
@@ -1289,6 +1303,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof renderRecon3Way === 'function') renderRecon3Way();
     };
     window.applyFilters = applyFilters; // Expose globally for HTML onchange
+
+    window.toggleDateMode = function() {
+        const mode = document.getElementById("dateFilterMode").value;
+        document.getElementById("dateFilterSingle").style.display = mode === "single" ? "flex" : "none";
+        document.getElementById("dateFilterRange").style.display = mode === "range" ? "flex" : "none";
+        if (mode === "single") {
+            document.getElementById("filterDateFrom").value = "";
+            document.getElementById("filterDateTo").value = "";
+        } else {
+            document.getElementById("filterDateSingle").value = "";
+        }
+        applyFilters();
+    };
+
+    window.applySingleDate = function() {
+        const val = document.getElementById("filterDateSingle").value;
+        document.getElementById("filterDateFrom").value = val;
+        document.getElementById("filterDateTo").value = val;
+        applyFilters();
+    };
     monthSelect.addEventListener('change', applyFilters);
     document.getElementById('filterWarehouse').addEventListener('change', applyFilters);
     document.getElementById('filterEmployee').addEventListener('input', applyFilters);
@@ -5410,6 +5444,7 @@ function renderNccTrip(preserveScroll = false) {
     const filterPlate = document.getElementById('filterPlate') ? document.getElementById('filterPlate').value : '';
     const filterEmp = document.getElementById('filterEmployee') ? document.getElementById('filterEmployee').value : '';
     const filterStatus = document.getElementById('filterNccStatus') ? document.getElementById('filterNccStatus').value : '';
+    const filterTripCode = document.getElementById('filterTripCode') ? document.getElementById('filterTripCode').value.trim().toLowerCase() : '';
     
     const filtered = [];
     window.currentNccTripFiltered = filtered;
@@ -5474,6 +5509,7 @@ function renderNccTrip(preserveScroll = false) {
         let isKhongChay = (_km === 0 && _cost > 0);
         if (filterStatus === 'khong_chay' && !isKhongChay) return;
         if (filterStatus === 'da_chuyen' && (!row.ghnTripCode || !String(row.ghnTripCode).includes('|'))) return;
+        if (filterTripCode && !(String(row.ghnTripCode || '').toLowerCase().includes(filterTripCode))) return;
         
         filtered.push({ ...row, originalIndex: idx });
     });
@@ -5500,7 +5536,21 @@ function renderNccTrip(preserveScroll = false) {
         return whA.localeCompare(whB, 'vi');
     });
 
-    let html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filtered.length + '/' + nccTripData.length + ' chuyến đi NCC.</div>';
+    // Đếm mã chuyến trùng (cùng mã nhưng khác biển số xe)
+    const tripCodePlateMap = {};
+    filtered.forEach(r => {
+        const codes = String(r.ghnTripCode || '').split('|').map(c => c.trim()).filter(c => c && !['GHN OFF','NCC OFF','OFF','PHẠT','PHAT'].includes(c.toUpperCase()));
+        codes.forEach(code => {
+            if (!tripCodePlateMap[code]) tripCodePlateMap[code] = new Set();
+            tripCodePlateMap[code].add(r.plate);
+        });
+    });
+    const duplicateTripCodes = new Set();
+    Object.entries(tripCodePlateMap).forEach(([code, plates]) => {
+        if (plates.size > 1) duplicateTripCodes.add(code);
+    });
+
+    let html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filtered.length + '/' + nccTripData.length + ' chuyến đi NCC.' + (duplicateTripCodes.size > 0 ? ' <span style="color:#3b82f6;font-weight:700;">⚠ ' + duplicateTripCodes.size + ' mã chuyến trùng nhiều xe</span>' : '') + '</div>';
     html += '<div class="ranking-card" style="margin-top:15px; padding:0; overflow:hidden;">';
     html += '<div class="table-scroll">';
     html += '<table style="width:100%; border-collapse:collapse;">';
@@ -5569,7 +5619,9 @@ function renderNccTrip(preserveScroll = false) {
             const codes = String(r.ghnTripCode).split('|').map(c => c.trim()).filter(c => c);
             ghnHtml = `<div style="display:flex; gap: 6px; align-items:center; flex-wrap:wrap;">`;
             codes.forEach((c, idx) => {
-                ghnHtml += `<div style="display:flex;align-items:center;gap:2px;"><a href="https://nhanh.ghn.vn/lastmile/trip-detail/${c}" target="_blank" style="color:var(--success);text-decoration:underline;"><strong>${c}</strong></a><button style="background:transparent;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 2px;" onclick="unmatchFromLastmile(${r.originalIndex}, '${c}')" title="Gỡ mã chuyến này">✖</button></div>`;
+                const isDupCode = duplicateTripCodes.has(c);
+                const codeColor = isDupCode ? '#3b82f6' : 'var(--success)';
+                ghnHtml += `<div style="display:flex;align-items:center;gap:2px;">${isDupCode ? '<span title="⚠ Mã này xuất hiện ở nhiều biển số khác nhau!" style="cursor:help;">⚠️</span>' : ''}<a href="https://nhanh.ghn.vn/lastmile/trip-detail/${c}" target="_blank" style="color:${codeColor};text-decoration:underline;${isDupCode ? 'font-weight:900;' : ''}"><strong>${c}</strong></a><button style="background:transparent;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 2px;" onclick="unmatchFromLastmile(${r.originalIndex}, '${c}')" title="Gỡ mã chuyến này">✖</button></div>`;
                 if (idx < codes.length - 1) ghnHtml += `<span style="color:#64748b;">|</span>`;
             });
             if (r.isManualMatch) {
@@ -6315,6 +6367,10 @@ window.jumpToNccTrip = function(tripCode) {
 };
 
     window.clearFilters = function() {
+        if (document.getElementById('filterTripCode')) document.getElementById('filterTripCode').value = '';
+        if (document.getElementById('clearTripCode')) document.getElementById('clearTripCode').style.display = 'none';
+        if (document.getElementById('filterDateSingle')) document.getElementById('filterDateSingle').value = '';
+        if (document.getElementById('dateFilterMode')) { document.getElementById('dateFilterMode').value = 'single'; toggleDateMode(); }
         document.getElementById('filterDateFrom').value = '';
         document.getElementById('filterDateTo').value = '';
         document.getElementById('filterWarehouse').value = '';

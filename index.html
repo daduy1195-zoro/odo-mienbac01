@@ -4162,7 +4162,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 }
                 // Financial columns (scan tất cả dòng header)
                 if ((h.includes('tổng chi phí') || h.includes('tổng tiền') || h.includes('tong chi phi') || (h.includes('tổng') && h.includes('phí')) || h === 'tổng') && !h.includes('km')) colTotalCost = ci;
-            if (h.includes('mã chuyến đi') || h.includes('mã ghn')) colGhnTrip = ci;
+            if (h.includes('mã chuyến') || h.includes('mã ghn')) colGhnTrip = ci;
             if (h.includes('ghi chú') || h.includes('note')) colGhnNote = ci;
                 if ((h.includes('đơn giá') && (h.includes('tháng') || h.includes('thang'))) || h.includes('giá tháng') || h.includes('thuê/tháng') || h.includes('thue/thang')) colMonthlyRate = ci;
                 if ((h.includes('đơn giá') && (h.includes('ngày') || h.includes('ngay'))) || h.includes('giá ngày') || h.includes('thuê/ngày') || h.includes('thue/ngay')) colDailyRate = ci;
@@ -4315,7 +4315,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 if (h.includes('cầu đường') || h.includes('giá cầu') || h.includes('phí cầu') || h.includes('cau duong')) colTollFee = ci;
                 if (h.includes('ngày lễ') || h.includes('ngay le') || h.includes('lễ tết')) colHolidayFee = ci;
                 if ((h.includes('tổng chi phí') || h.includes('tổng tiền') || h.includes('tong chi phi') || (h.includes('tổng') && h.includes('phí')) || h === 'tổng') && !h.includes('km')) colTotalCost = ci;
-            if (h.includes('mã chuyến đi') || h.includes('mã ghn')) colGhnTrip = ci;
+            if (h.includes('mã chuyến') || h.includes('mã ghn')) colGhnTrip = ci;
             if (h.includes('ghi chú') || h.includes('note')) colGhnNote = ci;
             }
             if (colKmEnd > -1 && colKmDiff === -1) colKmDiff = colKmEnd + 1;
@@ -5373,7 +5373,7 @@ window.copyThcpAC = function(sheetId, label) {
     
     // Data thật bắt đầu từ sheet row 4 (tức là sourceRow = 3)
     // Cắt mảng từ index 3 đến hết
-    const copyArr = colData.slice(3);
+    const copyArr = colData.slice(4);
     const textToCopy = copyArr.join('\n');
     
     navigator.clipboard.writeText(textToCopy).then(() => {

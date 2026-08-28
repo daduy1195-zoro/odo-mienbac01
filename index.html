@@ -1907,13 +1907,23 @@ function normalizeSupplierName(name) {
 // ====== ĐỒNG BỘ CLOUD ======
 const SYNC_API_URL = 'https://script.google.com/macros/s/AKfycbwJr2pgITDURfuT_H3zGUYXUEC2SzvM0V_JNSFPqLwexGLElVlGPSpzPXMXpmE4R25e4g/exec';
 
-async function syncToCloud(key, overrides, note, logs) {
+async function syncToCloud(key, overrides, note, logs, tripObj = null) {
     if (!SYNC_API_URL) return;
     try {
         const payload = { key: key };
         if (overrides !== undefined) payload.code = overrides;
         if (note !== undefined) payload.note = note;
         if (logs !== undefined) payload.logs = logs;
+            if (tripObj && tripObj.sheetId) {
+                payload.sheetInfo = {
+                    sheetId: tripObj.sheetId,
+                    tabGid: tripObj.tabGid,
+                    tabName: tripObj.tabName,
+                    row: tripObj.sourceRow,
+                    colTrip: tripObj.colGhnTrip,
+                    colNote: tripObj.colGhnNote
+                };
+            }
 
         fetch(SYNC_API_URL, {
             method: 'POST',
@@ -4151,6 +4161,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 }
                 // Financial columns (scan tất cả dòng header)
                 if ((h.includes('tổng chi phí') || h.includes('tổng tiền') || h.includes('tong chi phi') || (h.includes('tổng') && h.includes('phí')) || h === 'tổng') && !h.includes('km')) colTotalCost = ci;
+            if (h.includes('mã chuyến đi') || h.includes('mã ghn')) colGhnTrip = ci;
+            if (h.includes('ghi chú') || h.includes('note')) colGhnNote = ci;
                 if ((h.includes('đơn giá') && (h.includes('tháng') || h.includes('thang'))) || h.includes('giá tháng') || h.includes('thuê/tháng') || h.includes('thue/thang')) colMonthlyRate = ci;
                 if ((h.includes('đơn giá') && (h.includes('ngày') || h.includes('ngay'))) || h.includes('giá ngày') || h.includes('thuê/ngày') || h.includes('thue/ngay')) colDailyRate = ci;
                 if (h.includes('cầu đường') || h.includes('giá cầu') || h.includes('phí cầu') || h.includes('cau duong')) colTollFee = ci;
@@ -4302,6 +4314,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 if (h.includes('cầu đường') || h.includes('giá cầu') || h.includes('phí cầu') || h.includes('cau duong')) colTollFee = ci;
                 if (h.includes('ngày lễ') || h.includes('ngay le') || h.includes('lễ tết')) colHolidayFee = ci;
                 if ((h.includes('tổng chi phí') || h.includes('tổng tiền') || h.includes('tong chi phi') || (h.includes('tổng') && h.includes('phí')) || h === 'tổng') && !h.includes('km')) colTotalCost = ci;
+            if (h.includes('mã chuyến đi') || h.includes('mã ghn')) colGhnTrip = ci;
+            if (h.includes('ghi chú') || h.includes('note')) colGhnNote = ci;
             }
             if (colKmEnd > -1 && colKmDiff === -1) colKmDiff = colKmEnd + 1;
             continue; // Bỏ qua dòng header này
@@ -4576,7 +4590,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             kmStart, kmEnd, kmDiff, hourStart, hourEnd,
             otHours, otRate, otFee,
             kmOver, kmOverFee, monthlyRate, dailyRate,
-            tollFee, holidayFee, totalCost,
+            colGhnTrip: colGhnTrip > -1 ? colGhnTrip + 1 : 29,
+        colGhnNote: colGhnNote > -1 ? colGhnNote + 1 : 30,
+        tollFee, holidayFee, totalCost,
             warehouse,
             ghnTripCode: matchedTripCode,
             isManualMatch: isManualMatch,
@@ -4944,7 +4960,7 @@ function updateNccTripNote(index, value) {
                 if (!nccTripData[index].actionLogs) nccTripData[index].actionLogs = [];
                 nccTripData[index].actionLogs.push({ time: new Date().toLocaleString('vi-VN'), action: 'Sửa ghi chú', details: value || 'Xóa ghi chú', user: (typeof currentUser !== 'undefined' && currentUser ? currentUser.name : 'Ẩn danh') });
             }
-            syncToCloud(key, undefined, value, nccTripData[index]?.actionLogs);
+            syncToCloud(key, undefined, value, nccTripData[index]?.actionLogs, nccTripData[index]);
         } catch(e) {}
     }
 }
@@ -5194,7 +5210,7 @@ function updateNccTripCode(index, value, suggestedPlate) {
                 if (!nccTripData[index].actionLogs) nccTripData[index].actionLogs = [];
                 nccTripData[index].actionLogs.push({ time: new Date().toLocaleString('vi-VN'), action: 'Chốt mã chuyến', details: value || 'Xóa mã', user: (typeof currentUser !== 'undefined' && currentUser ? currentUser.name : 'Ẩn danh') });
             }
-            syncToCloud(key, value, undefined, nccTripData[index]?.actionLogs);
+            syncToCloud(key, value, undefined, nccTripData[index]?.actionLogs, nccTripData[index]);
 
         } catch(e) {}
 

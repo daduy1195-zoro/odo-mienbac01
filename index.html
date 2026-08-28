@@ -1318,7 +1318,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
-    } catch(e) {}
+    } catch(e) { console.error("Error:", e); }
 
     // Tải dữ liệu lần đầu
     loadAllData();
@@ -1347,7 +1347,7 @@ function initOnlineTracker() {
                         onlineUsers.delete(data.clientId);
                         updateOnlineCount();
                     }
-                } catch(e) {}
+                } catch(e) { console.error("Error:", e); }
             }
         };
 
@@ -1930,7 +1930,7 @@ async function syncToCloud(key, overrides, note, logs, tripObj = null) {
             body: JSON.stringify(payload),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         }).catch(e => console.error('Lỗi đồng bộ cloud:', e));
-    } catch(e) {}
+    } catch(e) { console.error("Error:", e); }
 }
 
 async function loadCloudData() {
@@ -1960,7 +1960,7 @@ async function loadCloudData() {
                     if (typeof parsedCloudVirtuals === 'string') parsedCloudVirtuals = JSON.parse(parsedCloudVirtuals);
                     const mergedVirtuals = { ...localVirtuals, ...parsedCloudVirtuals };
                     localStorage.setItem('GHN_VIRTUAL_TRIPS', JSON.stringify(mergedVirtuals));
-                } catch(e) {}
+                } catch(e) { console.error("Error:", e); }
             }
             
             // Đồng bộ Plate Mapping (Học biển số)
@@ -1979,7 +1979,7 @@ async function loadCloudData() {
                             syncToCloud('__PLATE_MAPPING__', JSON.stringify(mergedMapping), undefined, undefined);
                         }
                     }
-                } catch(e) {}
+                } catch(e) { console.error("Error:", e); }
             }
 
             localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(mergedOverrides));
@@ -2504,7 +2504,7 @@ async function loadAllData() {
                 supplierData: supplierData.map(s => ({ ...s, dateObj: null })),
                 masterList: masterList
             }));
-        } catch(e) {}
+        } catch(e) { console.error("Error:", e); }
 
         // TẢI HOÀN TẤT 100% MỚI TẮT SPINNER LOADING (ĐẢM BẢO KHÔNG BỊ RÁC / THIẾU DỮ LIỆU)
         showLoading(false);
@@ -4281,7 +4281,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         overridesCache = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
         notesCache = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_NOTES') || '{}');
         logsCache = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
-    } catch(e) {}
+    } catch(e) { console.error("Error:", e); }
     
     for (let i = startRow; i < rawData.length; i++) {
         const row = rawData[i];
@@ -4520,7 +4520,11 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             otHours = '';
         }
 
-        // 5. Filters removed
+        // 5. Sanity check for fee columns (nếu có giá trị < 1000đ thì đó là đọc nhầm cột KM, không phải tiền VND)
+        if (parseVietnameseNumber(kmOverFee) > 0 && parseVietnameseNumber(kmOverFee) < 1000) kmOverFee = '';
+        if (parseVietnameseNumber(otFee) > 0 && parseVietnameseNumber(otFee) < 1000) otFee = '';
+        if (parseVietnameseNumber(tollFee) > 0 && parseVietnameseNumber(tollFee) < 1000) tollFee = '';
+        if (parseVietnameseNumber(holidayFee) > 0 && parseVietnameseNumber(holidayFee) < 1000) holidayFee = '';
 
         // 6. Tự động đánh dấu Phạt nếu tổng chi phí âm
         if (!matchedTripCode && totVal < 0) {
@@ -4568,7 +4572,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                     break;
                 }
             }
-        } catch(e) {}
+        } catch(e) { console.error("Error:", e); }
         try {
             if (overridesCache[finalKey] !== undefined) {
                 matchedTripCode = overridesCache[finalKey];
@@ -4581,9 +4585,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             }
             try {
                 if (logsCache[finalKey]) actionLogs = logsCache[finalKey];
-            } catch(e) {}
+            } catch(e) { console.error("Error:", e); }
 
-        } catch(e) {}
+        } catch(e) { console.error("Error:", e); }
 
         results.push({
             ncc: actualNcc,
@@ -4663,7 +4667,7 @@ async function loadNccTripData() {
                                 allNccData.push(record);
                             }
                         }
-                    } catch(e) {}
+                    } catch(e) { console.error("Error:", e); }
                 }
                 console.log(`✅ Archive NCC Trips parsed: ${allNccData.length} chuyến`);
             }
@@ -4962,7 +4966,7 @@ function updateNccTripNote(index, value) {
                 nccTripData[index].actionLogs.push({ time: new Date().toLocaleString('vi-VN'), action: 'Sửa ghi chú', details: value || 'Xóa ghi chú', user: (typeof currentUser !== 'undefined' && currentUser ? currentUser.name : 'Ẩn danh') });
             }
             syncToCloud(key, undefined, value, nccTripData[index]?.actionLogs, nccTripData[index]);
-        } catch(e) {}
+        } catch(e) { console.error("Error:", e); }
     }
 }
 
@@ -5012,7 +5016,7 @@ function suggestTripsForNcc(nccRecord) {
     
     // Load plate mapping đã học
     let plateMapping = {};
-    try { plateMapping = JSON.parse(localStorage.getItem('GHN_PLATE_MAPPING') || '{}'); } catch(e) {}
+    try { plateMapping = JSON.parse(localStorage.getItem('GHN_PLATE_MAPPING') || '{}'); } catch(e) { console.error("Error:", e); }
     const learnedRealPlate = plateMapping[nccPlate] || '';
     
     const suggestions = [];
@@ -5187,7 +5191,7 @@ function saveActionLog(key, action, details) {
             user: userName
         });
         localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(logs));
-    } catch(e) {}
+    } catch(e) { console.error("Error:", e); }
 }
 
 function updateNccTripCode(index, value, suggestedPlate) {
@@ -5213,7 +5217,7 @@ function updateNccTripCode(index, value, suggestedPlate) {
             }
             syncToCloud(key, value, undefined, nccTripData[index]?.actionLogs, nccTripData[index]);
 
-        } catch(e) {}
+        } catch(e) { console.error("Error:", e); }
 
         // ★ Học hỏi mapping biển số: nếu user chọn gợi ý có biển khác → lưu mapping
         if (suggestedPlate && value && !['GHN OFF','NCC OFF','OFF','Phạt','PHẠT','GHN_OFF','NCC_OFF'].includes(value)) {
@@ -5228,7 +5232,7 @@ function updateNccTripCode(index, value, suggestedPlate) {
                         syncToCloud('__PLATE_MAPPING__', JSON.stringify(mapping), undefined, undefined);
                     }
                     console.log(`🧠 Đã học mapping biển số: ${nccPlate} → ${realPlate}`);
-                } catch(e) {}
+                } catch(e) { console.error("Error:", e); }
             }
         }
 
@@ -5975,7 +5979,7 @@ async function loadLastmileData() {
                     console.log('📅 Global dates:', fromDate, '→', toDate);
                 }
             }
-        } catch(e) {}
+        } catch(e) { console.error("Error:", e); }
         renderLastmile();
         showToast('✅', 'Đã tải ' + lastmileData.length + ' chuyến!');
     } catch (err) {
@@ -6017,7 +6021,7 @@ async function loadLastmileData() {
                   if (typeof syncToCloud === 'function') {
                       syncToCloud(vKey, isChecked ? 'VIRTUAL' : 'NOT_VIRTUAL', undefined, localLogs[vKey]);
                   }
-              } catch(e) {}
+              } catch(e) { console.error("Error:", e); }
           }
           showToast('success', (isChecked ? 'Đã đánh dấu chuyến ảo: ' : 'Đã bỏ chuyến ảo: ') + tripCode);
           
@@ -6185,7 +6189,7 @@ async function loadLastmileData() {
     html += '</tr></thead><tbody>';
     
     let allLocalLogs = {};
-    try { allLocalLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}'); } catch(e) {}
+    try { allLocalLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}'); } catch(e) { console.error("Error:", e); }
     
     for (var m = 0; m < filtered.length; m++) {
         var r = filtered[m];
@@ -6809,7 +6813,7 @@ function continueAsUser() {
             renderUserInfo();
             showToast('✅', 'Xin chào, ' + currentUser.name + '!');
         }
-    } catch(e) {}
+    } catch(e) { console.error("Error:", e); }
 }
 
 function renderUserInfo() {
@@ -6849,7 +6853,7 @@ function renderUserInfo() {
                 }
             }
         }
-    } catch(e) {}
+    } catch(e) { console.error("Error:", e); }
 })();
 
 

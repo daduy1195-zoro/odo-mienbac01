@@ -5414,7 +5414,7 @@ window.copyThcpAC = function(sheetId, label) {
     
     // Data thật bắt đầu từ sheet row 4 (tức là sourceRow = 3)
     // Cắt mảng từ index 3 đến hết
-    const copyArr = colData.slice(4);
+    const copyArr = colData.slice(3);
     const textToCopy = copyArr.join('\n');
     
     navigator.clipboard.writeText(textToCopy).then(() => {

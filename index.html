@@ -4113,6 +4113,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     // ★ Xác định vị trí cột KM vào/ra từ header row
     let colKmStart = -1, colKmEnd = -1, colKmDiff = -1, colRoute = -1, colDate = 1, colPlate = 2, colVehicle = 3, colNcc = -1, colKho = -1;
       let colOtHours = -1, colOtRate = -1, colOtFee = -1, colKmOver = -1, colKmOverFee = -1, colMonthlyRate = -1, colDailyRate = -1, colTollFee = -1, colHolidayFee = -1, colTotalCost = -1;
+    let colGhnTrip = -1, colGhnNote = -1;
       
       if (tabGid === '1482895796' || tabGid === '1957064243' || (sheetId && (sheetId.includes('1jFaJutdZD8uhBYa9Hy9fH6tHVaSnEf-iyg4VUMniXl8') || sheetId.includes('1tATkbxYOtiBuJC1GRto3QI81q_fkGzKYylufz4WtuAA')))) {
           colNcc = 1; colDate = 2; colPlate = 3; colVehicle = 4; colRoute = 5; 

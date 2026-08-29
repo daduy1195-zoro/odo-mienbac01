@@ -704,6 +704,7 @@
                     <option value="khop">✅ Khớp</option>
                     <option value="khop_tay">📝 Khớp tay</option>
                     <option value="da_chuyen">🔄 Đa chuyến</option>
+                    <option value="trung">⚠️ Chuyến trùng</option>
                     <option value="thieu">⚠️ Thiếu mã</option>
                     <option value="ghn_off">⏸️ GHN OFF</option>
                     <option value="ncc_off">⏸️ NCC OFF</option>
@@ -5556,7 +5557,21 @@ function renderNccTrip(preserveScroll = false) {
         if (plates.size > 1) duplicateTripCodes.add(code);
     });
 
-    let html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + filtered.length + '/' + nccTripData.length + ' chuyến đi NCC.' + (duplicateTripCodes.size > 0 ? ' <span style="color:#3b82f6;font-weight:700;">⚠ ' + duplicateTripCodes.size + ' mã chuyến trùng nhiều xe</span>' : '') + '</div>';
+    let finalFiltered = filtered;
+    if (filterStatus === 'trung') {
+        finalFiltered = filtered.filter(row => {
+            const codes = String(row.ghnTripCode || '').split('|').map(c => c.trim());
+            return codes.some(code => duplicateTripCodes.has(code));
+        });
+        window.currentNccTripFiltered = finalFiltered;
+    }
+    
+    if (finalFiltered.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho lọc này.</p></div>';
+        return;
+    }
+
+    let html = '<div style="padding:6px 12px;color:var(--text-muted);font-size:13px;">Hiển thị ' + finalFiltered.length + '/' + nccTripData.length + ' chuyến đi NCC.' + (duplicateTripCodes.size > 0 ? ' <span style="color:#3b82f6;font-weight:700;">⚠ ' + duplicateTripCodes.size + ' mã chuyến trùng nhiều xe</span>' : '') + '</div>';
     html += '<div class="ranking-card" style="margin-top:15px; padding:0; overflow:hidden;">';
     html += '<div class="table-scroll">';
     html += '<table style="width:100%; border-collapse:collapse;">';
@@ -5583,7 +5598,7 @@ function renderNccTrip(preserveScroll = false) {
     html += '<th style="width:40px; text-align:center;" title="Lịch sử thao tác">🕒</th>';
     html += '</tr></thead><tbody>';
 
-    filtered.forEach((r, i) => {
+    finalFiltered.forEach((r, i) => {
         const codeUpper = String(r.ghnTripCode || '').toUpperCase().trim();
         const isGhnOff = codeUpper === 'GHN OFF' || codeUpper === 'GHN_OFF';
         const isNccOff = codeUpper === 'NCC OFF' || codeUpper === 'NCC_OFF' || codeUpper === 'OFF';

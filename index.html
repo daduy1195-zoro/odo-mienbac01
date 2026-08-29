@@ -2027,23 +2027,7 @@ async function loadCloudData() {
             localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(mergedLogs));
             console.log('✅ Đã tải và hợp nhất dữ liệu đồng bộ từ Cloud thành công!');
 
-            // Cleanup wrong __CLEARED__
-            try {
-                let cleanedCount = 0;
-                for (const key in mergedOverrides) {
-                    if (mergedOverrides[key] === '__CLEARED__' || mergedOverrides[key] === '') {
-                        delete mergedOverrides[key];
-                        cleanedCount++;
-                        if (typeof syncToCloud === 'function') {
-                            syncToCloud(key, null, undefined, undefined, undefined);
-                        }
-                    }
-                }
-                if (cleanedCount > 0) {
-                    localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(mergedOverrides));
-                    console.log(`✅ Đã xóa bỏ ${cleanedCount} trạng thái __CLEARED__ sai lệch.`);
-                }
-            } catch(e) { console.error(e); }
+            // Cleanup wrong __CLEARED__ has been removed. __CLEARED__ is a valid user action (Unmatch) and must be preserved.
 
             
             // Log access after loading data

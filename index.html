@@ -5282,7 +5282,7 @@ function saveActionLog(key, action, details) {
             details: details,
             user: userName
         });
-        localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(logs));
+        if (logs[key].length > 10) logs[key] = logs[key].slice(-10); try { localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(logs)); } catch(e) { console.error('Log save fail', e); }
     } catch(e) { console.error("Error:", e); }
 }
 
@@ -5297,7 +5297,7 @@ function updateNccTripCode(index, value, suggestedPlate) {
             const r = nccTripData[index];
             const key = r.finalKey || `${r.ncc}_${r.plate}_${r.dateStr}_${r.route}`;
             overrides[key] = value || '__CLEARED__';
-            localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(overrides));
+            try { localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(overrides)); } catch(e) { alert('L?i luu tr?! B? nh? trình duy?t dã d?y. D? li?u s? không du?c luu khi t?i l?i trang.'); console.error(e); }
             saveActionLog(key, 'Chá»‘t mÃ£ chuyáº¿n', value || 'XÃ³a mÃ£');
             if (nccTripData[index]) {
                 if (!nccTripData[index].actionLogs) nccTripData[index].actionLogs = [];
@@ -7216,4 +7216,6 @@ window.forceSyncLocalToCloud = async function() {
 </script>
 </body>
 </html>
+
+
 

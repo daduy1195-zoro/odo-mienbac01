@@ -4195,7 +4195,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 if (ri === headerRowIdx) {
                     if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
                     if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
-                    if (h.includes('km chạy') || h.includes('tổng km') || (h.includes('số km') && !h.includes('vào') && !h.includes('ra') && !h.includes('phát sinh') && !h.includes('/')) || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
+                    if (h.includes('km chạy') || h.includes('tổng km') || (h.includes('số km') && !h.includes('vào') && !h.includes('ra') && !h.includes('phát sinh')) || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
                     if (h === 'lộ trình' || h === 'tuyến đường' || h.includes('điểm giao') || h === 'tuyến') colRoute = ci;
                 if (h.includes('ngày') && h.includes('thực hiện')) colDate = ci;
                 if (h.includes('biển số')) colPlate = ci;
@@ -4340,7 +4340,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 if (!h) continue;
                 if (h.includes('km vào') || h.includes('km đi') || h.includes('km bắt đầu')) colKmStart = ci;
                 if (h.includes('km ra') || h.includes('km về') || h.includes('km kết thúc')) colKmEnd = ci;
-                if (h.includes('km chạy') || h.includes('tổng km') || (h.includes('số km') && !h.includes('vào') && !h.includes('ra') && !h.includes('phát sinh') && !h.includes('/')) || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
+                if (h.includes('km chạy') || h.includes('tổng km') || (h.includes('số km') && !h.includes('vào') && !h.includes('ra') && !h.includes('phát sinh')) || h.includes('km chênh lệch') || h.includes('cự ly') || h.includes('quãng đường')) colKmDiff = ci;
                 if (h === 'lộ trình' || h === 'tuyến đường' || h.includes('điểm giao') || h === 'tuyến') colRoute = ci;
                 if (h.includes('ngày') && h.includes('thực hiện')) colDate = ci;
                 if (h.includes('biển số')) colPlate = ci;

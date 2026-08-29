@@ -5064,7 +5064,7 @@ function suggestTripsForNcc(nccRecord) {
     if (typeof nccTripData !== 'undefined' && Array.isArray(nccTripData)) {
         nccTripData.forEach(r => {
             if (r.ghnTripCode && !specialCodes.has(r.ghnTripCode)) {
-                usedTripCodes.add(r.ghnTripCode);
+                const codes = String(r.ghnTripCode).split('|').map(x => x.trim()).filter(x => x); codes.forEach(code => usedTripCodes.add(code));
             }
         });
     }

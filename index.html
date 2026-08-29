@@ -7046,6 +7046,7 @@ window.forceSyncLocalToCloud = async function() {
         const json = await res.json();
         const cloudOverrides = (json.data && json.data.overrides) ? json.data.overrides : {};
         const cloudNotes = (json.data && json.data.notes) ? json.data.notes : {};
+        const cloudLogs = (json.data && json.data.logs) ? json.data.logs : {};
         
         const localOverrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
         const localNotes = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_NOTES') || '{}');
@@ -7063,13 +7064,22 @@ window.forceSyncLocalToCloud = async function() {
                 if (cOver !== lOver) needsSync = true;
             }
             if (lOver === '__CLEARED__' && cOver !== undefined) {
-                 needsSync = true; // Needs to be deleted in cloud
+                 needsSync = true;
             }
             
             const lNote = localNotes[key];
             const cNote = cloudNotes[key];
             if (lNote !== undefined && lNote !== cNote) {
                 needsSync = true;
+            }
+            
+            const lLog = localLogs[key];
+            const cLog = cloudLogs[key];
+            if (lLog && Array.isArray(lLog) && lLog.length > 0) {
+                // If local has logs, but cloud doesn't have it, or cloud has fewer logs
+                if (!cLog || !Array.isArray(cLog) || cLog.length < lLog.length) {
+                    needsSync = true;
+                }
             }
             
             if (needsSync) keysToSync.push(key);

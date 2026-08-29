@@ -699,6 +699,7 @@
             <div style="display:flex;gap:8px;align-items:center;">
                 <button class="btn btn-primary" onclick="copyThcpAC('1tATkbxYOtiBuJC1GRto3QI81q_fkGzKYylufz4WtuAA', 'THCP')" style="padding:6px 14px;font-size:13px;background:#10b981;border-color:#10b981;" title="Copy mã chuyến đi và ghi chú của file THCP">📋 Copy AC, AD (THCP)</button>
                 <button class="btn btn-primary" onclick="copyThcpAC('1uzpRdyDq-ayFgpos6rWXDcJDC7OL3r5fzct_E4mMYgo', 'Tháng 8')" style="padding:6px 14px;font-size:13px;background:#3b82f6;border-color:#3b82f6;" title="Copy mã chuyến đi và ghi chú của file Tháng 8">📋 Copy AC, AD (Tháng 8)</button>
+<button class="btn btn-danger" id="btnWipeConflicts" onclick="clearAllConflictingTrips()" style="padding:6px 14px;font-size:13px;margin-right:8px;background:#ef4444;border-color:#ef4444;display:none;" title="Gỡ bỏ mã chuyến của tất cả các xe đang bị trùng mã">🧹 Gỡ toàn bộ chuyến trùng</button>
 <select id="filterNccStatus" class="form-control" style="width: 160px; font-size: 13px;" onchange="renderNccTrip()">
                     <option value="">Tất cả trạng thái</option>
                     <option value="khop">✅ Khớp</option>
@@ -4027,6 +4028,7 @@ async function saveToArchive(sheetName, newRecords) {
 
 // ====== GHÉP CHUYẾN ĐI NCC ======
 let nccTripData = [];
+let duplicateTripCodes = new Set();
 let isNccTripLoaded = false;
 let lastmileData = [];
 let isLastmileLoaded = false;
@@ -5634,7 +5636,7 @@ function renderNccTrip(preserveScroll = false) {
             tripCodePlateMap[code].add(r.plate);
         });
     });
-    const duplicateTripCodes = new Set();
+    duplicateTripCodes = new Set();
     Object.entries(tripCodePlateMap).forEach(([code, plates]) => {
         if (plates.size > 1) duplicateTripCodes.add(code);
     });
@@ -7258,6 +7260,9 @@ window.forceSyncLocalToCloud = async function() {
 </script>
 </body>
 </html>
+
+
+
 
 
 

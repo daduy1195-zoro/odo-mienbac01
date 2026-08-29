@@ -2021,29 +2021,23 @@ async function loadCloudData() {
             localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(mergedLogs));
             console.log('✅ Đã tải và hợp nhất dữ liệu đồng bộ từ Cloud thành công!');
 
-            // [AUTO RECOVERY] Khôi phục các thao tác "Xóa mã" bị mất do bug cũ
+            // Cleanup wrong __CLEARED__
             try {
-                let recoveredCount = 0;
-                for (const key in mergedLogs) {
-                    const logsArr = mergedLogs[key];
-                    if (Array.isArray(logsArr) && logsArr.length > 0) {
-                        const lastLog = logsArr[logsArr.length - 1];
-                        if (lastLog.action === 'Chốt mã chuyến' && (lastLog.details === 'Xóa mã' || lastLog.details === 'Xoa ma')) {
-                            if (mergedOverrides[key] === undefined) {
-                                mergedOverrides[key] = '__CLEARED__';
-                                recoveredCount++;
-                                if (typeof syncToCloud === 'function') {
-                                    syncToCloud(key, '__CLEARED__', undefined, logsArr, undefined);
-                                }
-                            }
+                let cleanedCount = 0;
+                for (const key in mergedOverrides) {
+                    if (mergedOverrides[key] === '__CLEARED__' || mergedOverrides[key] === '') {
+                        delete mergedOverrides[key];
+                        cleanedCount++;
+                        if (typeof syncToCloud === 'function') {
+                            syncToCloud(key, null, undefined, undefined, undefined);
                         }
                     }
                 }
-                if (recoveredCount > 0) {
+                if (cleanedCount > 0) {
                     localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(mergedOverrides));
-                    console.log(`✅ Đã tự động khôi phục ${recoveredCount} chuyến bị mất trạng thái Xóa mã.`);
+                    console.log(`✅ Đã xóa bỏ ${cleanedCount} trạng thái __CLEARED__ sai lệch.`);
                 }
-            } catch(e) { console.error('Lỗi auto recovery:', e); }
+            } catch(e) { console.error(e); }
 
             
             // Log access after loading data

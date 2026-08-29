@@ -1,21 +1,7 @@
-ï»¿const fs = require('fs');
-let c = fs.readFileSync('C:/Users/MSI/Desktop/AI/Odo/index.html', 'utf8').split('\n');
-
-for (let i = 4050; i < 4300; i++) {
-    if (!c[i]) continue;
-    
-    // Fix colKmDiff scanner
-    if (c[i].includes('colKmDiff = ci;')) {
-        c[i] = c[i].replace(/h\.includes\('tá»•ng km'\) \|\| h\.includes\('sá»‘ km'\)/, "h.includes('tá»•ng km') || (h.includes('sá»‘ km') && !h.includes('vÃ o') && !h.includes('ra') && !h.includes('phÃ¡t sinh') && !h.includes('/'))");
-        // Also remove 'km phÃ¡t sinh' from colKmDiff because it conflicts with colKmOver
-        c[i] = c[i].replace(/h\.includes\('km phÃ¡t sinh'\) \|\| /, "");
-    }
-    
-    // Fix colKmOver scanner
-    if (c[i].includes('colKmOver = ci;')) {
-        // Keep it as is, or make it stricter if needed. 
-        // Currently: if (h.includes('sá»‘ km phÃ¡t sinh tÄƒng') || h.includes('km phÃ¡t sinh tÄƒng')) colKmOver = ci;
-    }
-}
-fs.writeFileSync('C:/Users/MSI/Desktop/AI/Odo/index.html', c.join('\n'));
-console.log('Patched scanners');
+const fs=require('fs');
+let c=fs.readFileSync('C:/Users/MSI/Desktop/AI/Odo/index.html','utf8');
+const search = \lert('? Ðã copy ' + copyArr.length + ' dòng!\\n\\nBây gi? hãy:\\n1. M? file ' + label + '\\n2. Click chu?t vào ô d?u tiên c?a c?t AC (ô AC4)\\\\n3. ?n Ctrl+V d? dán toàn b? d? li?u.');\;
+const replacement = "alert('? Ðã copy ' + copyArr.length + ' dòng!\\\\n\\\\nBây gi? hãy:\\\\n1. M? file ' + label + '\\\\n2. Click chu?t vào ô d?u tiên c?a c?t AC (ô AC4)\\\\n3. ?n Ctrl+V d? dán toàn b? d? li?u AC và AD.');";
+c = c.replace(search, replacement);
+fs.writeFileSync('C:/Users/MSI/Desktop/AI/Odo/index.html', c);
+console.log('Patched string literal');

@@ -1,16 +1,8 @@
-﻿const fs = require('fs');
-const c = fs.readFileSync('C:/Users/MSI/Desktop/AI/Odo/index.html', 'utf8').split('\n');
-let idx = -1;
-for (let i = 4070; i <= 4090; i++) {
-    if (c[i] && c[i].includes('else if (tabGid === "1620536867"')) {
-        idx = i;
-        break;
-    }
-}
-if (idx > -1) {
-    c[idx] = `    } else if (["NAK", "Thiên Phú", "Hoa Vinh", "Long Thành", "Đạo Trường An", "TAL", "Đại Minh"].includes(nccName) || tabGid === "1620536867" || tabGid === "1290293725" || tabGid === "73639881" || tabGid === "45442280" || tabGid === "1012425134" || tabGid === "2147444878" || tabGid === "942983334") {`;
-    fs.writeFileSync('C:/Users/MSI/Desktop/AI/Odo/index.html', c.join('\n'));
-    console.log('Patched line ' + idx);
-} else {
-    console.log('Not found');
-}
+const fs=require('fs');
+let c=fs.readFileSync('C:/Users/MSI/Desktop/AI/Odo/index.html','utf8');
+c = c.replace(
+    "3. ?n Ctrl+V d? d�n to�n b? d? li?u.');",
+    "3. ?n Ctrl+V d? d�n to�n b? d? li?u AC v� AD.');"
+);
+fs.writeFileSync('C:/Users/MSI/Desktop/AI/Odo/index.html', c);
+console.log('Patched');

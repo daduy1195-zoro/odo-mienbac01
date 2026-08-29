@@ -4610,6 +4610,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         try {
             if (overridesCache[finalKey] !== undefined) {
                 matchedTripCode = overridesCache[finalKey];
+                if (matchedTripCode === '__CLEARED__') matchedTripCode = '';
                 if (matchedTripCode && !['GHN OFF', 'NCC OFF', 'OFF', 'Phạt', 'PHẠT', 'GHN_OFF', 'NCC_OFF'].includes(String(matchedTripCode).toUpperCase())) {
                     isManualMatch = true;
                 }
@@ -5245,18 +5246,14 @@ function updateNccTripCode(index, value, suggestedPlate) {
             const overrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
             const r = nccTripData[index];
             const key = `${r.ncc}_${r.plate}_${r.dateStr}_${r.route}`;
-            if (value) {
-                overrides[key] = value;
-            } else {
-                delete overrides[key];
-            }
+            overrides[key] = value || '__CLEARED__';
             localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(overrides));
             saveActionLog(key, 'Chốt mã chuyến', value || 'Xóa mã');
             if (nccTripData[index]) {
                 if (!nccTripData[index].actionLogs) nccTripData[index].actionLogs = [];
                 nccTripData[index].actionLogs.push({ time: new Date().toLocaleString('vi-VN'), action: 'Chốt mã chuyến', details: value || 'Xóa mã', user: (typeof currentUser !== 'undefined' && currentUser ? currentUser.name : 'Ẩn danh') });
             }
-            syncToCloud(key, value, undefined, nccTripData[index]?.actionLogs, nccTripData[index]);
+            syncToCloud(key, value || '__CLEARED__', undefined, nccTripData[index]?.actionLogs, nccTripData[index]);
 
         } catch(e) { console.error("Error:", e); }
 

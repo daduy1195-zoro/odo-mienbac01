@@ -1989,9 +1989,35 @@ async function loadCloudData() {
             const cloudLogs = json.data.logs || {};
 
 
-            const mergedOverrides = { ...localOverrides, ...cloudOverrides };
-            const mergedNotes = { ...localNotes, ...cloudNotes };
-            const mergedLogs = { ...localLogs, ...cloudLogs };
+            const mergedOverrides = { ...localOverrides };
+            const mergedNotes = { ...localNotes };
+            const mergedLogs = { ...localLogs };
+            
+            const allKeys = new Set([...Object.keys(cloudOverrides), ...Object.keys(localOverrides), ...Object.keys(cloudNotes), ...Object.keys(localNotes), ...Object.keys(cloudLogs), ...Object.keys(localLogs)]);
+            
+            for (const k of allKeys) {
+                if (k.startsWith('__')) {
+                    if (cloudOverrides[k] !== undefined) mergedOverrides[k] = cloudOverrides[k];
+                    if (cloudNotes[k] !== undefined) mergedNotes[k] = cloudNotes[k];
+                    
+                    // For __ACCESS__ logs, keep whichever is longer
+                    const cLogLen = Array.isArray(cloudLogs[k]) ? cloudLogs[k].length : 0;
+                    const lLogLen = Array.isArray(localLogs[k]) ? localLogs[k].length : 0;
+                    if (cLogLen > lLogLen) mergedLogs[k] = cloudLogs[k];
+                    continue;
+                }
+                
+                const cLogLen = Array.isArray(cloudLogs[k]) ? cloudLogs[k].length : 0;
+                const lLogLen = Array.isArray(localLogs[k]) ? localLogs[k].length : 0;
+                
+                const cloudIsNewer = cLogLen > lLogLen || (cLogLen === lLogLen && localOverrides[k] === undefined && cloudOverrides[k] !== undefined);
+                
+                if (cloudIsNewer) {
+                    if (cloudOverrides[k] !== undefined) mergedOverrides[k] = cloudOverrides[k];
+                    if (cloudNotes[k] !== undefined) mergedNotes[k] = cloudNotes[k];
+                    if (cloudLogs[k] !== undefined) mergedLogs[k] = cloudLogs[k];
+                }
+            }
             
             // Đồng bộ Chuyến Ảo (Virtual Trips)
             if (cloudOverrides['__VIRTUAL_TRIPS__']) {
@@ -7058,9 +7084,34 @@ window.forceSyncLocalToCloud = async function() {
         const localLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
         
         // --- 1. KÉO DỮ LIỆU TỪ CLOUD VỀ LOCAL (NHỮNG CÁI LOCAL CHƯA CÓ HOẶC CŨ) ---
-        const mergedOverrides = { ...localOverrides, ...cloudOverrides };
-        const mergedNotes = { ...localNotes, ...cloudNotes };
-        const mergedLogs = { ...localLogs, ...cloudLogs };
+        const mergedOverrides = { ...localOverrides };
+        const mergedNotes = { ...localNotes };
+        const mergedLogs = { ...localLogs };
+        
+        const allKeysToMerge = new Set([...Object.keys(cloudOverrides), ...Object.keys(localOverrides), ...Object.keys(cloudNotes), ...Object.keys(localNotes), ...Object.keys(cloudLogs), ...Object.keys(localLogs)]);
+        
+        for (const k of allKeysToMerge) {
+            if (k.startsWith('__')) {
+                if (cloudOverrides[k] !== undefined) mergedOverrides[k] = cloudOverrides[k];
+                if (cloudNotes[k] !== undefined) mergedNotes[k] = cloudNotes[k];
+                
+                const cLogLen = Array.isArray(cloudLogs[k]) ? cloudLogs[k].length : 0;
+                const lLogLen = Array.isArray(localLogs[k]) ? localLogs[k].length : 0;
+                if (cLogLen > lLogLen) mergedLogs[k] = cloudLogs[k];
+                continue;
+            }
+            
+            const cLogLen = Array.isArray(cloudLogs[k]) ? cloudLogs[k].length : 0;
+            const lLogLen = Array.isArray(localLogs[k]) ? localLogs[k].length : 0;
+            
+            const cloudIsNewer = cLogLen > lLogLen || (cLogLen === lLogLen && localOverrides[k] === undefined && cloudOverrides[k] !== undefined);
+            
+            if (cloudIsNewer) {
+                if (cloudOverrides[k] !== undefined) mergedOverrides[k] = cloudOverrides[k];
+                if (cloudNotes[k] !== undefined) mergedNotes[k] = cloudNotes[k];
+                if (cloudLogs[k] !== undefined) mergedLogs[k] = cloudLogs[k];
+            }
+        }
         
         localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(mergedOverrides));
         localStorage.setItem('GHN_NCC_TRIP_NOTES', JSON.stringify(mergedNotes));

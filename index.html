@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -1301,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAll();
         loadNccData();
         if (typeof renderNccTrip === 'function') renderNccTrip();
-        if (typeof renderLastmile === 'function') renderLastmile(true);
+        if (typeof renderLastmile === 'function') renderLastmile(true); renderNccTrip();
         if (typeof renderRecon3Way === 'function') renderRecon3Way();
     };
     window.applyFilters = applyFilters; // Expose globally for HTML onchange
@@ -1967,7 +1967,7 @@ async function syncToCloud(key, overrides, note, logs, tripObj = null) {
             method: 'POST',
             body: JSON.stringify(payload),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            mode: 'no-cors'
+            mode: 'no-cors', keepalive: true
         }).then(() => {
             console.log(`☁️ Cloud sync sent [${key.substring(0,50)}...]`);
         }).catch(e => console.error('❌ Cloud sync error:', e.message));
@@ -2558,7 +2558,7 @@ async function loadAllData() {
         renderAll();
         loadNccData();
         if (typeof renderNccTrip === 'function') renderNccTrip();
-        if (typeof renderLastmile === 'function') renderLastmile(true);
+        if (typeof renderLastmile === 'function') renderLastmile(true); renderNccTrip();
         if (typeof renderRecon3Way === 'function') renderRecon3Way();
 
         // Cập nhật thời gian refresh
@@ -4165,7 +4165,7 @@ function formatMoneyCell(val) {
     return Math.round(num).toLocaleString('en-US') + ' đ';
 }
 
-function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid, sourceRowsArray) {
+function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid, sourceRowsArray, usedGhnCodes = new Map()) {
     const results = [];
     const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
     const detectWH = (str) => {
@@ -4526,6 +4526,20 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         const normPlate = normalizeStr(plate);
         const matchKey = `${normPlate}_${dateStr}`;
           let mCodes = ghnTripMap.get(matchKey); let matchedTripCode = mCodes ? mCodes.join(' | ') : null;
+          if (matchedTripCode) {
+              const autoCodes = matchedTripCode.split('|').map(c => c.trim()).filter(c => c);
+              let validCodes = [];
+              for (let ac of autoCodes) {
+                  const acClean = ac.replace(/[-\s\.]/g, '').toUpperCase();
+                  if (usedGhnCodes.has(acClean)) {
+                      console.warn('Bot: MA chuyen ' + ac + ' da duoc gan cho ' + usedGhnCodes.get(acClean) + ', bo qua cho ' + plate);
+                  } else {
+                      validCodes.push(ac);
+                      usedGhnCodes.set(acClean, plate);
+                  }
+              }
+              matchedTripCode = validCodes.length > 0 ? validCodes.join(' | ') : null;
+          }
           
           const routeLower = (route || '').toLowerCase();
           const kmStartLower = kmStart.toLowerCase();
@@ -4746,7 +4760,7 @@ async function loadNccTripData() {
                 for (const key in tabGroups) {
                     const g = tabGroups[key];
                     try {
-                        const parsed = parseNccTabData(g.rows, g.ncc, ghnTripMapEmpty, '', g.tabName, g.tabGid, g.sourceRows);
+                        const parsed = parseNccTabData(g.rows, g.ncc, ghnTripMapEmpty, '', g.tabName, g.tabGid, g.sourceRows, globalUsedCodes);
                         if (parsed.length > 0) {
                             for (const record of parsed) {
                                 record.id = `${normalizeStr(record.dateStr)}_${normalizeStr(record.plate)}_${normalizeStr(record.ncc)}`;
@@ -4811,6 +4825,7 @@ async function loadNccTripData() {
         
         // Build GHN trips map: normalize(plate) + dateStr → tripCode
         const ghnTripMap = new Map();
+            const globalUsedCodes = new Map();
         // ★ Load learned plate mappings (NCC sai biển → biển thực tế)
         const plateMapping = JSON.parse(localStorage.getItem('GHN_PLATE_MAPPING') || '{}');
         const reversePlateMapping = {}; // realPlate → [nccPlate1, nccPlate2, ...]
@@ -4885,7 +4900,7 @@ async function loadNccTripData() {
                 if (sheet.ncc === 'ALL') {
                     console.log(`⏩ Bỏ qua lấy tab name cho ALL sheet, tải trực tiếp bằng GID`);
                     const rawData = await fetchSheetJSONP(sheet.id, sheet.gid);
-                    const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, '', sheet.gid);
+                    const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, '', sheet.gid, undefined, globalUsedCodes);
                 if (!window.rawSheetTrips[sheet.id]) window.rawSheetTrips[sheet.id] = [];
                 window.rawSheetTrips[sheet.id].push(...parsed);
                     const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
@@ -4920,7 +4935,7 @@ async function loadNccTripData() {
                     // Fallback: dùng GID nếu không lấy được tab names
                     console.log(`⚠️ ${sheet.ncc}: Không lấy được tab names, dùng GID ${sheet.gid}`);
                     const rawData = await fetchSheetJSONP(sheet.id, sheet.gid);
-                    const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, '', sheet.gid);
+                    const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, '', sheet.gid, undefined, globalUsedCodes);
                 if (!window.rawSheetTrips[sheet.id]) window.rawSheetTrips[sheet.id] = [];
                 window.rawSheetTrips[sheet.id].push(...parsed);
                     const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
@@ -4968,7 +4983,7 @@ async function loadNccTripData() {
                         const { tab, rawData } = res;
                         
                         try {
-                            const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, tab.name, tab.gid);
+                            const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, tab.name, tab.gid, undefined, globalUsedCodes);
                     if (!window.rawSheetTrips[sheet.id]) window.rawSheetTrips[sheet.id] = [];
                     window.rawSheetTrips[sheet.id].push(...parsed);
                             if (parsed.length > 0) {
@@ -5288,6 +5303,32 @@ function saveActionLog(key, action, details) {
 
 function updateNccTripCode(index, value, suggestedPlate) {
     if (nccTripData[index]) {
+        if (value && !['GHN OFF', 'NCC OFF', 'OFF', 'Phạt', 'PHẠT', 'GHN_OFF', 'NCC_OFF'].includes(String(value).toUpperCase())) {
+            const inputCodes = String(value).split('|').map(c => c.trim()).filter(c => c);
+            const myPlate = nccTripData[index].plate ? nccTripData[index].plate.replace(/[-\s\.]/g, '').toUpperCase() : '';
+            let conflictCode = null;
+            let conflictPlate = null;
+            for (let r of nccTripData) {
+                if (r.originalIndex === index) continue;
+                const rCodes = String(r.ghnTripCode || '').split('|').map(c => c.trim()).filter(c => c);
+                for (let c of inputCodes) {
+                    if (rCodes.includes(c)) {
+                        const rPlate = r.plate ? r.plate.replace(/[-\s\.]/g, '').toUpperCase() : '';
+                        if (rPlate !== myPlate) {
+                            conflictCode = c;
+                            conflictPlate = r.plate;
+                            break;
+                        }
+                    }
+                }
+                if (conflictCode) break;
+            }
+            if (conflictCode) {
+                showToast('error', 'LỖI: Mã chuyến ' + conflictCode + ' đã được gán cho xe ' + conflictPlate + '! Không thể ghép 1 mã cho 2 xe khác nhau.');
+                renderNccTrip(true);
+                return;
+            }
+        }
         nccTripData[index].ghnTripCode = value;
         nccTripData[index].isManualMatch = (value && !['GHN OFF', 'NCC OFF', 'OFF', 'Phạt', 'PHẠT', 'GHN_OFF', 'NCC_OFF'].includes(String(value).toUpperCase())) ? true : false;
         
@@ -5297,7 +5338,7 @@ function updateNccTripCode(index, value, suggestedPlate) {
             const r = nccTripData[index];
             const key = r.finalKey || `${r.ncc}_${r.plate}_${r.dateStr}_${r.route}`;
             overrides[key] = value || '__CLEARED__';
-            try { localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(overrides)); } catch(e) { alert('L?i luu tr?! B? nh? tr�nh duy?t d� d?y. D? li?u s? kh�ng du?c luu khi t?i l?i trang.'); console.error(e); }
+            try { localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(overrides)); } catch(e) { alert('L?i luu tr?! B? nh? tr�nh duy?t d� d?y. D? li?u s? kh�ng du?c luu khi t?i l?i trang.'); console.error(e); }
             saveActionLog(key, 'Chốt mã chuyến', value || 'Xóa mã');
             if (nccTripData[index]) {
                 if (!nccTripData[index].actionLogs) nccTripData[index].actionLogs = [];
@@ -5340,6 +5381,7 @@ function rematchNccTrips() {
     const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
     
     const ghnTripMap = new Map();
+            const globalUsedCodes = new Map();
     const ghnDriverMap = new Map();
     
     tripsData.forEach(trip => {
@@ -5869,7 +5911,7 @@ function unlockPhoneColumn() {
     if (pw === _NCC_PASS) {
         _phoneUnlocked = true;
         showToast('✅', 'Đã mở khóa hiển thị cột SĐT!');
-        if (typeof renderLastmile === 'function') renderLastmile(true);
+        if (typeof renderLastmile === 'function') renderLastmile(true); renderNccTrip();
     } else if (pw !== null) {
         showToast('❌', 'Mật khẩu không đúng!');
     }
@@ -6118,7 +6160,7 @@ async function loadLastmileData() {
       let newValue = currentCodes.join(' | ');
       
       updateNccTripCode(nccIndex, newValue);
-      renderLastmile(true);
+      renderLastmile(true); renderNccTrip();
       showToast('success', 'Đã gỡ đối soát chuyến ' + tripCode);
   };
 
@@ -6167,7 +6209,7 @@ async function loadLastmileData() {
                 }
             }
         } else {
-            if (typeof renderLastmile === 'function') renderLastmile(true);
+            if (typeof renderLastmile === 'function') renderLastmile(true); renderNccTrip();
         }
 
       } catch(e) {
@@ -6495,7 +6537,7 @@ window.jumpToNccTrip = function(tripCode) {
     }
     if (tab === 'lastmile') {
         if (!isLastmileLoaded) loadLastmileData();
-        else if (typeof renderLastmile === 'function') renderLastmile(true);
+        else if (typeof renderLastmile === 'function') renderLastmile(true); renderNccTrip();
     }
     if (tab === 'recon3Way' && (!isNccTripLoaded || !isLastmileLoaded)) {
         if (!isNccTripLoaded) loadNccTripData();
@@ -7196,7 +7238,7 @@ window.forceSyncLocalToCloud = async function() {
                     method: 'POST',
                     body: JSON.stringify(payload),
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    mode: 'no-cors'
+                    mode: 'no-cors', keepalive: true
                 });
                 sent++;
             } catch (e) {
@@ -7216,6 +7258,13 @@ window.forceSyncLocalToCloud = async function() {
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
 
 
 

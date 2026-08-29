@@ -1960,12 +1960,40 @@ async function syncToCloud(key, overrides, note, logs, tripObj = null) {
                 };
             }
 
-        fetch(SYNC_API_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        }).catch(e => console.error('Lỗi đồng bộ cloud:', e));
-    } catch(e) { console.error("Error:", e); }
+        const doSync = async (attempt) => {
+            try {
+                const res = await fetch(SYNC_API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    redirect: 'follow'
+                });
+                const text = await res.text();
+                try {
+                    const json = JSON.parse(text);
+                    if (json.status === 'success') {
+                        console.log(`✅ Cloud sync OK [${key.substring(0,40)}...] (attempt ${attempt})`);
+                        return true;
+                    }
+                } catch(pe) {}
+                console.warn(`⚠️ Cloud sync response not OK [${key.substring(0,40)}...]:`, text.substring(0, 200));
+                return false;
+            } catch(e) {
+                console.error(`❌ Cloud sync error [${key.substring(0,40)}...] (attempt ${attempt}):`, e.message);
+                return false;
+            }
+        };
+
+        // Try up to 2 times
+        let ok = await doSync(1);
+        if (!ok) {
+            await new Promise(r => setTimeout(r, 1000));
+            ok = await doSync(2);
+        }
+        if (!ok) {
+            console.error(`🚨 Cloud sync FAILED after 2 attempts: ${key}`);
+        }
+    } catch(e) { console.error("syncToCloud Error:", e); }
 }
 
 async function loadCloudData() {

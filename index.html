@@ -7043,48 +7043,105 @@ document.addEventListener('mouseout', function(e) {
 });
 
 window.forceSyncLocalToCloud = async function() {
-    if (!confirm('Bạn có muốn đẩy toàn bộ dữ liệu đang lưu trong trình duyệt lên Google Sheet không?')) return;
+    if (!confirm('Bạn có muốn kiểm tra và đồng bộ hai chiều dữ liệu trình duyệt và Google Sheet không?\n\n- Tải dữ liệu mới nhất từ Cloud về máy.\n- Chỉ đẩy lên Cloud những thao tác có sự thay đổi.')) return;
+    showToast('⏳', 'Đang tải dữ liệu từ Cloud...');
     
-    const localOverrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
-    const localNotes = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_NOTES') || '{}');
-    const localLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
-    
-    const allLocalKeys = new Set([...Object.keys(localOverrides), ...Object.keys(localNotes), ...Object.keys(localLogs)]);
-    // Filter out special/internal keys EXCEPT __ACCESS__
-    const keysToSync = [...allLocalKeys].filter(k => k === '__ACCESS__' || (!k.startsWith('__') && !k.startsWith('VIRTUAL_')));
-    
-    if (keysToSync.length === 0) {
-        showToast('✅', 'Không có dữ liệu nào cần đồng bộ.');
-        return;
-    }
-    
-    showToast('⏳', `Đang đồng bộ ${keysToSync.length} bản ghi lên Cloud...`);
-    let sent = 0;
-    
-    for (const key of keysToSync) {
-        const val = localOverrides[key];
-        const overrideToSync = (val === '__CLEARED__' || val === '') ? null : val;
-        const payload = { key: key };
-        if (overrideToSync !== undefined) payload.code = overrideToSync;
-        if (localNotes[key] !== undefined) payload.note = localNotes[key];
-        if (localLogs[key] !== undefined) payload.logs = localLogs[key];
+    try {
+        const res = await fetch(SYNC_API_URL + '?t=' + new Date().getTime(), { cache: 'no-store' });
+        const json = await res.json();
         
-        try {
-            await fetch(SYNC_API_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                mode: 'no-cors'
-            });
-            sent++;
-        } catch (e) {
-            console.error('Sync error for key:', key, e.message);
+        const cloudOverrides = (json.data && json.data.overrides) ? json.data.overrides : {};
+        const cloudNotes = (json.data && json.data.notes) ? json.data.notes : {};
+        const cloudLogs = (json.data && json.data.logs) ? json.data.logs : {};
+        
+        const localOverrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
+        const localNotes = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_NOTES') || '{}');
+        const localLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
+        
+        // --- 1. KÉO DỮ LIỆU TỪ CLOUD VỀ LOCAL (NHỮNG CÁI LOCAL CHƯA CÓ HOẶC CŨ) ---
+        const mergedOverrides = { ...localOverrides, ...cloudOverrides };
+        const mergedNotes = { ...localNotes, ...cloudNotes };
+        const mergedLogs = { ...localLogs, ...cloudLogs };
+        
+        localStorage.setItem('GHN_NCC_TRIP_OVERRIDES', JSON.stringify(mergedOverrides));
+        localStorage.setItem('GHN_NCC_TRIP_NOTES', JSON.stringify(mergedNotes));
+        localStorage.setItem('GHN_ACTION_LOGS', JSON.stringify(mergedLogs));
+
+        // --- 2. TÌM NHỮNG KEY CÓ SỰ THAY ĐỔI Ở LOCAL ĐỂ ĐẨY LÊN CLOUD ---
+        const keysToSync = [];
+        const allLocalKeys = new Set([...Object.keys(localOverrides), ...Object.keys(localNotes), ...Object.keys(localLogs)]);
+        
+        for (const key of allLocalKeys) {
+            // Không đẩy các biến hệ thống ngoại trừ __ACCESS__
+            if (key !== '__ACCESS__' && (key.startsWith('__') || key.startsWith('VIRTUAL_'))) continue;
+            
+            let needsSync = false;
+            
+            // Check overrides
+            if (localOverrides[key] !== undefined && localOverrides[key] !== '__CLEARED__' && localOverrides[key] !== '') {
+                if (cloudOverrides[key] !== localOverrides[key]) needsSync = true;
+            }
+            if (localOverrides[key] === '__CLEARED__' && cloudOverrides[key] !== undefined) {
+                 needsSync = true;
+            }
+            
+            // Check notes
+            if (localNotes[key] !== undefined && localNotes[key] !== cloudNotes[key]) {
+                needsSync = true;
+            }
+            
+            // Check logs
+            const lLog = localLogs[key];
+            const cLog = cloudLogs[key];
+            if (lLog && Array.isArray(lLog) && lLog.length > 0) {
+                // If cloud doesn't have it, or cloud has fewer logs (local has newer actions)
+                if (!cLog || !Array.isArray(cLog) || cLog.length < lLog.length) {
+                    needsSync = true;
+                }
+            }
+            
+            if (needsSync) keysToSync.push(key);
         }
-        // Small delay to prevent rate limit
-        await new Promise(r => setTimeout(r, 300));
+        
+        if (keysToSync.length === 0) {
+            showToast('✅', 'Tuyệt vời! Dữ liệu của bạn đã khớp hoàn toàn với Google Sheet.');
+            // Tải lại trang để áp dụng dữ liệu mới tải về từ Cloud
+            setTimeout(() => location.reload(), 1500);
+            return;
+        }
+        
+        showToast('⏳', `Đang đẩy ${keysToSync.length} thao tác mới lên Cloud...`);
+        let sent = 0;
+        
+        for (const key of keysToSync) {
+            const val = localOverrides[key];
+            const overrideToSync = (val === '__CLEARED__' || val === '') ? null : val;
+            const payload = { key: key };
+            
+            if (overrideToSync !== undefined) payload.code = overrideToSync;
+            if (localNotes[key] !== undefined) payload.note = localNotes[key];
+            if (localLogs[key] !== undefined) payload.logs = localLogs[key];
+            
+            try {
+                await fetch(SYNC_API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    mode: 'no-cors'
+                });
+                sent++;
+            } catch (e) {
+                console.error('Sync error for key:', key, e.message);
+            }
+            await new Promise(r => setTimeout(r, 200));
+        }
+        
+        showToast('✅', `Đã đồng bộ ${sent}/${keysToSync.length} thao tác! Đang tải lại trang...`);
+        setTimeout(() => location.reload(), 1500);
+        
+    } catch(e) {
+        showToast('❌', 'Lỗi đồng bộ: ' + e.message);
     }
-    
-    showToast('✅', `Đã gửi ${sent}/${keysToSync.length} bản ghi lên Cloud! Kiểm tra Google Sheet sau vài giây.`);
 };
 
 </script>

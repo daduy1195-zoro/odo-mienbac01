@@ -591,6 +591,7 @@
             <button class="btn btn-primary" onclick="sendTelegramReport(event)" style="padding: 8px 12px; font-size: 12px;">📤 Gửi BC</button>
                         <button class="btn btn-success" onclick="loadAllData()" style="padding: 8px 12px; font-size: 12px;">🔄 Làm mới</button>
             <button class="btn" onclick="clearFilters()" style="padding: 8px 12px; font-size: 12px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">❌ Xóa bộ lọc</button>
+            <button class="btn btn-warning" onclick="forceSyncLocalToCloud()" style="padding: 8px 12px; font-size: 12px; margin-left: 12px; border: 1px solid rgba(251, 191, 36, 0.3);" title="Đẩy dữ liệu bị kẹt ở trình duyệt lên Google Sheet">☁️ Đẩy lên Cloud</button>
         </div>
     </div>
 
@@ -7035,8 +7036,77 @@ document.addEventListener('mouseout', function(e) {
         target.removeEventListener('mousemove', target._mousemoveHandler);
     }
 });
-</script>
 
+window.forceSyncLocalToCloud = async function() {
+    if (!confirm('Bạn có muốn kiểm tra và đẩy dữ liệu đang lưu trong trình duyệt lên Google Sheet không? Việc này giúp đồng bộ các thao tác bị kẹt chưa lên được Cloud.')) return;
+    showToast('⏳', 'Đang kiểm tra dữ liệu với Cloud...');
+    
+    try {
+        const res = await fetch(CONFIG.SYNC_API_URL + '?t=' + new Date().getTime(), { cache: 'no-store' });
+        const json = await res.json();
+        const cloudOverrides = (json.data && json.data.overrides) ? json.data.overrides : {};
+        const cloudNotes = (json.data && json.data.notes) ? json.data.notes : {};
+        
+        const localOverrides = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_OVERRIDES') || '{}');
+        const localNotes = JSON.parse(localStorage.getItem('GHN_NCC_TRIP_NOTES') || '{}');
+        const localLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
+        
+        const keysToSync = [];
+        const allLocalKeys = new Set([...Object.keys(localOverrides), ...Object.keys(localNotes), ...Object.keys(localLogs)]);
+        
+        for (const key of allLocalKeys) {
+            let needsSync = false;
+            const lOver = localOverrides[key];
+            const cOver = cloudOverrides[key];
+            
+            if (lOver !== undefined && lOver !== '__CLEARED__' && lOver !== '') {
+                if (cOver !== lOver) needsSync = true;
+            }
+            if (lOver === '__CLEARED__' && cOver !== undefined) {
+                 needsSync = true; // Needs to be deleted in cloud
+            }
+            
+            const lNote = localNotes[key];
+            const cNote = cloudNotes[key];
+            if (lNote !== undefined && lNote !== cNote) {
+                needsSync = true;
+            }
+            
+            if (needsSync) keysToSync.push(key);
+        }
+        
+        if (keysToSync.length === 0) {
+            showToast('✅', 'Tuyệt vời! Dữ liệu của bạn đã được đồng bộ 100% với Google Sheet.');
+            return;
+        }
+        
+        if (!confirm(`Phát hiện ${keysToSync.length} thao tác đang bị kẹt ở trình duyệt chưa lên được Cloud. Tiến hành đồng bộ ngay?`)) return;
+        
+        showToast('⏳', `Đang đồng bộ ${keysToSync.length} bản ghi lên Cloud...`);
+        let success = 0;
+        let failed = 0;
+        
+        for (const key of keysToSync) {
+            const val = localOverrides[key];
+            const overrideToSync = (val === '__CLEARED__' || val === '') ? null : val;
+            try {
+                await syncToCloud(key, overrideToSync, localNotes[key], localLogs[key], undefined);
+                success++;
+            } catch (e) {
+                failed++;
+            }
+            // Small delay to prevent rate limit
+            await new Promise(r => setTimeout(r, 200));
+        }
+        
+        showToast('✅', `Đồng bộ hoàn tất! Thành công: ${success}, Lỗi: ${failed}`);
+        
+    } catch(e) {
+        showToast('❌', 'Lỗi đồng bộ: ' + e.message);
+    }
+};
+
+</script>
 </body>
 </html>
 

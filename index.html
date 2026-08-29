@@ -7050,8 +7050,8 @@ window.forceSyncLocalToCloud = async function() {
     const localLogs = JSON.parse(localStorage.getItem('GHN_ACTION_LOGS') || '{}');
     
     const allLocalKeys = new Set([...Object.keys(localOverrides), ...Object.keys(localNotes), ...Object.keys(localLogs)]);
-    // Filter out special/internal keys
-    const keysToSync = [...allLocalKeys].filter(k => !k.startsWith('__') && !k.startsWith('VIRTUAL_'));
+    // Filter out special/internal keys EXCEPT __ACCESS__
+    const keysToSync = [...allLocalKeys].filter(k => k === '__ACCESS__' || (!k.startsWith('__') && !k.startsWith('VIRTUAL_')));
     
     if (keysToSync.length === 0) {
         showToast('✅', 'Không có dữ liệu nào cần đồng bộ.');

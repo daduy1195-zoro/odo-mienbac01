@@ -1546,6 +1546,9 @@ async function loadNccData() {
         const tgOt = parseVietnameseNumber(r.otHours);
         const phiOt = parseVietnameseNumber(r.otFee);
         const phiCau = parseVietnameseNumber(r.tollFee);
+        if (tgOt > 0 || phiOt > 0 || phiKm > 0 || phiCau > 0 || km > 0) {
+            console.log(`💰 ${r.ncc} ${r.plate} ${r.dateStr}: totalCost=${r.totalCost}, kmOver=${r.kmOver}, kmOverFee=${r.kmOverFee}, otHours=${r.otHours}, otFee=${r.otFee}, tollFee=${r.tollFee}`);
+        }
 
         data.chiPhi += tong;
         data.kmPhatSinh += km;
@@ -4347,7 +4350,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         }
     }
     
-    console.log(`📊 ${nccName} [${tabName}] cols: kmOver=${colKmOverFee}, monthly=${colMonthlyRate}, daily=${colDailyRate}, toll=${colTollFee}, holiday=${colHolidayFee}, total=${colTotalCost}`);
+    console.log(`📊 ${nccName} [${tabName}] cols: otHours=${colOtHours}, otRate=${colOtRate}, otFee=${colOtFee}, kmOver=${colKmOver}, kmOverFee=${colKmOverFee}, monthly=${colMonthlyRate}, daily=${colDailyRate}, toll=${colTollFee}, holiday=${colHolidayFee}, total=${colTotalCost}, kho=${colKho}`);
     
     const startRow = headerRowIdx > -1 ? headerRowIdx + 1 : 0;
     

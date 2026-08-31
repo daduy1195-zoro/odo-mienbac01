@@ -4202,7 +4202,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
           colMonthlyRate = 20; colDailyRate = 21; 
           colTollFee = 22; colHolidayFee = 23; colTotalCost = 24; colKho = 27;
       }
-    else if (["NAK", "Hoa Vinh", "Long Thành", "TAL"].includes(nccName) || tabGid === "1620536867" || tabGid === "1290293725" || tabGid === "45442280" || tabGid === "1012425134") {
+    else if (["NAK", "Hoa Vinh", "Long Thành", "TAL", "Đại Minh", "Duy Phát", "Hoàng Minh"].includes(nccName) || tabGid === "1620536867" || tabGid === "1290293725" || tabGid === "45442280" || tabGid === "1012425134" || tabGid === "942983334" || tabGid === "679483124") {
             colNcc = -1; colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 4;
             colOtHours = 9; colOtRate = 10; colOtFee = 11;
             colKmStart = 13; colKmEnd = 14; colKmDiff = 15;
@@ -4294,7 +4294,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
       if (colOtHours === -1) colOtHours = 10;
       if (colOtRate === -1) colOtRate = 11;
       if (colOtFee === -1) colOtFee = 12;
-      if (colKmOverFee === -1) colKmOverFee = 17;
+      if (colKmOverFee === -1) colKmOverFee = 18;
       if (colKmOver === -1) colKmOver = 16;
       
       // Fallback cho Tổng chi phí nếu chưa tìm thấy

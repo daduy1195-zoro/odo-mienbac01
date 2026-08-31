@@ -5757,6 +5757,7 @@ function renderNccTrip(preserveScroll = false) {
             if (r.isManualMatch) {
                 ghnHtml += `<span class="badge" style="background:rgba(251,191,36,0.15);color:#f59e0b;font-size:10px;padding:2px 4px;border:1px solid rgba(251,191,36,0.3);" title="Được khớp bằng tay">📝 Khớp tay</span>`;
             }
+            ghnHtml += `<button class="btn btn-secondary" style="padding: 2px 4px; font-size: 10px; height: 24px; background:#f59e0b; color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:bold; margin-left:4px;" onclick="showSuggestionPopup(${r.originalIndex}, this)" title="Gợi ý thêm chuyến Lastmile">🔮</button>`;
             ghnHtml += `</div>`;
         } else {
             if (String(r.route || '').toLowerCase().includes('không chạy')) {

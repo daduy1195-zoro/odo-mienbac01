@@ -697,9 +697,7 @@
         <div class="section-header">
             <div class="section-title">🔗 Ghép chuyến đi NCC</div>
             <div style="display:flex;gap:8px;align-items:center;">
-                <button class="btn btn-primary" onclick="copyThcpAC('1tATkbxYOtiBuJC1GRto3QI81q_fkGzKYylufz4WtuAA', 'THCP')" style="padding:6px 14px;font-size:13px;background:#10b981;border-color:#10b981;" title="Copy mã chuyến đi và ghi chú của file THCP">📋 Copy AC, AD (THCP)</button>
-                <button class="btn btn-primary" onclick="copyThcpAC('1uzpRdyDq-ayFgpos6rWXDcJDC7OL3r5fzct_E4mMYgo', 'Tháng 8')" style="padding:6px 14px;font-size:13px;background:#3b82f6;border-color:#3b82f6;" title="Copy mã chuyến đi và ghi chú của file Tháng 8">📋 Copy AC, AD (Tháng 8)</button>
-<button class="btn btn-danger" id="btnWipeConflicts" onclick="clearAllConflictingTrips()" style="padding:6px 14px;font-size:13px;margin-right:8px;background:#ef4444;border-color:#ef4444;display:none;" title="Gỡ bỏ mã chuyến của tất cả các xe đang bị trùng mã">🧹 Gỡ toàn bộ chuyến trùng</button>
+                <button class="btn btn-danger" id="btnWipeConflicts" onclick="clearAllConflictingTrips()" style="padding:6px 14px;font-size:13px;margin-right:8px;background:#ef4444;border-color:#ef4444;display:none;" title="Gỡ bỏ mã chuyến của tất cả các xe đang bị trùng mã">🧹 Gỡ toàn bộ chuyến trùng</button>
 <select id="filterNccStatus" class="form-control" style="width: 160px; font-size: 13px;" onchange="renderNccTrip()">
                     <option value="">Tất cả trạng thái</option>
                     <option value="khop">✅ Khớp</option>
@@ -5499,47 +5497,6 @@ function rematchNccTrips() {
 // ==========================================
 // COPY CỘT AC CHO FILE THCP
 // ==========================================
-window.copyThcpAC = function(sheetId, label) {
-    if (typeof nccTripData === 'undefined' || !nccTripData || nccTripData.length === 0) {
-        if(typeof showToast === 'function') showToast('error', 'Chưa có dữ liệu, vui lòng đợi tải xong!');
-        return;
-    }
-
-    // Lọc các dòng thuộc file truyền vào
-    const thcpTrips = (window.rawSheetTrips && window.rawSheetTrips[sheetId]) ? window.rawSheetTrips[sheetId] : [];
-    if (thcpTrips.length === 0) {
-        if(typeof showToast === 'function') showToast('error', 'Không tìm thấy dữ liệu của file ' + label + '!');
-        return;
-    }
-    
-    let maxRow = 0;
-    thcpTrips.forEach(r => {
-        if (r.sourceRow > maxRow) maxRow = r.sourceRow;
-    });
-    
-    // Mảng chứa dữ liệu cột AC, mặc định rỗng
-    const colData = new Array(maxRow + 1).fill('\t');
-    
-    thcpTrips.forEach(r => {
-        let code = r.ghnTripCode || '';
-        if (code === 'NCC OFF' || code === 'GHN OFF' || code === 'Phạt') {
-            // Giữ nguyên trạng thái để paste vào sheet
-        }
-        let note = r.note || '';
-        colData[r.sourceRow] = code + '\t' + note;
-    });
-    
-    // Data thật bắt đầu từ sheet row 4 (tức là sourceRow = 3)
-    // Cắt mảng từ index 3 đến hết
-    const copyArr = colData.slice(3);
-    const textToCopy = copyArr.join('\n');
-    
-    navigator.clipboard.writeText(textToCopy).then(() => {
-        alert('✅ Đã copy ' + copyArr.length + ' dòng!\\n\\nBây giờ hãy:\\n1. Mở file ' + label + '\\n2. Click chuột vào ô đầu tiên của cột AC (ô AC4)\\n3. Ấn Ctrl+V để dán toàn bộ dữ liệu AC và AD.');
-    }).catch(err => {
-        alert('Lỗi copy: ' + err);
-    });
-}
 
 function renderNccTrip(preserveScroll = false) {
     const container = document.getElementById('nccTripContainer');

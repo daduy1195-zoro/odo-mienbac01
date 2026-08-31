@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -809,6 +809,12 @@ const CONFIG = {
         { id: '1sUIqHPnTB45lngkHPAgYndojfeMP1kKN', label: '2026-06' }
     ],
         NCC_TRIP_SHEETS: [
+        // THCP Tổng hợp 3 kỳ Hưng Yên (26/4 - 25/7)
+        { id: '1tATkbxYOtiBuJC1GRto3QI81q_fkGzKYylufz4WtuAA', gid: '1957064243', ncc: 'ALL' },
+        // PUT 'ALL' SHEET LAST SO IT OVERWRITES INDIVIDUAL SHEETS IN DEDUPLICATION
+        { id: '1jFaJutdZD8uhBYa9Hy9fH6tHVaSnEf-iyg4VUMniXl8', gid: '1482895796', ncc: 'ALL' },
+        { id: '1uzpRdyDq-ayFgpos6rWXDcJDC7OL3r5fzct_E4mMYgo', gid: '0', ncc: 'ALL' },
+        { id: '1bpahLTCIP7gUnEmn0zaQpKGxu7MS2NBVhCTxTVg_XAM', gid: '0', ncc: 'ALL' },
         { id: '1ZT_OPLSxOEWiy96YE-snqE-t3tX2T3EhkjDbk9Oll90', gid: '45442280', ncc: 'NAK' },
         { id: '1ZT_OPLSxOEWiy96YE-snqE-t3tX2T3EhkjDbk9Oll90', gid: '1620536867', ncc: 'NAK' },
         { id: '16jiK-hQ-xOrs9kxmJF6CXQ1HANy0zAlDyQM2q7mOtOg', gid: '73639881', ncc: 'Thiên Phú' },
@@ -820,12 +826,6 @@ const CONFIG = {
         { id: '1yqf8Bg6Tmq4v-qOzdpY9G4Y1OEnhQ5e7OURq017SiZI', gid: '2147444878', ncc: 'Đạo Trường An' },
         { id: '1T6Hj-tcabvxLARvF7YyUUI05SHpQmvcfjik_yPp4Mls', gid: '1012425134', ncc: 'TAL' },
         { id: '1aa_3Nwi0Z-SlGi-jZs1cNkU0v3Yt6p_9Fc4lr_oA5vY', gid: '942983334', ncc: 'Đại Minh' },
-        // THCP Tổng hợp 3 kỳ Hưng Yên (26/4 - 25/7)
-        { id: '1tATkbxYOtiBuJC1GRto3QI81q_fkGzKYylufz4WtuAA', gid: '1957064243', ncc: 'ALL' },
-        // PUT 'ALL' SHEET LAST SO IT OVERWRITES INDIVIDUAL SHEETS IN DEDUPLICATION
-        { id: '1jFaJutdZD8uhBYa9Hy9fH6tHVaSnEf-iyg4VUMniXl8', gid: '1482895796', ncc: 'ALL' },
-        { id: '1uzpRdyDq-ayFgpos6rWXDcJDC7OL3r5fzct_E4mMYgo', gid: '0', ncc: 'ALL' },
-        { id: '1bpahLTCIP7gUnEmn0zaQpKGxu7MS2NBVhCTxTVg_XAM', gid: '0', ncc: 'ALL' }
     ],
 
     // Telegram Proxy (token ẩn trên server Google Apps Script)
@@ -7287,6 +7287,7 @@ window.forceSyncLocalToCloud = async function() {
 </script>
 </body>
 </html>
+
 
 
 

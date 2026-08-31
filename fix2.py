@@ -1,5 +1,4 @@
 ﻿with open('C:/Users/MSI/Desktop/AI/Odo/index.html', 'r', encoding='utf-8') as f: html = f.read()
 import re
-html = re.sub(r'ALL\' \}\s*,', 'ALL\' },', html)
-html = re.sub(r'Đại Minh\' \},\]', 'Đại Minh\' }]', html)
+html = html.replace('\'Đại Minh\' },\n  \n    // Telegram', '\'Đại Minh\' }\n    ],\n  \n    // Telegram')
 with open('C:/Users/MSI/Desktop/AI/Odo/index.html', 'w', encoding='utf-8') as f: f.write(html)

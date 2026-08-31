@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -5032,7 +5032,29 @@ async function loadNccTripData() {
             saveToArchive('ncc_trips_raw', newRecordsToArchive);
         }
         
-        // Sắp xếp theo ngày giảm dần
+        // === DEDUP: Loai bo ban ghi trung 100% (cung ngay, xe, NCC, lo trinh, gio) ===
+        {
+            const seen = new Set();
+            const deduped = [];
+            for (const r of allNccData) {
+                const dedupKey = [
+                    normalizeStr(r.dateStr),
+                    normalizeStr(r.plate),
+                    normalizeStr(r.ncc),
+                    normalizeStr(r.route),
+                    normalizeStr(r.hourStart),
+                    normalizeStr(r.hourEnd)
+                ].join('|');
+                if (!seen.has(dedupKey)) {
+                    seen.add(dedupKey);
+                    deduped.push(r);
+                }
+            }
+            console.log('Dedup: ' + allNccData.length + ' -> ' + deduped.length + ' (removed ' + (allNccData.length - deduped.length) + ' true duplicates)');
+            allNccData = deduped;
+        }
+
+        // Sap xep theo ngay giam dan
         allNccData.sort((a, b) => {
             const da = a.dateStr ? String(a.dateStr).split('/').reverse().join('') : '';
             const db = b.dateStr ? String(b.dateStr).split('/').reverse().join('') : '';
@@ -7260,6 +7282,7 @@ window.forceSyncLocalToCloud = async function() {
 </script>
 </body>
 </html>
+
 
 
 

@@ -5638,7 +5638,7 @@ function renderNccTrip(preserveScroll = false) {
     }
     
     if (finalFiltered.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho lọc này.</p></div>';
+        container.innerHTML = <div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho lọc này.</p><p style="color:var(--text-muted);font-size:12px;margin-top:5px">Tổng nccTripData đã tải:  chuyến</p></div>;
         return;
     }
 

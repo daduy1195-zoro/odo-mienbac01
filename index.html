@@ -4586,7 +4586,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         let totalCost = (colTotalCost > -1 ? row[colTotalCost] : '').toString().trim();
         if (i === startRow) {
             console.log("==> NCC:", nccName, "Tab:", tabName);
-            console.log("colTotalCost:", colTotalCost, "Header text:", colTotalCost > -1 ? rawData[headerRowIdx][colTotalCost] : 'NOT FOUND');
+            console.log("colTotalCost:", colTotalCost, "Header text:", (colTotalCost > -1 && headerRowIdx > -1 && rawData[headerRowIdx]) ? rawData[headerRowIdx][colTotalCost] : 'N/A');
             console.log("Row 0 value for totalCost:", totalCost);
         }
 
@@ -4931,7 +4931,6 @@ async function loadNccTripData() {
                     });
                     totalTabs++;
                     totalRows += parsed.length;
-alert(`DEBUG: Đã tải file ALL thành công! Số dòng: ${parsed.length}`);
                     continue;
                 }
 
@@ -5077,7 +5076,6 @@ alert(`DEBUG: Đã tải file ALL thành công! Số dòng: ${parsed.length}`);
         rematchNccTrips();
         renderNccTrip();
         if (isLastmileLoaded && typeof renderRecon3Way === 'function') renderRecon3Way();
-alert(`DEBUG: Tổng kết loadNccTripData - Đã tải ${totalRows} chuyến live từ ${totalTabs} tabs NCC! Tổng allNccData: ${allNccData.length}`);
         showToast('✅', `Đã tải ${totalRows} chuyến live từ ${totalTabs} tabs NCC!`);
         console.log(`🏁 Tổng: ${totalRows} chuyến từ ${totalTabs} tabs`);
     } catch (err) {

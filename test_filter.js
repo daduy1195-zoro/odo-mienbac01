@@ -1,18 +1,46 @@
-﻿const rows = [
-  ["STT", "NCC", "Ngày", "Biển số", "Xe", "Ghi chú", "Khu vực", "Kho", "Tuyển", "Giờ đi"],
-  ["1", "Đại Minh", "18/08/2026", "29H-12345", "Xe", "", "GXT-MB", "Kho Giao Hàng Hải Phòng", "", "08:00"],
-  ["2", "Đại Minh", "18/08/2026", "29H-12345", "Xe", "", "GXT-MB", "21084000 Kho giao hàng nặng Hải Phòng", "", "08:00"],
-  ["3", "Đại Minh", "18/08/2026", "29H-12345", "Xe", "", "GXT-MB", "Kho Giao Hàng Hưng Yên", "", "08:00"],
-  ["4", "Đại Minh", "18/08/2026", "29H-12345", "Xe", "", "GXT-MB", "Kho Giao Hàng Lạng Sơn", "", "08:00"]
-];
-
-var MANAGED_WH = ['hải dương', 'hai duong', 'hải phòng', 'hai phong', 'hưng yên', 'hung yen', 'thái bình', 'thai binh'];
-var allRows = rows.filter(function(row) {
-  var kho = String(row[7] || '').toLowerCase();
-  for (var i = 0; i < MANAGED_WH.length; i++) {
-    if (kho.indexOf(MANAGED_WH[i]) >= 0) return true;
-  }
-  return false;
+﻿const https = require('https');
+https.get('https://docs.google.com/spreadsheets/d/1bpahLTCIP7gUnEmn0zaQpKGxu7MS2NBVhCTxTVg_XAM/gviz/tq?gid=0&headers=1&tqx=out:json', (res) => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => {
+        const js = JSON.parse(data.substring(47, data.length - 2));
+        const rawData = js.table.rows.map(row => row.c.map(cell => {
+            if (!cell) return '';
+            const sv = cell.v !== null && cell.v !== undefined ? String(cell.v).normalize('NFC') : '';
+            const dateMatch = sv.match(/^Date\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d+)\s*,\s*(\d+))?/);
+            if (dateMatch && parseInt(dateMatch[1]) >= 1900) {
+                const dd = String(parseInt(dateMatch[3])).padStart(2, '0');
+                const mm = String(parseInt(dateMatch[2]) + 1).padStart(2, '0');
+                return dd + '/' + mm + '/' + dateMatch[1];
+            }
+            if (cell.f) return String(cell.f).normalize('NFC');
+            return sv;
+        }));
+        
+        // Simulating parseNccTabData
+        let validRows = 0;
+        let filteredRows = 0;
+        
+        rawData.forEach(row => {
+            const dateStr = (row[2] || '').toString().trim();
+            if (!dateStr) return;
+            validRows++;
+            
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                const rowDateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                
+                // Simulating isInCycle for "2026-06" (26/06 - 25/07/2026)
+                const start = new Date(2026, 5, 26);
+                const end = new Date(2026, 6, 25);
+                
+                if (rowDateObj >= start && rowDateObj <= end) {
+                    filteredRows++;
+                }
+            }
+        });
+        
+        console.log('Total valid rows:', validRows);
+        console.log('Rows in 26/06 - 25/07:', filteredRows);
+    });
 });
-
-console.log(allRows);

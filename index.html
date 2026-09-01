@@ -1835,7 +1835,7 @@ function fetchSheetJSONP(sheetId, gid, headersCount = 1) {
 
         // Tạo thẻ <script> để tải dữ liệu (bypass CORS)
         const script = document.createElement('script');
-        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName};reqId:${Date.now()}&gid=${gid}&range=A1:AH&headers=${headersCount}&_cb=${Date.now()}`;
+        let url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName};reqId:${Date.now()}&range=A1:AH&headers=${headersCount}&_cb=${Date.now()}`; if (gid !== undefined && gid !== '') url += `&gid=${gid}`; script.src = url;
         script.onerror = () => {
               window[callbackName] = function(){ delete window[callbackName]; };
             clearTimeout(timer);
@@ -5592,10 +5592,7 @@ function renderNccTrip(preserveScroll = false) {
         filtered.push({ ...row, originalIndex: idx });
     });
     
-    if (filtered.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho lọc này.</p></div>';
-        return;
-    }
+    if (filtered.length === 0) { container.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>Không có dữ liệu cho lọc này.</p><p style="color:var(--text-muted);font-size:12px;margin-top:5px">Tổng dữ liệu nccTripData (trước lọc): ${nccTripData.length} chuyến</p></div>`; return; }
 
     // Sort filtered rows by date descending, then by warehouse
     filtered.sort((a, b) => {

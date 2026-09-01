@@ -4569,7 +4569,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                   matchedTripCode = 'Phạt';
               }
           }
-        const sourceRow = sourceRowsArray ? sourceRowsArray[i] : (i + 1);
+        const sourceRow = sourceRowsArray ? sourceRowsArray[i] : (i + 2);
         
         let otHours = (colOtHours > -1 ? row[colOtHours] : '').toString().trim();
         let otRate = (colOtRate > -1 ? row[colOtRate] : '').toString().trim();
@@ -5012,6 +5012,13 @@ async function loadNccTripData() {
                                     });
 
                                     if (existingIdx !== -1) {
+                                        // Preserve THCP sourceRow/sheetId so link points to master sheet
+                                        const existing = allNccData[existingIdx];
+                                        if (existing.isAllSheet) {
+                                            record.sourceRow = existing.sourceRow;
+                                            record.sheetId = existing.sheetId;
+                                            record.isAllSheet = true;
+                                        }
                                         allNccData[existingIdx] = record; // ★ Ghi đè bản ghi cũ bằng bản ghi tươi từ Sheet!
                                     } else {
                                         allNccData.push(record);
@@ -5746,8 +5753,9 @@ function renderNccTrip(preserveScroll = false) {
                 <td>${i + 1}</td>
                 <td style="font-weight:700; white-space:nowrap;">${r.sheetId ? (() => {
                     let sheetUrl = 'https://docs.google.com/spreadsheets/d/' + r.sheetId + '/edit';
-                    if (r.tabGid) sheetUrl += '#gid=' + r.tabGid + '&range=B' + r.sourceRow;
-                    return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName) + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
+                    const gidVal = r.tabGid || '0';
+                    sheetUrl += '#gid=' + gidVal + '&range=A' + r.sourceRow;
+                    return '<a href="' + sheetUrl + '" target="_blank" style="color:var(--accent);text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName || 'THCP') + ' → Dòng ' + r.sourceRow + '">' + escapeHtml(r.dateStr) + '</a>';
                 })() : escapeHtml(r.dateStr)}</td>
                 <td>${escapeHtml(r.ncc)}</td>
                 <td style="font-family:Calibri, sans-serif; font-weight:700; color:#f0ad4e;">${escapeHtml(formatPlate(r.plate))}</td>

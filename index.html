@@ -2583,6 +2583,7 @@ async function loadAllData() {
 
         // TẢI HOÀN TẤT 100% MỚI TẮT SPINNER LOADING (ĐẢM BẢO KHÔNG BỊ RÁC / THIẾU DỮ LIỆU)
         showLoading(false);
+alert(`DEBUG: Đã tải ${totalRows} chuyến live từ ${totalTabs} tabs NCC! Tổng allNccData: ${allNccData.length}`);
         showToast('✅', `Đã tải & đối soát hoàn tất 100% (${employeeData.length} bản ghi NV + ${supplierData.length} chuyến NCC)`);
 
     } catch (err) {
@@ -4931,6 +4932,7 @@ async function loadNccTripData() {
                     });
                     totalTabs++;
                     totalRows += parsed.length;
+alert(`DEBUG: Đã tải file ALL thành công! Số dòng: ${parsed.length}`);
                     continue;
                 }
 

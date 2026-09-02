@@ -4540,7 +4540,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
               for (let ac of autoCodes) {
                   const acClean = ac.replace(/[-\s\.]/g, '').toUpperCase();
                   if (usedGhnCodes.has(acClean)) {
-                      console.warn('Bot: MA chuyen ' + ac + ' da duoc gan cho ' + usedGhnCodes.get(acClean) + ', bo qua cho ' + plate);
+                      // Bỏ qua để chống trùng lặp
                   } else {
                       validCodes.push(ac);
                       usedGhnCodes.set(acClean, plate);
@@ -5514,7 +5514,7 @@ function rematchNccTrips() {
             for (let ac of autoCodes) {
                 const acClean = ac.replace(/[-\s\.]/g, '').toUpperCase();
                 if (globalUsedCodes.has(acClean)) {
-                    console.warn('Bot: MA chuyen ' + ac + ' da duoc gan cho ' + globalUsedCodes.get(acClean) + ', bo qua cho ' + r.plate);
+                    // Da bi xe khac giu truoc do (do cau noi ODO hoac hoc bien so), bo qua de chong trung lap
                 } else {
                     validCodes.push(ac);
                     globalUsedCodes.set(acClean, r.plate);

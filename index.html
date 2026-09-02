@@ -5470,6 +5470,16 @@ function rematchNccTrips() {
         });
     }
     
+    // Add manual matches to globalUsedCodes so auto-matcher doesn't steal them
+    nccTripData.forEach(r => {
+        if (r.isManualMatch && r.ghnTripCode) {
+            const codes = String(r.ghnTripCode).split('|').map(c => c.trim()).filter(c => c);
+            for (let c of codes) {
+                globalUsedCodes.set(c.replace(/[-\s\.]/g, '').toUpperCase(), r.plate);
+            }
+        }
+    });
+
     let matched = 0;
     nccTripData.forEach(r => {
         // Ưu tiên trạng thái OFF/Phạt đã được lưu hoặc detect từ parseNccTabData
@@ -5477,6 +5487,8 @@ function rematchNccTrips() {
         if (['GHN OFF', 'GHN_OFF', 'NCC OFF', 'NCC_OFF', 'OFF', 'PHẠT', 'PHAT'].includes(currCode)) {
             return;
         }
+
+        if (r.isManualMatch) return;
 
         const routeLower = String(r.route || '').toLowerCase();
         if (routeLower.includes('ghn off')) {
@@ -5497,8 +5509,23 @@ function rematchNccTrips() {
             let dCodeArr = ghnDriverMap.get(driverKey); code = dCodeArr ? dCodeArr.join(' | ') : null;
         }
         if (code) {
-            r.ghnTripCode = code;
-            matched++;
+            const autoCodes = code.split('|').map(c => c.trim()).filter(c => c);
+            let validCodes = [];
+            for (let ac of autoCodes) {
+                const acClean = ac.replace(/[-\s\.]/g, '').toUpperCase();
+                if (globalUsedCodes.has(acClean)) {
+                    console.warn('Bot: MA chuyen ' + ac + ' da duoc gan cho ' + globalUsedCodes.get(acClean) + ', bo qua cho ' + r.plate);
+                } else {
+                    validCodes.push(ac);
+                    globalUsedCodes.set(acClean, r.plate);
+                }
+            }
+            if (validCodes.length > 0) {
+                r.ghnTripCode = validCodes.join(' | ');
+                matched++;
+            } else {
+                r.ghnTripCode = null;
+            }
         }
     });
     console.log(`🔄 rematchNccTrips: ${matched}/${nccTripData.length} trips matched with GHN Lastmile`);

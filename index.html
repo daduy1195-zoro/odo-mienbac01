@@ -1772,7 +1772,7 @@ function fetchViaProxy(action, extraParams) {
 function fetchSheetJSONP(sheetId, gid, headersCount = 1) {
     return new Promise((resolve, reject) => {
         const callbackName = '_sheetCB_' + (++_jsonpCounter) + '_' + Date.now();
-        const timeoutMs = 30000; // timeout 30 giây
+        const timeoutMs = 10000; // timeout 10 giây
 
         // Tạo hàm callback toàn cục
         window[callbackName] = function(data) {
@@ -1848,7 +1848,7 @@ function fetchSheetJSONP(sheetId, gid, headersCount = 1) {
 function fetchSheetByNameJSONP(sheetId, sheetName) {
     return new Promise((resolve, reject) => {
         const callbackName = '_sheetCB_' + (++_jsonpCounter) + '_' + Date.now();
-        const timeoutMs = 30000;
+        const timeoutMs = 10000;
         window[callbackName] = function(data) {
             delete window[callbackName];
             if (script.parentNode) script.parentNode.removeChild(script);
@@ -4256,7 +4256,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                   if (h.includes('thời gian tăng ca') || h.includes('tg tăng ca') || h.includes('giờ tăng ca')) colOtHours = ci;
                   if (h.includes('phí tăng ca') || h.includes('tiền tăng ca')) colOtFee = ci;
                   if (h.includes('đơn giá tăng ca') || h.includes('giá tăng ca')) colOtRate = ci;
-                  if (h.includes('số km phát sinh tăng') || h.includes('km phát sinh tăng') || (h.includes('km') && h.includes('phát sinh'))) colKmOver = ci;
+                  if ((h.includes('số km phát sinh tăng') || h.includes('km phát sinh tăng') || (h.includes('km') && h.includes('phát sinh'))) && !h.includes('phí') && !h.includes('giá') && !h.includes('tiền')) colKmOver = ci;
             }
         }
     }
@@ -4987,7 +4987,11 @@ async function loadNccTripData() {
                     const results = await Promise.all(fetchPromises);
                     
                     for (const res of results) {
-                        if (!res.success || res.rawData.length === 0) continue;
+                        if (!res.success) {
+                            console.warn(`  ⚠️ Lỗi tải tab "${res.tab.name}": ${res.err.message}`);
+                            continue;
+                        }
+                        if (res.rawData.length === 0) continue;
                         const { tab, rawData } = res;
                         
                         try {

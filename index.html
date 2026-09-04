@@ -4175,7 +4175,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         if (str.includes('hải dương')) return 'Hải Dương';
         if (str.includes('hải phòng') && /kv2|kv3/i.test(str)) return 'Hải Dương';
         if (str.includes('hải phòng')) return 'Hải Phòng';
-        if (str.includes('hưng yên')) return 'Hưng Yên';
+        if (str.includes('hưng yên') || str.includes('miền bắc') || str.includes('mien bac')) return 'Hưng Yên';
         return '';
     };
     // Tìm header row (chứa "Biển số" hoặc "STT")

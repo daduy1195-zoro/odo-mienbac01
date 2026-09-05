@@ -4915,16 +4915,7 @@ async function loadNccTripData() {
                 window.rawSheetTrips[sheet.id].push(...parsed);
                     const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
                     parsed.forEach(record => {
-                        const normPlate = normalizeStr(record.plate);
-                        const existingIdx = allNccData.findIndex(r => {
-                            if (r.dateStr !== record.dateStr) return false;
-                            if (r.ncc !== record.ncc) return false;
-                            const rTab = normalizeStr(r.tabName);
-                            const normTab = normalizeStr(record.tabName);
-                            if (normTab && rTab && (normTab === rTab || normTab.includes(rTab) || rTab.includes(normTab))) return true;
-                            if (normalizeStr(r.plate) === normPlate) return true;
-                            return false;
-                        });
+                        const existingIdx = allNccData.findIndex(r => r.finalKey === record.finalKey);
                         if (existingIdx !== -1) {
                             allNccData[existingIdx] = record;
                         } else {
@@ -5008,14 +4999,7 @@ async function loadNccTripData() {
                                     const normTab = normalizeStr(record.tabName || record.vehicleCode || '');
                                     const normPlate = normalizeStr(record.plate);
 
-                                    // Tìm bản ghi lưu trữ tương ứng để ghi đè (khớp date+ncc+tab hoặc date+ncc+plate)
-                                    const existingIdx = allNccData.findIndex(r => {
-                                        if (normalizeStr(r.ncc) !== normNcc || normalizeStr(r.dateStr) !== normDate) return false;
-                                        const rTab = normalizeStr(r.tabName || r.vehicleCode || '');
-                                        if (normTab && rTab && (normTab === rTab || normTab.includes(rTab) || rTab.includes(normTab))) return true;
-                                        if (normalizeStr(r.plate) === normPlate) return true;
-                                        return false;
-                                    });
+                                    const existingIdx = allNccData.findIndex(r => r.finalKey === record.finalKey);
 
                                     if (existingIdx !== -1) {
                                         // Preserve THCP sourceRow/sheetId so link points to master sheet

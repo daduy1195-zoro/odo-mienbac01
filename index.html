@@ -4857,8 +4857,9 @@ async function loadNccTripData() {
         });
         
         if (typeof tripsData !== 'undefined' && Array.isArray(tripsData)) {
+            const virtualTrips = JSON.parse(localStorage.getItem('GHN_VIRTUAL_TRIPS') || '{}');
             tripsData.forEach(trip => {
-                if (!trip.plate || !trip.dateStr) return;
+                if (!trip.plate || !trip.dateStr || virtualTrips[trip.tripCode]) return;
                 const normPlate = normalizeStr(trip.plate);
                 const key = `${normPlate}_${trip.dateStr}`;
                 if (!ghnTripMap.has(key)) ghnTripMap.set(key, [trip.tripCode]);
@@ -5165,6 +5166,10 @@ function suggestTripsForNcc(nccRecord) {
     try { plateMapping = JSON.parse(localStorage.getItem('GHN_PLATE_MAPPING') || '{}'); } catch(e) { console.error("Error:", e); }
     const learnedRealPlate = plateMapping[nccPlate] || '';
     
+    // Load danh sách chuyến ảo (virtual trips)
+    let virtualTrips = {};
+    try { virtualTrips = JSON.parse(localStorage.getItem('GHN_VIRTUAL_TRIPS') || '{}'); } catch(e) { console.error("Error:", e); }
+    
     const suggestions = [];
     
     tripsData.forEach(trip => {
@@ -5173,6 +5178,8 @@ function suggestTripsForNcc(nccRecord) {
         if (trip.dateStr !== nccDate) return;
         // Bỏ qua chuyến đã ghép
         if (usedTripCodes.has(trip.tripCode)) return;
+        // Bỏ qua chuyến ảo
+        if (virtualTrips[trip.tripCode]) return;
         
         const tripPlate = (trip.plate || '').trim().toLowerCase().replace(/[-\s\.]/g, '');
         const tripHub = (trip.hubName || '').toLowerCase();

@@ -5886,7 +5886,15 @@ function copyNccDataToClipboard(sheetIdParam) {
     allSheetTrips.sort((a, b) => a.sourceRow - b.sourceRow);
 
     let tsv = '';
+    let currentRow = 2; // Luôn bắt đầu từ dòng 2 (dòng dữ liệu đầu tiên)
+
     allSheetTrips.forEach(r => {
+        // Bù các dòng trống bị bỏ qua (vd dòng trắng, header phụ) để giữ nguyên vị trí vật lý
+        while (currentRow < r.sourceRow) {
+            tsv += '\t\t\n';
+            currentRow++;
+        }
+
         const codeUpper = String(r.ghnTripCode || '').toUpperCase().trim();
         const isGhnOff = codeUpper === 'GHN OFF' || codeUpper === 'GHN_OFF';
         const isNccOff = codeUpper === 'NCC OFF' || codeUpper === 'NCC_OFF' || codeUpper === 'OFF';
@@ -5906,10 +5914,11 @@ function copyNccDataToClipboard(sheetIdParam) {
         let note = r.note || '';
 
         tsv += `${ghnCode}\t${status}\t${note}\n`;
+        currentRow++;
     });
 
     navigator.clipboard.writeText(tsv).then(() => {
-        showToast('✅', `Đã copy ${allSheetTrips.length} dòng! Hãy paste vào Google Sheet (từ dòng dữ liệu đầu tiên).`);
+        showToast('✅', `Đã copy xong! Hãy XÓA BỘ LỌC (Filter) trong Sheet, click vào ô Trạng thái ở DÒNG 2 rồi dán (Ctrl+V).`);
     }).catch(err => {
         console.error(err);
         showToast('❌', 'Lỗi khi copy!');

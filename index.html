@@ -710,7 +710,13 @@
                     <option value="phat">⚠️ Phạt</option>
                     <option value="khong_chay">🛑 Không chạy vẫn tính tiền</option>
                 </select>
-                <button class="btn btn-outline" onclick="copyNccDataToClipboard()" style="padding:6px 14px;font-size:13px;" title="Copy 3 cột: Mã chuyến, Trạng thái, Ghi chú theo đúng thứ tự dòng của file Tổng hợp Google Sheet">📋 Copy dữ liệu</button>
+                <div class="dropdown" style="display:inline-block;position:relative;">
+    <button class="btn btn-outline" style="padding:6px 14px;font-size:13px;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">📋 Copy dữ liệu ▾</button>
+    <div class="dropdown-content" style="display:none;position:absolute;right:0;background:var(--bg-card);min-width:160px;box-shadow:0 8px 16px rgba(0,0,0,0.5);z-index:1000;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
+        <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1Ls3_WDZBzEXfNu2vJOPJI18kKQbvyZIkLPtAYJUngqk')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">📄 Copy Tháng 8</button>
+        <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1bpahLTCIP7gUnEmn0zaQpKGxu7MS2NBVhCTxTVg_XAM')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;">📄 Copy Tháng 5, 6, 7</button>
+    </div>
+</div>
                 <button class="btn btn-primary" onclick="exportNccTripExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
             </div>
         </div>
@@ -809,9 +815,9 @@ const CONFIG = {
     ],
         NCC_TRIP_SHEETS: [
         // THCP Tổng hợp 3 kỳ 4 tỉnh (26/4 - 25/7)
-        { id: '1bpahLTCIP7gUnEmn0zaQpKGxu7MS2NBVhCTxTVg_XAM', gid: '', ncc: 'ALL' },
+        { id: '1bpahLTCIP7gUnEmn0zaQpKGxu7MS2NBVhCTxTVg_XAM', gid: '', ncc: 'ALL', label: 'Tháng 5, 6, 7' },
         // THCP Tổng hợp Tháng 8
-        { id: '1Ls3_WDZBzEXfNu2vJOPJI18kKQbvyZIkLPtAYJUngqk', gid: '', ncc: 'ALL' },
+        { id: '1Ls3_WDZBzEXfNu2vJOPJI18kKQbvyZIkLPtAYJUngqk', gid: '', ncc: 'ALL', label: 'Tháng 8' },
         { id: '1ZT_OPLSxOEWiy96YE-snqE-t3tX2T3EhkjDbk9Oll90', gid: '45442280', ncc: 'NAK' },
         { id: '1ZT_OPLSxOEWiy96YE-snqE-t3tX2T3EhkjDbk9Oll90', gid: '1620536867', ncc: 'NAK' },
         { id: '16jiK-hQ-xOrs9kxmJF6CXQ1HANy0zAlDyQM2q7mOtOg', gid: '73639881', ncc: 'Thiên Phú' },
@@ -5862,15 +5868,18 @@ function renderNccTrip(preserveScroll = false) {
     }
 }
 
-function copyNccDataToClipboard() {
+function copyNccDataToClipboard(sheetIdParam) {
     if (typeof nccTripData === 'undefined' || nccTripData.length === 0) {
         showToast('❌', 'Chưa có dữ liệu NCC!');
         return;
     }
     
-    // Chỉ lấy các chuyến có nguồn từ file Tổng (ALL sheet) mới nhất và có sourceRow
-    const lastAllSheetConfig = CONFIG.NCC_TRIP_SHEETS.slice().reverse().find(s => s.ncc === 'ALL');
-    const targetSheetId = lastAllSheetConfig ? lastAllSheetConfig.id : null;
+    // Chỉ lấy các chuyến có nguồn từ file Tổng (ALL sheet) và có sourceRow
+    let targetSheetId = sheetIdParam;
+    if (!targetSheetId) {
+        const lastAllSheetConfig = CONFIG.NCC_TRIP_SHEETS.slice().reverse().find(s => s.ncc === 'ALL');
+        targetSheetId = lastAllSheetConfig ? lastAllSheetConfig.id : null;
+    }
     const allSheetTrips = nccTripData.filter(r => r.isAllSheet && r.sourceRow && r.sheetId === targetSheetId);
     
     if (allSheetTrips.length === 0) {
@@ -7185,6 +7194,18 @@ document.addEventListener('mouseout', function(e) {
         target.removeEventListener('mousemove', target._mousemoveHandler);
     }
 });
+
+window.onclick = function(event) {
+    if (!event.target.matches('.dropdown button')) {
+        var dropdowns = document.getElementsByClassName("dropdown-content");
+        for (var i = 0; i < dropdowns.length; i++) {
+            var openDropdown = dropdowns[i];
+            if (openDropdown.style.display !== 'none') {
+                openDropdown.style.display = 'none';
+            }
+        }
+    }
+}
 
 window.forceSyncLocalToCloud = async function() {
     if (!confirm('Bạn có muốn kiểm tra và đồng bộ hai chiều dữ liệu trình duyệt và Google Sheet không?\n\n- Tải dữ liệu mới nhất từ Cloud về máy.\n- Chỉ đẩy lên Cloud những thao tác có sự thay đổi.')) return;

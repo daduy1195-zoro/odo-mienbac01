@@ -4639,12 +4639,16 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             matchedTripCode = 'Phạt';
         }
 
-        let finalKey = `${actualNcc}_${plate}_${dateStr}_${route}`;
+        const normTime = t => (t||'').toString().replace(/:\d{2}$/, '').trim();
+        let baseKeyOld = `${actualNcc}_${plate}_${dateStr}_${route}`;
+        let baseKeyNew = `${actualNcc}_${plate}_${dateStr}_${normTime(hourStart)}_${normTime(hourEnd)}`;
+
+        let finalKey = baseKeyNew;
         let dupCount = keyCounts.get(finalKey) || 0;
         if (dupCount > 0) {
             finalKey = `${finalKey}_dup${dupCount}`;
         }
-        keyCounts.set(`${actualNcc}_${plate}_${dateStr}_${route}`, dupCount + 1);
+        keyCounts.set(baseKeyNew, dupCount + 1);
         
         let tripNote = '';
         let isManualMatch = false;
@@ -4655,6 +4659,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             const rawPlate = colPlate > -1 ? (row[colPlate] || '').toString().trim() : plate;
             const oldKeys = [
                 `${actualNcc}_${sourceRow}`,
+                baseKeyOld,
                 `${actualNcc}_${rawPlate}_${dateStr}_${route}`,
                 `${actualNcc}_${rawPlate.replace(/-/g, '')}_${dateStr}_${route}`,
                 `${nccName}_${plate}_${dateStr}_${route}`,

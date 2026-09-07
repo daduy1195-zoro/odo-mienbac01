@@ -5819,27 +5819,10 @@ function renderNccTrip(preserveScroll = false) {
                     return (hs || '-') + ' - ' + (he || '-');
                 })()}</td>
                 <td style="font-family:Calibri, sans-serif;">${(() => {
-                    // Kiểm tra otHours có giá trị thực không (loại bỏ 0, 0.00, 0,00)
+                    // Chỉ lấy giá trị thực từ cột Thời gian tăng ca (Cột K) của file Google Sheet
                     const otVal = r.otHours ? String(r.otHours).trim() : '';
                     const otNum = otVal ? parseFloat(otVal.replace(',', '.')) : 0;
-                    if (otVal && otNum > 0) return otVal;
-                    // Tính từ giờ về nếu > 19:00
-                    if (!r.hourEnd) return '-';
-                    const timeStr = String(r.hourEnd).replace(/h/gi, ':');
-                    const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
-                    if (!timeParts) return '-';
-                    let hours = parseInt(timeParts[1]);
-                    const mins = parseInt(timeParts[2]);
-                    if (/PM/i.test(timeStr) && hours < 12) hours += 12;
-                    if (/AM/i.test(timeStr) && hours === 12) hours = 0;
-                    const totalMinutes = hours * 60 + mins;
-                    const shiftEnd = 19 * 60; // 19:00
-                    if (totalMinutes > shiftEnd) {
-                        const otMinutes = totalMinutes - shiftEnd;
-                        const otH = Math.floor(otMinutes / 60);
-                        const otM = otMinutes % 60;
-                        return '<span style="color:var(--danger);font-weight:bold;">' + otH + 'h' + (otM > 0 ? otM : '') + '</span>';
-                    }
+                    if (otVal && otNum > 0) return '<span style="color:var(--danger);font-weight:bold;">' + otVal + '</span>';
                     return '-';
                 })()}</td>
                 <td style="text-align:right; font-family:Calibri, sans-serif;">${formatMoneyCell(r.otFee)}</td>

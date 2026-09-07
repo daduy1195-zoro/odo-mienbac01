@@ -710,6 +710,7 @@
                     <option value="phat">⚠️ Phạt</option>
                     <option value="khong_chay">🛑 Không chạy vẫn tính tiền</option>
                 </select>
+                <button class="btn btn-outline" onclick="copyNccDataToClipboard()" style="padding:6px 14px;font-size:13px;" title="Copy 3 cột: Mã chuyến, Trạng thái, Ghi chú theo đúng thứ tự dòng của file Tổng hợp Google Sheet">📋 Copy dữ liệu</button>
                 <button class="btn btn-primary" onclick="exportNccTripExcel()" style="padding:6px 14px;font-size:13px;">📥 Xuất Excel</button>
             </div>
         </div>
@@ -5859,6 +5860,54 @@ function renderNccTrip(preserveScroll = false) {
             if (newScroll) newScroll.scrollTop = scrollPos;
         }, 0);
     }
+}
+
+function copyNccDataToClipboard() {
+    if (typeof nccTripData === 'undefined' || nccTripData.length === 0) {
+        showToast('❌', 'Chưa có dữ liệu NCC!');
+        return;
+    }
+    
+    // Chỉ lấy các chuyến có nguồn từ file Tổng (ALL sheet) và có sourceRow
+    const allSheetTrips = nccTripData.filter(r => r.isAllSheet && r.sourceRow);
+    
+    if (allSheetTrips.length === 0) {
+        showToast('❌', 'Không tìm thấy dữ liệu từ file Tổng hợp!');
+        return;
+    }
+
+    // Sắp xếp theo đúng thứ tự dòng vật lý trong Google Sheet
+    allSheetTrips.sort((a, b) => a.sourceRow - b.sourceRow);
+
+    let tsv = '';
+    allSheetTrips.forEach(r => {
+        const codeUpper = String(r.ghnTripCode || '').toUpperCase().trim();
+        const isGhnOff = codeUpper === 'GHN OFF' || codeUpper === 'GHN_OFF';
+        const isNccOff = codeUpper === 'NCC OFF' || codeUpper === 'NCC_OFF' || codeUpper === 'OFF';
+        const isPhat = codeUpper === 'PHẠT' || codeUpper === 'PHAT';
+        const isSpecialStatus = isGhnOff || isNccOff || isPhat;
+        const hasMatch = !!r.ghnTripCode && !isSpecialStatus;
+        const isManual = !!r.isManualMatch && hasMatch;
+        
+        let status = '';
+        if (isGhnOff || isNccOff) status = 'OFF';
+        else if (isPhat) status = 'Phạt';
+        else if (isManual) status = 'Khớp tay';
+        else if (hasMatch) status = 'Khớp';
+        else status = 'Thiếu mã';
+
+        let ghnCode = r.ghnTripCode || '';
+        let note = r.note || '';
+
+        tsv += `${ghnCode}\t${status}\t${note}\n`;
+    });
+
+    navigator.clipboard.writeText(tsv).then(() => {
+        showToast('✅', `Đã copy ${allSheetTrips.length} dòng! Hãy paste vào Google Sheet (từ dòng dữ liệu đầu tiên).`);
+    }).catch(err => {
+        console.error(err);
+        showToast('❌', 'Lỗi khi copy!');
+    });
 }
 
 function exportNccTripExcel() {

@@ -2295,20 +2295,34 @@ async function loadAllData() {
             const rawDate = (r[4] || '').trim();
             const dateStr = normalizeToDDMMYYYY(rawDate);
             const supplier = normalizeSupplierName(r[5]);
-            let kmStart = (r[7] || '').trim();
-            let kmEnd = (r[12] || '').trim();
+            const gid = r._gid || CONFIG.SHEET_EMPLOYEE_GIDS[0];
             
-            // Fix bug: If Google Sheets accidentally formats a number (Km End) as a Date,
-            // JSONP returns the date string (e.g. '05/10/2002') instead of the number.
-            // Convert it back to Google's serial date number format (days since 30/12/1899).
+            // ★ GID 409459817 thiếu cột "Hình ảnh bắt đầu" → tất cả cột sau dịch lên 1
+            // GID 1274066622: col 10=imgStart, 11=imgEnd, 12=kmEnd, 13=hourEnd
+            // GID 409459817:  col 10=imgEnd,              11=kmEnd, 12=hourEnd
+            const colKmEnd   = (gid === '409459817') ? 11 : 12;
+            const colHourEnd = (gid === '409459817') ? 12 : 13;
+            
+            let kmStart = (r[7] || '').toString().trim();
+            let kmEnd   = (r[colKmEnd] || '').toString().trim();
+            
+            // Fix: Nếu Google Sheets format số km thành Date, JSONP trả Date string.
+            // Phát hiện & convert ngược lại: nếu giá trị chứa "/" mà không phải URL → coi như ngày bị format sai.
             const recoverDateNumber = (val) => {
-                if (!val || !val.includes('/')) return val;
+                if (!val || !val.includes('/') || val.startsWith('http')) return val;
                 const parts = val.split('/');
                 if (parts.length === 3) {
-                    const d = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, y = parseInt(parts[2], 10);
-                    if (y >= 1900 && y < 3000) {
-                        const date = new Date(Date.UTC(y, m, d)), base = new Date(Date.UTC(1899, 11, 30));
-                        return Math.round((date - base) / 86400000).toString();
+                    const d = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1;
+                    let y = parseInt(parts[2], 10);
+                    if (!isNaN(d) && !isNaN(m) && !isNaN(y) && y >= 0) {
+                        // Google Sheets serial dates: year < 100 means 1900+ (giống quy ước Excel)
+                        if (y < 100) y += 1900;
+                        const date = new Date(Date.UTC(2000, 0, 1));
+                        date.setUTCFullYear(y, m, d);
+                        const base = new Date(Date.UTC(2000, 0, 1));
+                        base.setUTCFullYear(1899, 11, 30);
+                        const serial = Math.round((date - base) / 86400000);
+                        if (serial > 0 && serial < 10000000) return serial.toString();
                     }
                 }
                 return val;
@@ -2316,8 +2330,15 @@ async function loadAllData() {
             kmStart = recoverDateNumber(kmStart);
             kmEnd = recoverDateNumber(kmEnd);
             
+            // Fallback: nếu kmEnd vẫn chứa ":" (đọc nhầm cột giờ), thử đọc cột bên cạnh
+            if (kmEnd.includes(':')) {
+                const alt = (r[11] || '').toString().trim();
+                if (alt && /^\d+$/.test(alt.replace(/[\s\.]/g, ''))) kmEnd = alt;
+                else kmEnd = '';
+            }
+            
             const hourStart = (r[8] || '').trim();
-            const hourEnd = (r[13] || '').trim();
+            const hourEnd = (r[colHourEnd] || '').toString().trim();
                     
                     let imgLinks = [];
                     r.forEach(col => {
@@ -2330,7 +2351,8 @@ async function loadAllData() {
                     const imgStart = imgLinks[0] || '';
                     const imgEnd = imgLinks[1] || '';
 
-            const gid = r._gid || CONFIG.SHEET_EMPLOYEE_GIDS[0];
+
+
             const jsMatchKey = dateStr && normPlate ? `${dateStr}_${normPlate}` : '';
             let matchKey = '';
             if (gid === '1274066622') {

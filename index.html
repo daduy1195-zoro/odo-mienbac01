@@ -598,11 +598,11 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('daily', this)">📋 Bảng theo dõi NV báo cáo ODO</button>
             <button class="tab" onclick="switchTab('ranking', this)">👤 Danh sách NV chưa báo cáo</button>
-            <button class="tab" onclick="switchTab('nccTrip', this)">🔗 Ghép chuyến đi NCC</button>
             <button class="tab" onclick="switchTab('lastmile', this)">🚚 Chuyến đi Lastmile</button>
             <button class="tab" onclick="switchTab('fraud', this)">🚨 Cảnh báo gian lận <span class="badge badge-danger" id="fraudBadge" style="margin-left:4px;font-size:11px;">0</span></button>
             <button class="tab" onclick="switchTab('typo', this)">⚠️ Cảnh báo gõ sai <span class="badge badge-danger" id="typoBadge" style="margin-left:4px;font-size:11px;">0</span></button>
             <button class="tab" onclick="switchTab('ncc', this)">🔒 Chi phí xe NCC</button>
+            <button class="tab" onclick="switchTab('nccTrip', this)">🔒 Ghép chuyến đi NCC</button>
         </div>
     </div>
 
@@ -4109,10 +4109,17 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     const results = [];
     const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
     const detectWH = (str) => {
+        if (str.includes('thái nguyên')) return 'Thái Nguyên';
+        if (str.includes('nam định')) return 'Nam Định';
+        if (str.includes('hà nam')) return 'Hà Nam';
+        if (str.includes('bắc ninh')) return 'Bắc Ninh';
+        if (str.includes('vĩnh phúc')) return 'Vĩnh Phúc';
+        if (str.includes('bắc giang')) return 'Bắc Giang';
         if (str.includes('thái bình')) return 'Thái Bình';
         if (str.includes('hải dương')) return 'Hải Dương';
         if (str.includes('hải phòng') && /kv2|kv3/i.test(str)) return 'Hải Dương';
         if (str.includes('hải phòng')) return 'Hải Phòng';
+        // Generic 'miền bắc' fallback for Hưng Yên MUST be checked last
         if (str.includes('hưng yên') || str.includes('miền bắc') || str.includes('mien bac')) return 'Hưng Yên';
         return '';
     };
@@ -5923,6 +5930,7 @@ function exportNccTripExcel() {
 
 // ====== CHUYỂN TAB & MẬT KHẨU ======
 let _nccUnlocked = false;
+let _nccTripUnlocked = false;
 let _phoneUnlocked = false;
 const _NCC_PASS = 'admin123';
 
@@ -6531,6 +6539,16 @@ window.jumpToNccTrip = function(tripCode) {
         }
         _nccUnlocked = true;
         el.innerHTML = '📊 Chi phí xe NCC';
+    }
+
+    if (tab === 'nccTrip' && !_nccTripUnlocked) {
+        const pw = prompt('🔒 Nhập mật khẩu để xem Ghép chuyến đi NCC:');
+        if (pw !== _NCC_PASS) {
+            if (pw !== null) alert('❌ Mật khẩu không đúng!');
+            return;
+        }
+        _nccTripUnlocked = true;
+        el.innerHTML = '🔗 Ghép chuyến đi NCC';
     }
 
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));

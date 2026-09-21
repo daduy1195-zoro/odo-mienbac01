@@ -2295,10 +2295,29 @@ async function loadAllData() {
             const rawDate = (r[4] || '').trim();
             const dateStr = normalizeToDDMMYYYY(rawDate);
             const supplier = normalizeSupplierName(r[5]);
-            const kmStart = (r[7] || '').trim();
-            const kmEnd = (r[12] || '').trim();
-                    const hourStart = (r[8] || '').trim();
-                    const hourEnd = (r[13] || '').trim();
+            let kmStart = (r[7] || '').trim();
+            let kmEnd = (r[12] || '').trim();
+            
+            // Fix bug: If Google Sheets accidentally formats a number (Km End) as a Date,
+            // JSONP returns the date string (e.g. '05/10/2002') instead of the number.
+            // Convert it back to Google's serial date number format (days since 30/12/1899).
+            const recoverDateNumber = (val) => {
+                if (!val || !val.includes('/')) return val;
+                const parts = val.split('/');
+                if (parts.length === 3) {
+                    const d = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, y = parseInt(parts[2], 10);
+                    if (y >= 1900 && y < 3000) {
+                        const date = new Date(Date.UTC(y, m, d)), base = new Date(Date.UTC(1899, 11, 30));
+                        return Math.round((date - base) / 86400000).toString();
+                    }
+                }
+                return val;
+            };
+            kmStart = recoverDateNumber(kmStart);
+            kmEnd = recoverDateNumber(kmEnd);
+            
+            const hourStart = (r[8] || '').trim();
+            const hourEnd = (r[13] || '').trim();
                     
                     let imgLinks = [];
                     r.forEach(col => {

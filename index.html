@@ -4485,7 +4485,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         // Fallback: lấy kho từ xe đã inferred (dành cho ngày OFF)
         if (!warehouse && inferredWH) warehouse = inferredWH;
         
-        if (!warehouse) continue;
+        if (!isMyWarehouse(warehouse)) continue;
         
         const kmStart = (colKmStart > -1 ? row[colKmStart] : '').toString().trim();
         const kmEnd = (colKmEnd > -1 ? row[colKmEnd] : '').toString().trim();

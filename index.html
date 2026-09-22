@@ -4156,12 +4156,19 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         if (str.includes('bắc ninh')) return 'Bắc Ninh';
         if (str.includes('vĩnh phúc')) return 'Vĩnh Phúc';
         if (str.includes('bắc giang')) return 'Bắc Giang';
+        if (str.includes('phú thọ')) return 'Phú Thọ';
+        if (str.includes('ninh bình')) return 'Ninh Bình';
+        if (str.includes('quảng ninh')) return 'Quảng Ninh';
+        if (str.includes('yên bái')) return 'Yên Bái';
+        if (str.includes('hòa bình')) return 'Hòa Bình';
+        if (str.includes('lạng sơn')) return 'Lạng Sơn';
         if (str.includes('thái bình')) return 'Thái Bình';
         if (str.includes('hải dương')) return 'Hải Dương';
         if (str.includes('hải phòng') && /kv2|kv3/i.test(str)) return 'Hải Dương';
         if (str.includes('hải phòng')) return 'Hải Phòng';
-        // Generic 'miền bắc' fallback for Hưng Yên MUST be checked last
-        if (str.includes('hưng yên') || str.includes('miền bắc') || str.includes('mien bac')) return 'Hưng Yên';
+        if (str.includes('hưng yên')) return 'Hưng Yên';
+        // Generic fallback returns 'Miền Bắc' instead of 'Hưng Yên' directly, so we can override it if route has a specific province
+        if (str.includes('miền bắc') || str.includes('mien bac')) return 'Miền Bắc';
         return '';
     };
     // Tìm header row (chứa "Biển số" hoặc "STT")
@@ -4521,8 +4528,17 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         
         // Check Kho column first (most authoritative)
         warehouse = detectWH(khoStr);
-        // Fallback: check route + Kho combined
-        if (!warehouse) warehouse = detectWH(searchStr);
+        
+        // If it's generic 'Miền Bắc' or empty, check the route + Kho combined
+        if (!warehouse || warehouse === 'Miền Bắc') {
+            const routeWH = detectWH(searchStr);
+            if (routeWH && routeWH !== 'Miền Bắc') {
+                warehouse = routeWH;
+            } else if (warehouse === 'Miền Bắc' || routeWH === 'Miền Bắc') {
+                warehouse = 'Hưng Yên'; // Fallback to Hưng Yên if nothing more specific
+            }
+        }
+        
         // Fallback: lấy kho từ xe đã inferred (dành cho ngày OFF)
         if (!warehouse && inferredWH) warehouse = inferredWH;
         

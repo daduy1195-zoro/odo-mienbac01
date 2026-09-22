@@ -4148,6 +4148,19 @@ function formatMoneyCell(val) {
 
 function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid, sourceRowsArray, usedGhnCodes = new Map()) {
     const results = [];
+    const nccProvMap = {};
+    if (typeof masterList !== 'undefined' && masterList && masterList.length > 0) {
+        masterList.forEach(m => {
+            if (m.ncc && (m.province || m.warehouse)) {
+                const nNorm = normalizeSupplierName(m.ncc);
+                const pNorm = shortWarehouse(m.province || m.warehouse);
+                if (pNorm) {
+                    if (!nccProvMap[nNorm]) nccProvMap[nNorm] = new Set();
+                    nccProvMap[nNorm].add(pNorm);
+                }
+            }
+        });
+    }
     const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
     const detectWH = (str) => {
         if (str.includes('thái nguyên')) return 'Thái Nguyên';
@@ -4543,6 +4556,13 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         if (!warehouse && inferredWH) warehouse = inferredWH;
         
         if (!isMyWarehouse(warehouse)) continue;
+        
+        // Loại bỏ chuyến nếu NCC đó không chạy ở tỉnh này (dựa trên Master List)
+        if (actualNcc && nccProvMap[actualNcc] && nccProvMap[actualNcc].size > 0) {
+            if (!nccProvMap[actualNcc].has(warehouse)) {
+                continue; 
+            }
+        }
         
         const kmStart = (colKmStart > -1 ? row[colKmStart] : '').toString().trim();
         const kmEnd = (colKmEnd > -1 ? row[colKmEnd] : '').toString().trim();

@@ -4558,7 +4558,14 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         
         const kmStart = (colKmStart > -1 ? row[colKmStart] : '').toString().trim();
         const kmEnd = (colKmEnd > -1 ? row[colKmEnd] : '').toString().trim();
-        const kmDiff = (colKmDiff > -1 ? row[colKmDiff] : '').toString().trim();
+        let kmDiff = (colKmDiff > -1 ? row[colKmDiff] : '').toString().trim();
+        
+        // Tự động tính Số KM chạy = ODO Về - ODO Đi để đảm bảo chính xác 100% dù bị sai cột
+        const pKmStart = parseFloat(kmStart.replace(/[^\d.]/g, ''));
+        const pKmEnd = parseFloat(kmEnd.replace(/[^\d.]/g, ''));
+        if (!isNaN(pKmStart) && !isNaN(pKmEnd) && pKmEnd >= pKmStart) {
+            kmDiff = (pKmEnd - pKmStart).toString();
+        }
         
         // Ghép mã chuyến GHN
         const normPlate = normalizeStr(plate);

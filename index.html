@@ -2297,11 +2297,10 @@ async function loadAllData() {
             const supplier = normalizeSupplierName(r[5]);
             const gid = r._gid || CONFIG.SHEET_EMPLOYEE_GIDS[0];
             
-            // ★ GID 409459817 thiếu cột "Hình ảnh bắt đầu" → tất cả cột sau dịch lên 1
-            // GID 1274066622: col 10=imgStart, 11=imgEnd, 12=kmEnd, 13=hourEnd
-            // GID 409459817:  col 10=imgEnd,              11=kmEnd, 12=hourEnd
-            const colKmEnd   = (gid === '409459817') ? 11 : 12;
-            const colHourEnd = (gid === '409459817') ? 12 : 13;
+            // ★ Bỏ qua logic lùi cột vì form đã thêm lại cột Hình ảnh bắt đầu, trở lại vị trí gốc
+            // GID 1274066622 & 409459817: col 10=imgStart, 11=imgEnd, 12=kmEnd, 13=hourEnd
+            const colKmEnd   = 12;
+            const colHourEnd = 13;
             
             let kmStart = (r[7] || '').toString().trim();
             let kmEnd   = (r[colKmEnd] || '').toString().trim();

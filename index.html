@@ -4227,7 +4227,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             let detectedKmStart = -1;
             
             // 1. Tìm bằng ODO thực tế (chắc chắn nhất)
-            for (let i = startCheck; i < Math.min(startCheck + 5, rawData.length); i++) {
+            for (let i = startCheck; i < Math.min(startCheck + 25, rawData.length); i++) {
                 if (!rawData[i]) continue;
                 for (let ci = 12; ci <= 15; ci++) {
                     const v1 = parseFloat((rawData[i][ci] || '').toString().replace(/[^\d.]/g, ''));
@@ -4242,7 +4242,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             
             // 2. Nếu ODO trống, tìm bằng text Lộ trình
             if (detectedKmStart === -1) {
-                for (let i = startCheck; i < Math.min(startCheck + 5, rawData.length); i++) {
+                for (let i = startCheck; i < Math.min(startCheck + 25, rawData.length); i++) {
                     if (!rawData[i]) continue;
                     const c4 = (rawData[i][4] || '').toString().toLowerCase();
                     const c5 = (rawData[i][5] || '').toString().toLowerCase();
@@ -4319,7 +4319,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     // để phát hiện 2 cột liên tiếp có giá trị lớn (>1000) là odometer readings
     if (colKmStart === -1 || colKmEnd === -1) {
         const startRow = headerRowIdx > -1 ? headerRowIdx + 1 : 0;
-        for (let i = startRow; i < Math.min(startRow + 5, rawData.length); i++) {
+        for (let i = startRow; i < Math.min(startRow + 25, rawData.length); i++) {
             const row = rawData[i];
             if (!row) continue;
             for (let ci = 12; ci <= 16; ci++) {

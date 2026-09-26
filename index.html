@@ -5721,6 +5721,8 @@ function renderNccTrip(preserveScroll = false) {
     html += '<th>Biển số xe</th>';
     html += '<th>Kho</th>';
     html += '<th style="max-width:120px; width:120px;">Lộ trình</th>';
+    html += '<th style="text-align:right">KM Đi (Vào)</th>';
+    html += '<th style="text-align:right">KM Về (Ra)</th>';
     html += '<th style="text-align:right">KM phát sinh</th>';
     html += '<th style="text-align:right">Phí vượt KM</th>';
     html += '<th>Giờ đi - về</th>';
@@ -5825,6 +5827,8 @@ function renderNccTrip(preserveScroll = false) {
                 <td style="font-family:Calibri, sans-serif; font-weight:700; color:#f0ad4e;">${escapeHtml(formatPlate(r.plate))}</td>
                 <td><span class="badge" style="${whColor}">${escapeHtml(shortWH)}</span></td>
                 <td style="font-size:11px; max-width:120px; width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.route)}">${escapeHtml(r.route)}</td>
+                <td style="text-align:right; font-family:Calibri, sans-serif; color:var(--text-muted);">${escapeHtml(r.kmStart || '-')}</td>
+                <td style="text-align:right; font-family:Calibri, sans-serif; color:var(--text-muted);">${escapeHtml(r.kmEnd || '-')}</td>
                 <td style="font-family:Calibri, sans-serif; font-weight:700;">${(() => {
                     let finalDiff = null;
                     if (r.kmDiff !== undefined && r.kmDiff !== null && String(r.kmDiff).trim() !== '') {
@@ -5969,6 +5973,8 @@ function exportNccTripExcel() {
           "Biển số xe": r.plate,
           "Kho": r.warehouse,
           "Lộ trình": r.route,
+          "KM đi(vào)": formatEmpty(r.kmStart),
+          "KM về(ra)": formatEmpty(r.kmEnd),
           "KM phát sinh": formatEmpty(r.kmDiff),
           "Phí vượt KM": formatEmpty(r.kmOverFee),
           "Giờ đi - về": (r.hourStart && r.hourEnd) ? (r.hourStart + " - " + r.hourEnd) : "-",

@@ -4396,7 +4396,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     
     // ★ Fix: Tự động căn chỉnh các cột tài chính dựa trên vị trí của Total Cost
     // Form chuẩn của THCP: ... | Phí vượt KM | Phí cầu đường | Phí ngày lễ | Giá tháng | Giá ngày | ... | Tổng chi phí
-    if (colTotalCost > 0) {
+    const isStandardNcc = ["Đại Minh", "Duy Phát", "Hoàng Minh", "Thiên Phú", "Đạo Trường An"].includes(nccName) || ["942983334", "679483124", "2147444878", "73639881"].includes(tabGid);
+    if (colTotalCost > 0 && !isStandardNcc) {
         // Luôn neo Giá ngày và Giá tháng theo Tổng chi phí
         colDailyRate = colTotalCost - 3;
         colMonthlyRate = colTotalCost - 4;

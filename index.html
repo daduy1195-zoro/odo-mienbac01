@@ -4224,19 +4224,37 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             
             // Xử lý lệch cột cho các tab xe chi tiết (thường NCC thêm cột STT Xe ở index 4)
             const startCheck = headerRowIdx > -1 ? headerRowIdx + 1 : 0;
-            let isShifted = false;
+            let detectedKmStart = -1;
+            
+            // 1. Tìm bằng ODO thực tế (chắc chắn nhất)
             for (let i = startCheck; i < Math.min(startCheck + 5, rawData.length); i++) {
                 if (!rawData[i]) continue;
-                const c4 = (rawData[i][4] || '').toString().toLowerCase();
-                const c5 = (rawData[i][5] || '').toString().toLowerCase();
-                // Lộ trình thường chứa chữ kho, giao, điểm, hoặc tên tỉnh
-                if (c5.includes('kho') || c5.includes('giao') || c5.includes('điểm') || c5.includes('hải') || c5.includes('nội thành')) {
-                    isShifted = true; break;
-                } else if (c4.includes('kho') || c4.includes('giao') || c4.includes('điểm') || c4.includes('hải') || c4.includes('nội thành')) {
-                    isShifted = false; break;
+                for (let ci = 12; ci <= 15; ci++) {
+                    const v1 = parseFloat((rawData[i][ci] || '').toString().replace(/[^\d.]/g, ''));
+                    const v2 = parseFloat((rawData[i][ci+1] || '').toString().replace(/[^\d.]/g, ''));
+                    if (v1 > 1000 && v2 > 1000 && Math.abs(v2 - v1) < 500) {
+                        detectedKmStart = ci;
+                        break;
+                    }
+                }
+                if (detectedKmStart > -1) break;
+            }
+            
+            // 2. Nếu ODO trống, tìm bằng text Lộ trình
+            if (detectedKmStart === -1) {
+                for (let i = startCheck; i < Math.min(startCheck + 5, rawData.length); i++) {
+                    if (!rawData[i]) continue;
+                    const c4 = (rawData[i][4] || '').toString().toLowerCase();
+                    const c5 = (rawData[i][5] || '').toString().toLowerCase();
+                    if (c5.includes('kho') || c5.includes('giao') || c5.includes('điểm') || c5.includes('hải') || c5.includes('nội thành')) {
+                        detectedKmStart = 14; break;
+                    } else if (c4.includes('kho') || c4.includes('giao') || c4.includes('điểm') || c4.includes('hải') || c4.includes('nội thành')) {
+                        detectedKmStart = 13; break;
+                    }
                 }
             }
-            if (isShifted) {
+
+            if (detectedKmStart === 14) {
                 // Tịnh tiến tất cả các cột từ lộ trình trở đi sang phải 1 đơn vị
                 colRoute = 5;
                 colOtHours = 10; colOtRate = 11; colOtFee = 12;
@@ -4244,6 +4262,10 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 colKmOver = 17; colKmOverFee = 19;
                 colMonthlyRate = 20; colDailyRate = 21;
                 colTollFee = 22; colHolidayFee = 23; colTotalCost = 24; colKho = 27;
+            } else if (detectedKmStart === 13) {
+                colKmStart = 13; colKmEnd = 14; colKmDiff = 15;
+            } else {
+                colKmStart = -1; colKmEnd = -1; colKmDiff = -1;
             }
         }
     if (headerRowIdx > -1) {

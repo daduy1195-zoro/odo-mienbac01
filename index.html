@@ -4565,6 +4565,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         const pKmEnd = parseVietnameseNumber(kmEnd);
         if (pKmStart > 0 && pKmEnd >= pKmStart) {
             kmDiff = Math.round(pKmEnd - pKmStart).toString();
+        } else if (parseVietnameseNumber(kmDiff) > 3000) {
+            // Sanity check: Nếu KM chạy/ngày > 3000km thì chắc chắn là đọc nhầm cột ODO tổng, set về rỗng để báo lỗi
+            kmDiff = 'Lỗi Data';
         }
         
         // Ghép mã chuyến GHN

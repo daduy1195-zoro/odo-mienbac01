@@ -4214,13 +4214,37 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             colTollFee = 21; colHolidayFee = 22; colTotalCost = 23; colKho = 26;
         }
         else if (["Đại Minh", "Duy Phát", "Hoàng Minh", "Thiên Phú", "Đạo Trường An"].includes(nccName) || ["942983334", "679483124", "2147444878", "73639881"].includes(tabGid)) {
-            // Đã verify qua API: col 4=route, 9=otH, 13=kmIn, 14=kmOut, 15=kmDiff, 16=kmPS
+            // Mặc định mapping cho Sheet tổng
             colNcc = -1; colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 4;
             colOtHours = 9; colOtRate = 10; colOtFee = 11;
             colKmStart = 13; colKmEnd = 14; colKmDiff = 15;
             colKmOver = 16; colKmOverFee = 18;
             colMonthlyRate = 19; colDailyRate = 20;
             colTollFee = 21; colHolidayFee = 22; colTotalCost = 23; colKho = 26;
+            
+            // Xử lý lệch cột cho các tab xe chi tiết (thường NCC thêm cột STT Xe ở index 4)
+            const startCheck = headerRowIdx > -1 ? headerRowIdx + 1 : 0;
+            let isShifted = false;
+            for (let i = startCheck; i < Math.min(startCheck + 5, rawData.length); i++) {
+                if (!rawData[i]) continue;
+                const c4 = (rawData[i][4] || '').toString().toLowerCase();
+                const c5 = (rawData[i][5] || '').toString().toLowerCase();
+                // Lộ trình thường chứa chữ kho, giao, điểm, hoặc tên tỉnh
+                if (c5.includes('kho') || c5.includes('giao') || c5.includes('điểm') || c5.includes('hải') || c5.includes('nội thành')) {
+                    isShifted = true; break;
+                } else if (c4.includes('kho') || c4.includes('giao') || c4.includes('điểm') || c4.includes('hải') || c4.includes('nội thành')) {
+                    isShifted = false; break;
+                }
+            }
+            if (isShifted) {
+                // Tịnh tiến tất cả các cột từ lộ trình trở đi sang phải 1 đơn vị
+                colRoute = 5;
+                colOtHours = 10; colOtRate = 11; colOtFee = 12;
+                colKmStart = 14; colKmEnd = 15; colKmDiff = 16;
+                colKmOver = 17; colKmOverFee = 19;
+                colMonthlyRate = 20; colDailyRate = 21;
+                colTollFee = 22; colHolidayFee = 23; colTotalCost = 24; colKho = 27;
+            }
         }
     if (headerRowIdx > -1) {
         // Scan nhiều dòng header (multi-row merged headers) cho cột tài chính

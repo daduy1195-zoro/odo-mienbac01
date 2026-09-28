@@ -4311,12 +4311,18 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     }
     if (colKmEnd > -1 && colKmDiff === -1) colKmDiff = colKmEnd + 1;
 
-    // Fallback cho file THCP Tháng 8 (bị khuyết text ở dòng tiêu đề)
+    // Fallback cho file THCP Tháng 8 và Tháng 9 (bị khuyết text ở dòng tiêu đề do merge/filter)
     if (nccName === 'ALL') {
-        if (colDate === -1) colDate = 2;
-        if (colPlate === -1) colPlate = 3;
-        if (colRoute === -1) colRoute = 5;
-        if (colNcc === -1) colNcc = 1;
+        const isMonth9 = (colDate === 1) || (rawData[headerRowIdx > -1 ? headerRowIdx : 0] && rawData[headerRowIdx > -1 ? headerRowIdx : 0][1] && rawData[headerRowIdx > -1 ? headerRowIdx : 0][1].toString().toLowerCase().includes('ngày'));
+        if (isMonth9) {
+            colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 5; colNcc = 0;
+        } else {
+            colDate = 2; colPlate = 3; colVehicle = 4; colRoute = 5; colNcc = 1;
+        }
+        colOtHours = 10; colOtRate = 11; colOtFee = 12;
+        colKmStart = 14; colKmEnd = 15; colKmDiff = 16; colKmOver = 17; colKmOverFee = 19;
+        colMonthlyRate = 20; colDailyRate = 21; colTollFee = 22; colHolidayFee = 23; colTotalCost = 24;
+        colKho = 27; colGhnTrip = 28; colGhnNote = 29;
     }
     // Fallback: nếu không tìm được trong header, thử scan data row đầu tiên
     // để phát hiện 2 cột liên tiếp có giá trị lớn (>1000) là odometer readings
@@ -4399,7 +4405,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     
     // ★ Fix: Tự động căn chỉnh các cột tài chính dựa trên vị trí của Total Cost
     // Form chuẩn của THCP: ... | Phí vượt KM | Phí cầu đường | Phí ngày lễ | Giá tháng | Giá ngày | ... | Tổng chi phí
-    const isStandardNcc = ["Đại Minh", "Duy Phát", "Hoàng Minh", "Thiên Phú", "Đạo Trường An"].includes(nccName) || ["942983334", "679483124", "2147444878", "73639881"].includes(tabGid);
+    const isStandardNcc = ["Đại Minh", "Duy Phát", "Hoàng Minh", "Thiên Phú", "Đạo Trường An", "NAK", "Hoa Vinh", "Long Thành", "TAL"].includes(nccName) || ["942983334", "679483124", "2147444878", "73639881", "1620536867", "1290293725", "45442280", "1012425134"].includes(tabGid);
     if (colTotalCost > 0 && !isStandardNcc) {
         // Luôn neo Giá ngày và Giá tháng theo Tổng chi phí
         colDailyRate = colTotalCost - 3;

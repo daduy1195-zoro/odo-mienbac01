@@ -710,6 +710,7 @@
                 <div class="dropdown" style="display:inline-block;position:relative;">
     <button class="btn btn-outline" style="padding:6px 14px;font-size:13px;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">📋 Copy dữ liệu ▾</button>
     <div class="dropdown-content" style="display:none;position:absolute;right:0;background:var(--bg-card);min-width:160px;box-shadow:0 8px 16px rgba(0,0,0,0.5);z-index:1000;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
+        <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">📄 Copy Tháng 9</button>
         <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1Ls3_WDZBzEXfNu2vJOPJI18kKQbvyZIkLPtAYJUngqk')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">📄 Copy Tháng 8</button>
         <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1bpahLTCIP7gUnEmn0zaQpKGxu7MS2NBVhCTxTVg_XAM')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;">📄 Copy Tháng 5, 6, 7</button>
     </div>
@@ -4658,7 +4659,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                   matchedTripCode = 'Phạt';
               }
           }
-        const sourceRow = sourceRowsArray ? sourceRowsArray[i] : (i + 2);
+        const defaultSourceRow = headerRowIdx > -1 ? (i + 1) : (i + 2);
+        const sourceRow = sourceRowsArray ? sourceRowsArray[i] : defaultSourceRow;
         
         let otHours = (colOtHours > -1 ? row[colOtHours] : '').toString().trim();
         let otRate = (colOtRate > -1 ? row[colOtRate] : '').toString().trim();

@@ -815,6 +815,8 @@ const CONFIG = {
         { id: '1bpahLTCIP7gUnEmn0zaQpKGxu7MS2NBVhCTxTVg_XAM', gid: '', ncc: 'ALL', label: 'Tháng 5, 6, 7' },
         // THCP Tổng hợp Tháng 8
         { id: '1Ls3_WDZBzEXfNu2vJOPJI18kKQbvyZIkLPtAYJUngqk', gid: '', ncc: 'ALL', label: 'Tháng 8' },
+        // THCP Tổng hợp Tháng 9
+        { id: '1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78', gid: '14915787', ncc: 'ALL', label: 'Tháng 9' },
         { id: '1ZT_OPLSxOEWiy96YE-snqE-t3tX2T3EhkjDbk9Oll90', gid: '45442280', ncc: 'NAK' },
         { id: '1ZT_OPLSxOEWiy96YE-snqE-t3tX2T3EhkjDbk9Oll90', gid: '1620536867', ncc: 'NAK' },
         { id: '16jiK-hQ-xOrs9kxmJF6CXQ1HANy0zAlDyQM2q7mOtOg', gid: '73639881', ncc: 'Thiên Phú' },
@@ -5000,7 +5002,7 @@ async function loadNccTripData() {
             try {
                 if (sheet.ncc === 'ALL') {
                     console.log(`⏩ Bỏ qua lấy tab name cho ALL sheet, tải trực tiếp bằng GID`);
-                    const rawData = await fetchSheetJSONP(sheet.id, sheet.gid);
+                    const rawData = await fetchSheetJSONP(sheet.id, sheet.gid, 0);
                     const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, '', sheet.gid, undefined, globalUsedCodes);
                 if (!window.rawSheetTrips[sheet.id]) window.rawSheetTrips[sheet.id] = [];
                 window.rawSheetTrips[sheet.id].push(...parsed);

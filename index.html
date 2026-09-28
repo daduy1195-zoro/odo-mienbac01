@@ -4315,15 +4315,18 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     if (nccName === 'ALL') {
         const isMonth9 = (colDate === 1) || (rawData[headerRowIdx > -1 ? headerRowIdx : 0] && rawData[headerRowIdx > -1 ? headerRowIdx : 0][1] && rawData[headerRowIdx > -1 ? headerRowIdx : 0][1].toString().toLowerCase().includes('ngày'));
         if (isMonth9) {
-            colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 5; colNcc = 0;
+            colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 4; colNcc = 0;
+            colOtHours = 9; colOtRate = 10; colOtFee = 11;
+            colKmStart = 13; colKmEnd = 14; colKmDiff = 15; colKmOver = 16; colKmOverFee = 18;
+            colMonthlyRate = 19; colDailyRate = 20; colTollFee = 21; colHolidayFee = 22; colTotalCost = 23;
+            colKho = 26; colGhnTrip = 27; colGhnNote = 28;
         } else {
             colDate = 2; colPlate = 3; colVehicle = 4; colRoute = 5; colNcc = 1;
+            colOtHours = 10; colOtRate = 11; colOtFee = 12;
+            colKmStart = 14; colKmEnd = 15; colKmDiff = 16; colKmOver = 17; colKmOverFee = 19;
+            colMonthlyRate = 20; colDailyRate = 21; colTollFee = 22; colHolidayFee = 23; colTotalCost = 24;
+            colKho = 27; colGhnTrip = 28; colGhnNote = 29;
         }
-        colOtHours = 10; colOtRate = 11; colOtFee = 12;
-        colKmStart = 14; colKmEnd = 15; colKmDiff = 16; colKmOver = 17; colKmOverFee = 19;
-        colMonthlyRate = 20; colDailyRate = 21; colTollFee = 22; colHolidayFee = 23; colTotalCost = 24;
-        colKho = 27; colGhnTrip = 28; colGhnNote = 29;
-    }
     // Fallback: nếu không tìm được trong header, thử scan data row đầu tiên
     // để phát hiện 2 cột liên tiếp có giá trị lớn (>1000) là odometer readings
     if (colKmStart === -1 || colKmEnd === -1) {
@@ -4727,7 +4730,11 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             matchedTripCode = 'Phạt';
         }
 
-        const normTime = t => (t||'').toString().replace(/:\d{2}$/, '').trim();
+        const normTime = t => {
+            let s = (t||'').toString().replace(/:\d{2}$/, '').trim();
+            if (s.indexOf(':') === 1) s = '0' + s;
+            return s;
+        };
         let baseKeyOld = `${actualNcc}_${plate}_${dateStr}_${route}`;
         let baseKeyNew = `${actualNcc}_${plate}_${dateStr}_${normTime(hourStart)}_${normTime(hourEnd)}`;
 

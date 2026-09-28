@@ -4327,6 +4327,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             colMonthlyRate = 20; colDailyRate = 21; colTollFee = 22; colHolidayFee = 23; colTotalCost = 24;
             colKho = 27; colGhnTrip = 28; colGhnNote = 29;
         }
+    }
     // Fallback: nếu không tìm được trong header, thử scan data row đầu tiên
     // để phát hiện 2 cột liên tiếp có giá trị lớn (>1000) là odometer readings
     if (colKmStart === -1 || colKmEnd === -1) {

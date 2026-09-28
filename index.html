@@ -4536,7 +4536,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         
         if (typeof formatPlate === "function") plate = formatPlate(plate);
         if (!dateStr.match(/\d{1,2}\/\d{1,2}\/\d{4}/)) continue;
-        if (stt && isNaN(stt) && !stt.match(/^\d/)) continue;
+        if (stt && isNaN(stt) && !stt.match(/^\d/) && nccName !== 'ALL') continue;
 
         // Bỏ qua các ngày tương lai chưa phát sinh chuyến đi
         const dateParts = dateStr.split('/');

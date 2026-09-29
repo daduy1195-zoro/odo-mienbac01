@@ -5048,7 +5048,35 @@ async function loadNccTripData() {
         
 
         
-
+        // Đánh dấu các dòng trùng lặp y đúc
+        {
+            const seen = new Set();
+            for (const r of allNccData) {
+                const dedupKey = [
+                    normalizeStr(r.dateStr),
+                    normalizeStr(r.plate),
+                    normalizeStr(r.ncc),
+                    normalizeStr(r.route),
+                    normalizeStr(r.hourStart),
+                    normalizeStr(r.hourEnd)
+                ].join('|');
+                if (seen.has(dedupKey)) {
+                    r.isDuplicate = true;
+                    // Đánh dấu dòng gốc cũng là trùng lặp
+                    const first = allNccData.find(x => [
+                        normalizeStr(x.dateStr),
+                        normalizeStr(x.plate),
+                        normalizeStr(x.ncc),
+                        normalizeStr(x.route),
+                        normalizeStr(x.hourStart),
+                        normalizeStr(x.hourEnd)
+                    ].join('|') === dedupKey);
+                    if (first) first.isDuplicate = true;
+                } else {
+                    seen.add(dedupKey);
+                }
+            }
+        }
 
         // Sap xep theo ngay giam dan
         allNccData.sort((a, b) => {
@@ -5773,8 +5801,8 @@ function renderNccTrip(preserveScroll = false) {
                     let sheetUrl = 'https://docs.google.com/spreadsheets/d/' + r.sheetId + '/edit';
                     const gidVal = r.tabGid || '0';
                     sheetUrl += '#gid=' + gidVal + '&range=A' + r.sourceRow;
-                    const linkColor = r.isAllSheet ? 'var(--accent)' : '#f39c12';
-                    const titleSuffix = r.isAllSheet ? '' : ' (Chuyến lệch lấy từ file phụ NCC)';
+                    const linkColor = r.isDuplicate ? '#f39c12' : 'var(--accent)';
+                    const titleSuffix = r.isDuplicate ? ' (CẢNH BÁO: Bị nhập trùng lặp y đúc trong file Tổng hợp)' : '';
                     return '<a href="' + sheetUrl + '" target="_blank" style="color:' + linkColor + ';text-decoration:underline;cursor:pointer;" title="Mở ' + escapeHtml(r.ncc) + ' → ' + escapeHtml(r.tabName || 'THCP') + ' → Dòng ' + r.sourceRow + titleSuffix + '">' + escapeHtml(r.dateStr) + '</a>';
                 })() : escapeHtml(r.dateStr)}</td>
                 <td>${escapeHtml(r.ncc)}</td>

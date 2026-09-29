@@ -4468,10 +4468,21 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
 
         const stt = (row[0] || '').toString().trim();
         let dateStr = (row[colDate] || '').toString().trim();
-        // ★ Chuẩn hóa ngày thành DD/MM/YYYY (pad số 0 đầu nếu thiếu: 7/9/2026 → 07/09/2026)
+        // ★ Chuẩn hóa ngày thành DD/MM/YYYY và sửa lỗi gõ nhầm M/D/YYYY
         const _dp = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
         if (_dp) {
-            dateStr = _dp[1].padStart(2, '0') + '/' + _dp[2].padStart(2, '0') + '/' + _dp[3];
+            let d = parseInt(_dp[1], 10);
+            let m = parseInt(_dp[2], 10);
+            let y = parseInt(_dp[3], 10);
+            
+            // Nếu tháng > 12 (VD: 8/26/2026) -> chắc chắn lộn
+            // Hoặc nếu tháng < 8 (tháng 1, 2..) nhưng 'ngày' lại là 8, 9, 10 -> lộn MM/DD
+            if (m > 12 || (m < 8 && (d === 8 || d === 9 || d === 10))) {
+                let temp = d;
+                d = m;
+                m = temp;
+            }
+            dateStr = d.toString().padStart(2, '0') + '/' + m.toString().padStart(2, '0') + '/' + y.toString();
         }
         let plate = (row[colPlate] || '').toString().trim();
         let actualNcc = nccName;

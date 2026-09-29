@@ -4327,8 +4327,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             const row = rawData[i];
             if (!row) continue;
             for (let ci = 12; ci <= 16; ci++) {
-                const v1 = parseFloat((row[ci] || '').toString().replace(/[^\d.]/g, ''));
-                const v2 = parseFloat((row[ci+1] || '').toString().replace(/[^\d.]/g, ''));
+                const v1 = parseFloat((row[ci] || '').toString().replace(/[^\d]/g, ''));
+                const v2 = parseFloat((row[ci+1] || '').toString().replace(/[^\d]/g, ''));
                 // KM vào ca và KM ra ca phải > 1000 và gần nhau (chênh < 500)
                 if (v1 > 1000 && v2 > 1000 && Math.abs(v2 - v1) < 500) {
                     colKmStart = ci;
@@ -4341,15 +4341,18 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         }
     }
     // Final fallback
-    if (colKmStart === -1) colKmStart = 14;
-    if (colKmEnd === -1) colKmEnd = 15;
-    if (colKmDiff === -1) colKmDiff = 16;
+    
+    const isMonth9 = sheetLabel === 'Tháng 9';
+    if (colKmStart === -1) colKmStart = isMonth9 ? 13 : 14;
+    if (colKmEnd === -1) colKmEnd = isMonth9 ? 14 : 15;
+    if (colKmDiff === -1) colKmDiff = isMonth9 ? 15 : 16;
+    if (colKmOver === -1) colKmOver = isMonth9 ? 16 : 17;
+    if (colKmOverFee === -1) colKmOverFee = isMonth9 ? 18 : 19;
+    
+    if (colOtHours === -1) colOtHours = 10;
+    if (colOtRate === -1) colOtRate = 11;
+    if (colOtFee === -1) colOtFee = 12;
 
-      if (colOtHours === -1) colOtHours = 10;
-      if (colOtRate === -1) colOtRate = 11;
-      if (colOtFee === -1) colOtFee = 12;
-      if (colKmOverFee === -1) colKmOverFee = 18;
-      if (colKmOver === -1) colKmOver = 16;
       
       // Fallback cho Tổng chi phí nếu chưa tìm thấy
       if (colTotalCost === -1) {
@@ -5680,7 +5683,7 @@ function renderNccTrip(preserveScroll = false) {
     html += '<th style="max-width:120px; width:120px;">Lộ trình</th>';
     html += '<th style="text-align:right">KM Đi (Vào)</th>';
     html += '<th style="text-align:right">KM Về (Ra)</th>';
-    html += '<th style="text-align:right">KM phát sinh</th>';
+    html += '<th style="text-align:right" title="Số KM chạy/ ngày">Số KM chạy/ngày</th>';
     html += '<th style="text-align:right">Phí vượt KM</th>';
     html += '<th>Giờ đi - về</th>';
     html += '<th>TG Tăng ca</th>';
@@ -5934,7 +5937,7 @@ function exportNccTripExcel() {
           "Lộ trình": r.route,
           "KM đi(vào)": formatEmpty(r.kmStart),
           "KM về(ra)": formatEmpty(r.kmEnd),
-          "KM phát sinh": formatEmpty(r.kmDiff),
+          "Số KM chạy/ ngày": formatEmpty(r.kmDiff),
           "Phí vượt KM": formatEmpty(r.kmOverFee),
           "Giờ đi - về": (r.hourStart && r.hourEnd) ? (r.hourStart + " - " + r.hourEnd) : "-",
           "TG tăng ca": formatEmpty(r.otHours),

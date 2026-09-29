@@ -5029,28 +5029,8 @@ async function loadNccTripData() {
                             if (parsed.length > 0) {
                                 for (const record of parsed) {
                                     record.id = `${normalizeStr(record.dateStr)}_${normalizeStr(record.plate)}_${normalizeStr(record.ncc)}`;
-                                    const normDate = normalizeStr(record.dateStr);
-                                    const normNcc = normalizeStr(record.ncc);
-                                    const normTab = normalizeStr(record.tabName || record.vehicleCode || '');
-                                    const normPlate = normalizeStr(record.plate);
-
-                                    // Match lỏng: date + plate + ncc
-                                    const existingIdx = allNccData.findIndex(r =>
-                                        normalizeStr(r.dateStr) === normDate &&
-                                        normalizeStr(r.plate) === normPlate &&
-                                        normalizeStr(r.ncc) === normNcc
-                                    );
-
-                                    if (existingIdx !== -1) {
-                                        const existing = allNccData[existingIdx];
-                                        if (!existing.isAllSheet) {
-                                            allNccData[existingIdx] = record; // Chỉ ghi đè nếu bản ghi cũ KHÔNG phải từ file Tổng hợp
-                                        }
-                                        // Nếu đã có từ ALL sheet → bỏ qua, không thêm mới
-                                    } else {
-                                        allNccData.push(record);
-                                        newRecordsToArchive.push(record);
-                                    }
+                                    // Không xóa chuyến thứ 2 trong ngày của cùng một xe (để hiển thị đủ 100% chuyến như file gốc)
+                                    allNccData.push(record);
                                 }
                                 totalTabs++;
                                 totalRows += parsed.length;

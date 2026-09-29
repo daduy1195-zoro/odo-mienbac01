@@ -817,18 +817,7 @@ const CONFIG = {
         // THCP Tổng hợp Tháng 8
         { id: '1Ls3_WDZBzEXfNu2vJOPJI18kKQbvyZIkLPtAYJUngqk', gid: '', ncc: 'ALL', label: 'Tháng 8' },
         // THCP Tổng hợp Tháng 9
-        { id: '1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78', gid: '14915787', ncc: 'ALL', label: 'Tháng 9' },
-        { id: '1ZT_OPLSxOEWiy96YE-snqE-t3tX2T3EhkjDbk9Oll90', gid: '45442280', ncc: 'NAK' },
-        { id: '1ZT_OPLSxOEWiy96YE-snqE-t3tX2T3EhkjDbk9Oll90', gid: '1620536867', ncc: 'NAK' },
-        { id: '16jiK-hQ-xOrs9kxmJF6CXQ1HANy0zAlDyQM2q7mOtOg', gid: '73639881', ncc: 'Thiên Phú' },
-        { id: '1aMz8LLOo9wm2KrDgEXk6xOKMN8wUrfCDco7pOM6t2Qs', gid: '679483124', ncc: 'Duy Phát' },
-        { id: '1E8T_mJBy14qmTPT4k64zxVThjDNNoxEfzuynbuONCBg', gid: '679483124', ncc: 'Hoàng Minh' },
-        { id: '1ZjxQD5Hh3nW7zxg4DCeWRfe704zoaD4gAcA5_hQFqQA', gid: '1620536867', ncc: 'Hoa Vinh' },
-        { id: '1Q0idCOo-S-8XzmNWsw-4r51Kjsxsj0OxgP9D2ApCwxc', gid: '1290293725', ncc: 'Long Thành' },
-        { id: '1Q0idCOo-S-8XzmNWsw-4r51Kjsxsj0OxgP9D2ApCwxc', gid: '1620536867', ncc: 'Long Thành' },
-        { id: '1yqf8Bg6Tmq4v-qOzdpY9G4Y1OEnhQ5e7OURq017SiZI', gid: '2147444878', ncc: 'Đạo Trường An' },
-        { id: '1T6Hj-tcabvxLARvF7YyUUI05SHpQmvcfjik_yPp4Mls', gid: '1012425134', ncc: 'TAL' },
-        { id: '1aa_3Nwi0Z-SlGi-jZs1cNkU0v3Yt6p_9Fc4lr_oA5vY', gid: '942983334', ncc: 'Đại Minh' },
+        { id: '1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78', gid: '14915787', ncc: 'ALL', label: 'Tháng 9' }
     ],
 
     // Telegram Proxy (token ẩn trên server Google Apps Script)
@@ -4844,112 +4833,13 @@ async function loadNccTripData() {
     try {
         const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
 
-        // ★ Bước 0: Load NCC trip raw data từ Archive Sheet (fallback khi live sheets bị chặn)
+        // Không load từ Archive ncc_trips_raw nữa vì giờ chỉ lấy từ file Tổng hợp (ALL sheet)
         let allNccData = [];
-    window.rawSheetTrips = {};
-        try {
-            const archiveNccRaw = await fetchSheetByNameJSONP(CONFIG.ARCHIVE_SHEET_ID, 'ncc_trips_raw');
-            if (archiveNccRaw.length > 0) {
-                console.log(`📦 Archive NCC Trips raw: ${archiveNccRaw.length} rows`);
-                // Nhóm data theo _ncc + _tab_name (2 cột cuối)
-                const tabGroups = {};
-                archiveNccRaw.forEach(r => {
-                    if (r.length > 0 && (r[r.length - 1] === '_tab_gid' || r[r.length - 1] === '_source_row')) return;
-                    
-                    let ncc, tabName, tabGid, sourceRow, gRowsData;
-                    
-                    if (/^\d+$/.test((r[r.length - 2] || '').toString().trim())) {
-                        ncc = (r[r.length - 4] || '').toString().trim();
-                        tabName = (r[r.length - 3] || '').toString().trim();
-                        tabGid = (r[r.length - 2] || '').toString().trim();
-                        sourceRow = parseInt((r[r.length - 1] || '').toString().trim()) || 0;
-                        gRowsData = r.slice(0, r.length - 4);
-                    } else {
-                        ncc = (r[r.length - 3] || '').toString().trim();
-                        tabName = (r[r.length - 2] || '').toString().trim();
-                        tabGid = (r[r.length - 1] || '').toString().trim();
-                        sourceRow = 0;
-                        gRowsData = r.slice(0, r.length - 3);
-                    }
-                    
-                    if (!ncc) return;
-                    const key = ncc + '|' + tabName;
-                    if (!tabGroups[key]) tabGroups[key] = { ncc, tabName, tabGid, rows: [], sourceRows: [] };
-                    tabGroups[key].rows.push(gRowsData);
-                    tabGroups[key].sourceRows.push(sourceRow);
-                });
-                // Parse mỗi tab group
-                const ghnTripMapEmpty = new Map(); // Sẽ fill sau
-                for (const key in tabGroups) {
-                    const g = tabGroups[key];
-                    try {
-                        const parsed = parseNccTabData(g.rows, g.ncc, ghnTripMapEmpty, '', g.tabName, g.tabGid, g.sourceRows, globalUsedCodes);
-                        if (parsed.length > 0) {
-                            for (const record of parsed) {
-                                record.id = `${normalizeStr(record.dateStr)}_${normalizeStr(record.plate)}_${normalizeStr(record.ncc)}`;
-                                allNccData.push(record);
-                            }
-                        }
-                    } catch(e) { console.error("Error:", e); }
-                }
-                console.log(`✅ Archive NCC Trips parsed: ${allNccData.length} chuyến`);
-            }
-        } catch(e) {
-            console.warn('⚠️ Archive NCC Trips load failed:', e.message);
-        }
+        window.rawSheetTrips = {};
         
-        // Lọc trùng (Deduplicate) thông minh:
-        // Nếu cùng 1 ngày, 1 xe, 1 NCC mà có dữ liệu từ file ALL và file lẻ -> Chỉ lấy của file ALL, vứt file lẻ.
-        // Giữ lại TẤT CẢ các chuyến của file được chọn (vì 1 xe có thể chạy 2 chuyến/ngày).
-        const groupMap = new Map();
-        allNccData.forEach(r => {
-            const key = `${normalizeStr(r.dateStr)}_${normalizeStr(r.plate)}_${normalizeStr(r.ncc)}`;
-            if (!groupMap.has(key)) groupMap.set(key, []);
-            groupMap.get(key).push(r);
-        });
 
-        allNccData = [];
-        groupMap.forEach(trips => {
-            const hasAllSheet = trips.some(t => t.isAllSheet);
-            if (hasAllSheet) {
-                allNccData.push(...trips.filter(t => t.isAllSheet));
-            } else {
-                allNccData.push(...trips);
-            }
-        });
-
-        allNccData.forEach(r => {
-            if (r.dateStr && String(r.dateStr).includes('T') && String(r.dateStr).endsWith('Z')) {
-                const d = new Date(r.dateStr);
-                r.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-            }
-            // ★ Chuẩn hóa ngày DD/MM/YYYY (pad số 0: 7/9/2026 → 07/09/2026)
-            if (r.dateStr) {
-                const dp = String(r.dateStr).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-                if (dp) r.dateStr = dp[1].padStart(2, '0') + '/' + dp[2].padStart(2, '0') + '/' + dp[3];
-            }
-            if (r.plate) r.plate = String(r.plate);
-            
-            // Phục hồi giờ cho NCC Trips
-            ['hourStart', 'hourEnd'].forEach(field => {
-                if (r[field]) {
-                    const strVal = String(r[field]);
-                    if (strVal.includes('T') && strVal.endsWith('Z')) {
-                        const d = new Date(strVal);
-                        r[field] = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                    } else if (typeof r[field] === 'number') {
-                        const totalMins = Math.round(r[field] * 24 * 60);
-                        const h = Math.floor(totalMins / 60);
-                        const m = totalMins % 60;
-                        r[field] = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                    } else {
-                        r[field] = strVal;
-                    }
-                }
-            });
-        });
         
-        let newRecordsToArchive = [];
+
         
         // Build GHN trips map: normalize(plate) + dateStr → tripCode
         const ghnTripMap = new Map();
@@ -5160,11 +5050,7 @@ async function loadNccTripData() {
             }
         }
         
-        // Lưu data mới vào Archive (chạy ngầm, không block UI)
-        if (newRecordsToArchive.length > 0) {
-            console.log(`📤 Đang lưu ${newRecordsToArchive.length} chuyến NCC mới vào Archive...`);
-            saveToArchive('ncc_trips_raw', newRecordsToArchive);
-        }
+
         
         // === DEDUP: Loai bo ban ghi trung 100% (cung ngay, xe, NCC, lo trinh, gio) ===
         {

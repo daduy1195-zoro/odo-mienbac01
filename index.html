@@ -4300,9 +4300,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     if (nccName === 'ALL') {
         const isMonth9 = (colDate === 1) || (rawData[headerRowIdx > -1 ? headerRowIdx : 0] && rawData[headerRowIdx > -1 ? headerRowIdx : 0][1] && rawData[headerRowIdx > -1 ? headerRowIdx : 0][1].toString().toLowerCase().includes('ngày'));
         if (isMonth9) {
-            colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 5; colNcc = 0;
-            colOtHours = 10; colOtRate = 11; colOtFee = 12;
-            colKmStart = 14; colKmEnd = 15; colKmDiff = 16; colKmOver = 17; colKmOverFee = 18;
+            colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 4; colNcc = 0;
+            colOtHours = 9; colOtRate = 10; colOtFee = 11;
+            colKmStart = 13; colKmEnd = 14; colKmDiff = 15; colKmOver = 16; colKmOverFee = 18;
             colMonthlyRate = 19; colDailyRate = 20; colTollFee = 21; colHolidayFee = 22; colTotalCost = 23;
             colKho = 26; colGhnTrip = 27; colGhnNote = 28;
         } else {
@@ -4468,20 +4468,29 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
 
         const stt = (row[0] || '').toString().trim();
         let dateStr = (row[colDate] || '').toString().trim();
-        // ★ Chuẩn hóa ngày thành DD/MM/YYYY và sửa lỗi gõ nhầm M/D/YYYY
+        // ★ Chuẩn hóa ngày thành DD/MM/YYYY và sửa lỗi gõ nhầm M/D/YYYY (tự động đảo ngược nếu lọt vào chu kỳ)
         const _dp = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
         if (_dp) {
             let d = parseInt(_dp[1], 10);
             let m = parseInt(_dp[2], 10);
             let y = parseInt(_dp[3], 10);
             
-            // Nếu tháng > 12 (VD: 8/26/2026) -> chắc chắn lộn
-            // Hoặc nếu tháng < 8 (tháng 1, 2..) nhưng 'ngày' lại là 8, 9, 10 -> lộn MM/DD
-            if (m > 12 || (m < 8 && (d === 8 || d === 9 || d === 10))) {
-                let temp = d;
-                d = m;
-                m = temp;
+            const isInsideCycle = (dd, mm, yy) => {
+                if (yy !== 2026) return false;
+                if (mm === 8 && dd >= 26) return true;
+                if (mm === 9 && dd <= 25) return true;
+                return false;
+            };
+            
+            // Nếu tháng > 12 -> chắc chắn lộn
+            if (m > 12) {
+                let temp = d; d = m; m = temp;
+            } 
+            // Nếu ngày hiện tại nằm ngoài chu kỳ, nhưng nếu đảo ngược lại thì nằm đúng trong chu kỳ -> Chắc chắn kế toán gõ ngược M/D
+            else if (!isInsideCycle(d, m, y) && isInsideCycle(m, d, y)) {
+                let temp = d; d = m; m = temp;
             }
+            
             dateStr = d.toString().padStart(2, '0') + '/' + m.toString().padStart(2, '0') + '/' + y.toString();
         }
         let plate = (row[colPlate] || '').toString().trim();

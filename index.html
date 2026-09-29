@@ -5111,14 +5111,10 @@ async function loadNccTripData() {
                                     const existingIdx = allNccData.findIndex(r => r.finalKey === record.finalKey);
 
                                     if (existingIdx !== -1) {
-                                        // Preserve THCP sourceRow/sheetId so link points to master sheet
                                         const existing = allNccData[existingIdx];
-                                        if (existing.isAllSheet) {
-                                            record.sourceRow = existing.sourceRow;
-                                            record.sheetId = existing.sheetId;
-                                            record.isAllSheet = true;
+                                        if (!existing.isAllSheet) {
+                                            allNccData[existingIdx] = record; // Chỉ ghi đè nếu bản ghi cũ KHÔNG phải từ file Tổng hợp
                                         }
-                                        allNccData[existingIdx] = record; // ★ Ghi đè bản ghi cũ bằng bản ghi tươi từ Sheet!
                                     } else {
                                         allNccData.push(record);
                                         newRecordsToArchive.push(record);

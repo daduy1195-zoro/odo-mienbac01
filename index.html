@@ -4482,7 +4482,12 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         }
 
         const stt = (row[0] || '').toString().trim();
-        const dateStr = (row[colDate] || '').toString().trim();
+        let dateStr = (row[colDate] || '').toString().trim();
+        // ★ Chuẩn hóa ngày thành DD/MM/YYYY (pad số 0 đầu nếu thiếu: 7/9/2026 → 07/09/2026)
+        const _dp = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (_dp) {
+            dateStr = _dp[1].padStart(2, '0') + '/' + _dp[2].padStart(2, '0') + '/' + _dp[3];
+        }
         let plate = (row[colPlate] || '').toString().trim();
         let actualNcc = nccName;
         if (colNcc > -1 && row[colNcc]) actualNcc = normalizeSupplierName(row[colNcc].toString().trim());
@@ -4917,6 +4922,11 @@ async function loadNccTripData() {
             if (r.dateStr && String(r.dateStr).includes('T') && String(r.dateStr).endsWith('Z')) {
                 const d = new Date(r.dateStr);
                 r.dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+            }
+            // ★ Chuẩn hóa ngày DD/MM/YYYY (pad số 0: 7/9/2026 → 07/09/2026)
+            if (r.dateStr) {
+                const dp = String(r.dateStr).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                if (dp) r.dateStr = dp[1].padStart(2, '0') + '/' + dp[2].padStart(2, '0') + '/' + dp[3];
             }
             if (r.plate) r.plate = String(r.plate);
             

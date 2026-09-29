@@ -4392,25 +4392,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         }
     }
     
-    // ★ Fix: Tự động căn chỉnh các cột tài chính dựa trên vị trí của Total Cost
-    // Form chuẩn của THCP: ... | Phí vượt KM | Phí cầu đường | Phí ngày lễ | Giá tháng | Giá ngày | ... | Tổng chi phí
-    const isStandardNcc = ["Đại Minh", "Duy Phát", "Hoàng Minh", "Thiên Phú", "Đạo Trường An", "NAK", "Hoa Vinh", "Long Thành", "TAL"].includes(nccName) || ["942983334", "679483124", "2147444878", "73639881", "1620536867", "1290293725", "45442280", "1012425134"].includes(tabGid);
-    if (colTotalCost > 0 && !isStandardNcc) {
-        // Luôn neo Giá ngày và Giá tháng theo Tổng chi phí
-        colDailyRate = colTotalCost - 3;
-        colMonthlyRate = colTotalCost - 4;
-        
-        // Tránh việc Phí vượt KM, Cầu đường bị đè vào Giá tháng (gây ra lỗi kmOverFee = 35 triệu)
-        if (colKmOverFee === colMonthlyRate || colKmOverFee === colDailyRate || colKmOverFee > colMonthlyRate) {
-            colKmOverFee = colMonthlyRate - 3;
-        }
-        if (colHolidayFee === colMonthlyRate || colHolidayFee === colDailyRate || colHolidayFee > colMonthlyRate) {
-            colHolidayFee = colMonthlyRate - 1;
-        }
-        if (colTollFee === colMonthlyRate || colTollFee === colDailyRate || colTollFee > colMonthlyRate) {
-            colTollFee = colMonthlyRate - 2;
-        }
-    }
+
     
     console.log(`📊 ${nccName} [${tabName}] cols: otHours=${colOtHours}, otRate=${colOtRate}, otFee=${colOtFee}, kmOver=${colKmOver}, kmOverFee=${colKmOverFee}, monthly=${colMonthlyRate}, daily=${colDailyRate}, toll=${colTollFee}, holiday=${colHolidayFee}, total=${colTotalCost}, kho=${colKho}`);
     
@@ -4701,20 +4683,22 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             console.log("Row 0 value for totalCost:", totalCost);
         }
 
-        // 1. Nếu dailyRate rỗng nhưng col 21 chứa Đơn giá ngày (300k - 5M), chuyển sang dailyRate
-        const dVal = parseVietnameseNumber(dailyRate);
-        const c21Val = parseVietnameseNumber(row[21]);
-        if ((dVal === 0 || dVal < 300000) && c21Val > 300000 && c21Val < 5000000) {
-            dailyRate = row[21];
-            tollFee = (row[22] && row[22] !== row[21]) ? row[22] : '';
-        }
+        if (nccName !== 'ALL') {
+            // 1. Nếu dailyRate rỗng nhưng col 21 chứa Đơn giá ngày (300k - 5M), chuyển sang dailyRate
+            const dVal = parseVietnameseNumber(dailyRate);
+            const c21Val = parseVietnameseNumber(row[21]);
+            if ((dVal === 0 || dVal < 300000) && c21Val > 300000 && c21Val < 5000000) {
+                dailyRate = row[21];
+                tollFee = (row[22] && row[22] !== row[21]) ? row[22] : '';
+            }
 
-        // 2. Nếu dailyRate chứa số tiền tháng (> 5M) và monthlyRate rỗng/bé, đảo lại đúng vị trí
-        const mVal = parseVietnameseNumber(monthlyRate);
-        const dValCheck = parseVietnameseNumber(dailyRate);
-        if (dValCheck > 5000000 && (mVal === 0 || mVal < 2000000)) {
-            monthlyRate = dailyRate;
-            dailyRate = row[21] || '';
+            // 2. Nếu dailyRate chứa số tiền tháng (> 5M) và monthlyRate rỗng/bé, đảo lại đúng vị trí
+            const mVal = parseVietnameseNumber(monthlyRate);
+            const dValCheck = parseVietnameseNumber(dailyRate);
+            if (dValCheck > 5000000 && (mVal === 0 || mVal < 2000000)) {
+                monthlyRate = dailyRate;
+                dailyRate = row[21] || '';
+            }
         }
 
         // 3. Xóa bỏ trùng lặp Phí cầu đường (nếu bằng Đơn giá ngày hoặc Tổng chi phí)

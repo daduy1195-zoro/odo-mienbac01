@@ -4342,7 +4342,8 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     }
     // Final fallback
     
-    const isMonth9 = sheetLabel === 'Tháng 9';
+    const sheetConfig = CONFIG.NCC_TRIP_SHEETS.find(s => s.id === sheetId);
+    const isMonth9 = sheetConfig && sheetConfig.label === 'Tháng 9';
     if (colKmStart === -1) colKmStart = isMonth9 ? 13 : 14;
     if (colKmEnd === -1) colKmEnd = isMonth9 ? 14 : 15;
     if (colKmDiff === -1) colKmDiff = isMonth9 ? 15 : 16;

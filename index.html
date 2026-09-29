@@ -5024,9 +5024,17 @@ async function loadNccTripData() {
                 window.rawSheetTrips[sheet.id].push(...parsed);
                     const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
                     parsed.forEach(record => {
-                        const existingIdx = allNccData.findIndex(r => r.finalKey === record.finalKey);
+                        // Match lỏng: date + plate + ncc (không dùng finalKey vì archive records có key cũ)
+                        const rDate = normalizeStr(record.dateStr);
+                        const rPlate = normalizeStr(record.plate);
+                        const rNcc = normalizeStr(record.ncc);
+                        const existingIdx = allNccData.findIndex(r =>
+                            normalizeStr(r.dateStr) === rDate &&
+                            normalizeStr(r.plate) === rPlate &&
+                            normalizeStr(r.ncc) === rNcc
+                        );
                         if (existingIdx !== -1) {
-                            allNccData[existingIdx] = record;
+                            allNccData[existingIdx] = record; // Ghi đè bằng data tươi từ ALL sheet
                         } else {
                             allNccData.push(record);
                         }
@@ -5061,7 +5069,9 @@ async function loadNccTripData() {
                     if (normalizeStr(r.plate) === normPlate) return true;
                     return false;
                 });
-                if (existingIdx !== -1) allNccData[existingIdx] = record;
+                if (existingIdx !== -1) {
+                    if (!allNccData[existingIdx].isAllSheet) allNccData[existingIdx] = record;
+                }
                 else allNccData.push(record);
             });
                     totalTabs++;
@@ -5108,13 +5118,19 @@ async function loadNccTripData() {
                                     const normTab = normalizeStr(record.tabName || record.vehicleCode || '');
                                     const normPlate = normalizeStr(record.plate);
 
-                                    const existingIdx = allNccData.findIndex(r => r.finalKey === record.finalKey);
+                                    // Match lỏng: date + plate + ncc
+                                    const existingIdx = allNccData.findIndex(r =>
+                                        normalizeStr(r.dateStr) === normDate &&
+                                        normalizeStr(r.plate) === normPlate &&
+                                        normalizeStr(r.ncc) === normNcc
+                                    );
 
                                     if (existingIdx !== -1) {
                                         const existing = allNccData[existingIdx];
                                         if (!existing.isAllSheet) {
                                             allNccData[existingIdx] = record; // Chỉ ghi đè nếu bản ghi cũ KHÔNG phải từ file Tổng hợp
                                         }
+                                        // Nếu đã có từ ALL sheet → bỏ qua, không thêm mới
                                     } else {
                                         allNccData.push(record);
                                         newRecordsToArchive.push(record);

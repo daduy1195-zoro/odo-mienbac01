@@ -4300,9 +4300,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     if (nccName === 'ALL') {
         const isMonth9 = (colDate === 1) || (rawData[headerRowIdx > -1 ? headerRowIdx : 0] && rawData[headerRowIdx > -1 ? headerRowIdx : 0][1] && rawData[headerRowIdx > -1 ? headerRowIdx : 0][1].toString().toLowerCase().includes('ngày'));
         if (isMonth9) {
-            colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 4; colNcc = 0;
-            colOtHours = 9; colOtRate = 10; colOtFee = 11;
-            colKmStart = 13; colKmEnd = 14; colKmDiff = 15; colKmOver = 16; colKmOverFee = 18;
+            colDate = 1; colPlate = 2; colVehicle = 3; colRoute = 5; colNcc = 0;
+            colOtHours = 10; colOtRate = 11; colOtFee = 12;
+            colKmStart = 14; colKmEnd = 15; colKmDiff = 16; colKmOver = 17; colKmOverFee = 18;
             colMonthlyRate = 19; colDailyRate = 20; colTollFee = 21; colHolidayFee = 22; colTotalCost = 23;
             colKho = 26; colGhnTrip = 27; colGhnNote = 28;
         } else {

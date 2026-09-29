@@ -1470,7 +1470,7 @@ async function loadNccData() {
         const data = pivotMap.get(key);
 
         const tong = parseVietnameseNumber(r.totalCost);
-        const km = parseVietnameseNumber(r.kmOver);
+        const km = parseVietnameseNumber(r.kmDiff);
         const phiKm = parseVietnameseNumber(r.kmOverFee);
         const tgOt = parseVietnameseNumber(r.otHours);
         const phiOt = parseVietnameseNumber(r.otFee);
@@ -1510,7 +1510,7 @@ function renderNcc(pivotData) {
                 '<th>NCC</th>\n' +
                 '<th>Biển số xe</th>\n' +
                 '<th style="text-align:right;color:var(--accent);">Tổng chi phí<br>(trước thuế)</th>\n' +
-                '<th style="text-align:right;color:var(--accent);">Số KM phát sinh</th>\n' +
+                '<th style="text-align:right;color:var(--accent);">Số KM chạy/ ngày</th>\n' +
                 '<th style="text-align:right;color:var(--accent);">Phí vượt KM</th>\n' +
                 '<th style="text-align:right;color:var(--accent);">TG tăng ca<br>(h)</th>\n' +
                 '<th style="text-align:right;color:var(--accent);">Phí tăng ca</th>\n' +

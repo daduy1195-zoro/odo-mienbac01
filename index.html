@@ -4640,11 +4640,15 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         // Tự động tính Số KM chạy = ODO Về - ODO Đi để đảm bảo chính xác 100% dù bị sai cột
         const pKmStart = parseVietnameseNumber(kmStart);
         const pKmEnd = parseVietnameseNumber(kmEnd);
-        if (pKmStart > 0 && pKmEnd >= pKmStart) {
-            kmDiff = Math.round(pKmEnd - pKmStart).toString();
-        } else if (parseVietnameseNumber(kmDiff) > 3000) {
-            // Sanity check: Nếu KM chạy/ngày > 3000km thì chắc chắn là đọc nhầm cột ODO tổng, set về rỗng để báo lỗi
-            kmDiff = 'Lỗi Data';
+        const parsedKmDiff = parseVietnameseNumber(kmDiff);
+        if (!kmDiff || parsedKmDiff <= 0 || parsedKmDiff > 3000) {
+            if (pKmStart > 0 && pKmEnd >= pKmStart) {
+                let diff = pKmEnd - pKmStart;
+                if (diff > 0 && diff < 10) diff = diff * 1000;
+                kmDiff = Math.round(diff).toString();
+            } else if (parsedKmDiff > 3000) {
+                kmDiff = 'Lỗi Data';
+            }
         }
         
         // Ghép mã chuyến GHN

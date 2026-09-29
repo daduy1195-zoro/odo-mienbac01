@@ -4926,23 +4926,7 @@ async function loadNccTripData() {
                     const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, '', sheet.gid, undefined, globalUsedCodes);
                 if (!window.rawSheetTrips[sheet.id]) window.rawSheetTrips[sheet.id] = [];
                 window.rawSheetTrips[sheet.id].push(...parsed);
-                    const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
-                    parsed.forEach(record => {
-                        // Match lỏng: date + plate + ncc (không dùng finalKey vì archive records có key cũ)
-                        const rDate = normalizeStr(record.dateStr);
-                        const rPlate = normalizeStr(record.plate);
-                        const rNcc = normalizeStr(record.ncc);
-                        const existingIdx = allNccData.findIndex(r =>
-                            normalizeStr(r.dateStr) === rDate &&
-                            normalizeStr(r.plate) === rPlate &&
-                            normalizeStr(r.ncc) === rNcc
-                        );
-                        if (existingIdx !== -1) {
-                            allNccData[existingIdx] = record; // Ghi đè bằng data tươi từ ALL sheet
-                        } else {
-                            allNccData.push(record);
-                        }
-                    });
+                    allNccData.push(...parsed);
                     totalTabs++;
                     totalRows += parsed.length;
                     continue;
@@ -4960,24 +4944,7 @@ async function loadNccTripData() {
                     const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, '', sheet.gid, undefined, globalUsedCodes);
                 if (!window.rawSheetTrips[sheet.id]) window.rawSheetTrips[sheet.id] = [];
                 window.rawSheetTrips[sheet.id].push(...parsed);
-                    const normalizeStr = s => s ? String(s).trim().toLowerCase().replace(/[-\s\.]/g, '') : '';
-            parsed.forEach(record => {
-                const normPlate = normalizeStr(record.plate);
-                const normNcc = normalizeStr(record.ncc);
-                const normDate = normalizeStr(record.dateStr);
-                const normTab = normalizeStr(record.tabName || record.vehicleCode || '');
-                const existingIdx = allNccData.findIndex(r => {
-                    if (normalizeStr(r.ncc) !== normNcc || normalizeStr(r.dateStr) !== normDate) return false;
-                    const rTab = normalizeStr(r.tabName || r.vehicleCode || '');
-                    if (normTab && rTab && (normTab === rTab || normTab.includes(rTab) || rTab.includes(normTab))) return true;
-                    if (normalizeStr(r.plate) === normPlate) return true;
-                    return false;
-                });
-                if (existingIdx !== -1) {
-                    if (!allNccData[existingIdx].isAllSheet) allNccData[existingIdx] = record;
-                }
-                else allNccData.push(record);
-            });
+                    allNccData.push(...parsed);
                     totalTabs++;
                     totalRows += parsed.length;
                     continue;

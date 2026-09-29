@@ -813,11 +813,11 @@ const CONFIG = {
     ],
         NCC_TRIP_SHEETS: [
         // THCP Tổng hợp 3 kỳ 4 tỉnh (26/4 - 25/7)
-        { id: '1bpahLTCIP7gUnEmn0zaQpKGxu7MS2NBVhCTxTVg_XAM', gid: '', ncc: 'ALL', label: 'Tháng 5, 6, 7' },
+        { id: '1bpahLTCIP7gUnEmn0zaQpKGxu7MS2NBVhCTxTVg_XAM', gid: '', ncc: 'ALL', label: 'Tháng 5, 6, 7', cycles: ['2026-06', '2026-05', '2026-04'] },
         // THCP Tổng hợp Tháng 8
-        { id: '1Ls3_WDZBzEXfNu2vJOPJI18kKQbvyZIkLPtAYJUngqk', gid: '', ncc: 'ALL', label: 'Tháng 8' },
+        { id: '1Ls3_WDZBzEXfNu2vJOPJI18kKQbvyZIkLPtAYJUngqk', gid: '', ncc: 'ALL', label: 'Tháng 8', cycles: ['2026-07'] },
         // THCP Tổng hợp Tháng 9
-        { id: '1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78', gid: '14915787', ncc: 'ALL', label: 'Tháng 9' }
+        { id: '1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78', gid: '14915787', ncc: 'ALL', label: 'Tháng 9', cycles: ['2026-08'] }
     ],
 
     // Telegram Proxy (token ẩn trên server Google Apps Script)
@@ -1294,9 +1294,11 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFilters();
         renderAll();
         loadNccData();
-        if (typeof renderNccTrip === 'function') renderNccTrip();
-        if (typeof renderLastmile === 'function') renderLastmile(true); renderNccTrip();
-        if (typeof renderRecon3Way === 'function') renderRecon3Way();
+        if (typeof loadNccTripData === 'function') loadNccTripData().then(() => {
+            if (typeof renderNccTrip === 'function') renderNccTrip();
+            if (typeof renderLastmile === 'function') renderLastmile(true);
+            if (typeof renderRecon3Way === 'function') renderRecon3Way();
+        });
     };
     window.applyFilters = applyFilters; // Expose globally for HTML onchange
 
@@ -4461,10 +4463,25 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             let m = parseInt(_dp[2], 10);
             let y = parseInt(_dp[3], 10);
             
+            const sheetConfig = typeof CONFIG !== 'undefined' && CONFIG.NCC_TRIP_SHEETS ? CONFIG.NCC_TRIP_SHEETS.find(s => s.id === sheetId) : null;
+            const sheetLabel = sheetConfig ? sheetConfig.label : '';
             const isInsideCycle = (dd, mm, yy) => {
                 if (yy !== 2026) return false;
-                if (mm === 8 && dd >= 26) return true;
-                if (mm === 9 && dd <= 25) return true;
+                if (sheetLabel === 'Tháng 9') {
+                    if (mm === 8 && dd >= 26) return true;
+                    if (mm === 9 && dd <= 25) return true;
+                } else if (sheetLabel === 'Tháng 8') {
+                    if (mm === 7 && dd >= 26) return true;
+                    if (mm === 8 && dd <= 25) return true;
+                } else if (sheetLabel === 'Tháng 5, 6, 7') {
+                    if (mm === 4 && dd >= 26) return true;
+                    if (mm >= 5 && mm <= 6) return true;
+                    if (mm === 7 && dd <= 25) return true;
+                } else {
+                    // Fallback to Month 9
+                    if (mm === 8 && dd >= 26) return true;
+                    if (mm === 9 && dd <= 25) return true;
+                }
                 return false;
             };
             
@@ -4829,7 +4846,10 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
 }
 
 async function loadNccTripData() {
-    if (isNccTripLoaded) return;
+    const currentMonth = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
+    if (isNccTripLoaded && window.currentLoadedMonth === currentMonth) return;
+    window.currentLoadedMonth = currentMonth;
+    isNccTripLoaded = false;
     
     const container = document.getElementById('nccTripContainer');
     container.innerHTML = '<div class="loading-overlay" style="position:relative;height:100px;display:flex;align-items:center;justify-content:center"><div class="spinner"></div><span style="margin-left:10px;color:var(--text-muted)">Đang tải dữ liệu lưu trữ...</span></div>';
@@ -4918,7 +4938,9 @@ async function loadNccTripData() {
         
         let totalTabs = 0, totalRows = 0;
         
-        for (const sheet of CONFIG.NCC_TRIP_SHEETS) {
+        const currentMonth = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : '';
+        const sheetsToFetch = currentMonth ? CONFIG.NCC_TRIP_SHEETS.filter(s => !s.cycles || s.cycles.includes(currentMonth)) : CONFIG.NCC_TRIP_SHEETS;
+        for (const sheet of sheetsToFetch) {
             try {
                 if (sheet.ncc === 'ALL') {
                     console.log(`⏩ Bỏ qua lấy tab name cho ALL sheet, tải trực tiếp bằng GID`);

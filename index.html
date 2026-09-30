@@ -1471,6 +1471,9 @@ async function loadNccData() {
         const tgOt = parseVietnameseNumber(r.otHours);
         const phiOt = parseVietnameseNumber(r.otFee);
         const phiCau = parseVietnameseNumber(r.tollFee);
+        const dgThang = parseVietnameseNumber(r.monthlyRate);
+        const dgNgay = parseVietnameseNumber(r.dailyRate);
+        const phiLe = parseVietnameseNumber(r.holidayFee);
         if (tgOt > 0 || phiOt > 0 || phiKm > 0 || phiCau > 0 || km > 0) {
             console.log(`💰 ${r.ncc} ${r.plate} ${r.dateStr}: totalCost=${r.totalCost}, kmOver=${r.kmOver}, kmOverFee=${r.kmOverFee}, otHours=${r.otHours}, otFee=${r.otFee}, tollFee=${r.tollFee}`);
         }
@@ -1481,6 +1484,9 @@ async function loadNccData() {
         data.thoiGianTangCa += tgOt;
         data.phiTangCa += phiOt;
         data.phiCauDuong += phiCau;
+        if (dgThang > (data.donGiaThang||0)) data.donGiaThang = dgThang;
+        if (dgNgay > (data.donGiaNgay||0)) data.donGiaNgay = dgNgay;
+        data.phiNgayLe += phiLe;
         
         hasData = true;
     });
@@ -1506,11 +1512,14 @@ function renderNcc(pivotData) {
                 '<th>NCC</th>\n' +
                 '<th>Biển số xe</th>\n' +
                 '<th style="text-align:right;color:var(--accent);">Tổng chi phí<br>(trước thuế)</th>\n' +
-                '<th style="text-align:right;color:var(--accent);">Số KM chạy/ ngày</th>\n' +
+                '<th style="text-align:right;color:var(--accent);">Đơn giá thuê<br>/tháng</th>
+                <th style="text-align:right;color:var(--accent);">Đơn giá thuê<br>/ngày</th>
+                <th style="text-align:right;color:var(--accent);">Số KM chạy/ ngày</th>\n' +
                 '<th style="text-align:right;color:var(--accent);">Phí vượt KM</th>\n' +
                 '<th style="text-align:right;color:var(--accent);">TG tăng ca<br>(h)</th>\n' +
                 '<th style="text-align:right;color:var(--accent);">Phí tăng ca</th>\n' +
                 '<th style="text-align:right;color:var(--accent);">Phí cầu đường</th>\n' +
+                '<th style="text-align:right;color:var(--accent);">Phí ngày lễ</th>\n' +
             '</tr>\n' +
         '</thead>\n' +
         '<tbody>\n';
@@ -1642,11 +1651,14 @@ function renderNcc(pivotData) {
                 '<td style="font-size:13px; font-weight:700; color:var(--text-primary);">' + escapeHtml(data.ncc) + '</td>\n' +
                 '<td style="font-family:Calibri, sans-serif; font-weight:700; font-size:15px; letter-spacing: 0.8px; color: var(--text-primary);">' + escapeHtml(data.bienSo) + '</td>\n' +
                 '<td style="text-align:right;color:' + getCostColor(data.chiPhi) + ';font-weight:700;">' + Math.round(data.chiPhi).toLocaleString('vi-VN') + ' đ</td>\n' +
-                '<td style="text-align:right;color:' + getDivergingColor(data.kmPhatSinh, parsedKhoStats[data.kho || 'Unknown'].km, parsedKhoStats[data.kho || 'Unknown'].mKm) + ';font-weight:700;">' + Math.round(data.kmPhatSinh).toLocaleString('vi-VN') + '</td>\n' +
+                '<td style="text-align:right;color:var(--text-muted);font-weight:700;">' + (data.donGiaThang > 0 ? Math.round(data.donGiaThang).toLocaleString('vi-VN') + ' đ' : '-' ) + '</td>
+                <td style="text-align:right;color:var(--text-muted);font-weight:700;">' + (data.donGiaNgay > 0 ? Math.round(data.donGiaNgay).toLocaleString('vi-VN') + ' đ' : '-' ) + '</td>
+                <td style="text-align:right;color:' + getDivergingColor(data.kmPhatSinh, parsedKhoStats[data.kho || 'Unknown'].km, parsedKhoStats[data.kho || 'Unknown'].mKm) + ';font-weight:700;">' + Math.round(data.kmPhatSinh).toLocaleString('vi-VN') + '</td>\n' +
                 '<td style="text-align:right;color:' + getDivergingColor(data.phiVuotKm, parsedKhoStats[data.kho || 'Unknown'].phiVuot, parsedKhoStats[data.kho || 'Unknown'].mPhiVuot) + ';font-weight:700;">' + Math.round(data.phiVuotKm).toLocaleString('vi-VN') + ' đ</td>\n' +
                 '<td style="text-align:right;color:' + getDivergingColor(data.thoiGianTangCa, parsedKhoStats[data.kho || 'Unknown'].tgOt, parsedKhoStats[data.kho || 'Unknown'].mTgOt) + ';font-weight:700;">' + Math.round(data.thoiGianTangCa).toLocaleString('vi-VN') + '</td>\n' +
                 '<td style="text-align:right;color:' + getDivergingColor(data.phiTangCa, parsedKhoStats[data.kho || 'Unknown'].phiOt, parsedKhoStats[data.kho || 'Unknown'].mPhiOt) + ';font-weight:700;">' + Math.round(data.phiTangCa).toLocaleString('vi-VN') + ' đ</td>\n' +
                 '<td style="text-align:right;color:' + getDivergingColor(data.phiCauDuong, parsedKhoStats[data.kho || 'Unknown'].phiCau, parsedKhoStats[data.kho || 'Unknown'].mPhiCau) + ';font-weight:700;">' + Math.round(data.phiCauDuong).toLocaleString('vi-VN') + ' đ</td>\n' +
+                '<td style="text-align:right;color:var(--text-secondary);font-weight:700;">' + (data.phiNgayLe > 0 ? Math.round(data.phiNgayLe).toLocaleString('vi-VN') + ' đ' : '-' ) + '</td>\n' +
             '</tr>\n';
     });
 

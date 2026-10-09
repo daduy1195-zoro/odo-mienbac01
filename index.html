@@ -5618,12 +5618,12 @@ function renderNccTrip(preserveScroll = false) {
         if (filterStatus === 'phat' && !isPhat) return;
         let _km = 0;
         if (row.kmDiff !== undefined && row.kmDiff !== null && String(row.kmDiff).trim() !== '') {
-            let diffVal = parseFloat(String(row.kmDiff).replace(/[^\d.]/g, ''));
+            let diffVal = parseVietnameseNumber(row.kmDiff);
             if (!isNaN(diffVal) && diffVal > 0) _km = diffVal;
         }
         if (_km === 0) {
-            let s = parseFloat(String(row.kmStart || '').replace(/[^\d.]/g, ''));
-            let e = parseFloat(String(row.kmEnd || '').replace(/[^\d.]/g, ''));
+            let s = parseVietnameseNumber(row.kmStart);
+            let e = parseVietnameseNumber(row.kmEnd);
             if (!isNaN(s) && !isNaN(e) && s > 1000 && e >= s) {
                 _km = e - s;
             } else if (!isNaN(e) && e > 0 && e < 1000) {

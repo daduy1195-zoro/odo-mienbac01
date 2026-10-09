@@ -813,7 +813,7 @@ const CONFIG = {
     ],
         NCC_TRIP_SHEETS: [
         // THCP Tổng hợp Tháng 9
-        { id: '1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78', gid: '14915787', ncc: 'ALL', label: 'Tháng 9', cycles: ['2026-08'] }
+        { id: '1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78', gid: '14915787', ncc: 'ALL', label: 'Tháng 9', cycles: ['2026-08', '2026-09'] }
     ],
 
     // Telegram Proxy (token ẩn trên server Google Apps Script)
@@ -1292,6 +1292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadNccData();
         if (typeof loadNccTripData === 'function') loadNccTripData().then(() => {
             if (typeof renderNccTrip === 'function') renderNccTrip();
+            if (typeof loadNccData === 'function') loadNccData();
             if (typeof renderLastmile === 'function') renderLastmile(true);
             if (typeof renderRecon3Way === 'function') renderRecon3Way();
         });
@@ -5086,6 +5087,7 @@ async function loadNccTripData() {
         isNccTripLoaded = true;
         rematchNccTrips();
         renderNccTrip();
+        if (typeof loadNccData === 'function') loadNccData();
         if (isLastmileLoaded && typeof renderRecon3Way === 'function') renderRecon3Way();
         showToast('✅', `Đã tải ${totalRows} chuyến live từ ${totalTabs} tabs NCC!`);
         console.log(`🏁 Tổng: ${totalRows} chuyến từ ${totalTabs} tabs`);

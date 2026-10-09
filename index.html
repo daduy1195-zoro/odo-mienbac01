@@ -1460,7 +1460,7 @@ async function loadNccData() {
                 ncc: ncc,
                 bienSo: bienSo,
                 chiPhi: 0, donGiaThang: 0, donGiaNgay: 0, kmPhatSinh: 0, phiVuotKm: 0,
-                thoiGianTangCa: 0, phiTangCa: 0, phiCauDuong: 0, phiNgayLe: 0
+                thoiGianTangCa: 0, phiTangCa: 0, phiCauDuong: 0, phiNgayLe: 0, phiKhongChay: 0, ngayKhongChay: 0
             });
         }
         
@@ -1488,6 +1488,10 @@ async function loadNccData() {
         if (dgThang > (data.donGiaThang||0)) data.donGiaThang = dgThang;
         if (dgNgay > (data.donGiaNgay||0)) data.donGiaNgay = dgNgay;
         data.phiNgayLe += phiLe;
+        if (km === 0 && tong > 0) {
+            data.phiKhongChay += tong;
+            data.ngayKhongChay += 1;
+        }
         
         hasData = true;
     });
@@ -1521,11 +1525,12 @@ function renderNcc(pivotData) {
                 '<th style="text-align:right;color:var(--accent);">Phí tăng ca</th>\n' +
                 '<th style="text-align:right;color:var(--accent);">Phí cầu đường</th>\n' +
                 '<th style="text-align:right;color:var(--accent);">Phí ngày lễ</th>\n' +
+                '<th style="text-align:right;color:var(--accent);">Không chạy<br>vẫn tính tiền</th>\n' +
             '</tr>\n' +
         '</thead>\n' +
         '<tbody>\n';
 
-    let grandTotalCost = 0, grandKm = 0, grandPhiVuot = 0, grandTgOt = 0, grandPhiOt = 0, grandPhiCau = 0;
+    let grandTotalCost = 0, grandKm = 0, grandPhiVuot = 0, grandTgOt = 0, grandPhiOt = 0, grandPhiCau = 0, grandPhiKhongChay = 0, grandPhiLe = 0;
     let minCost = Infinity, maxCost = -Infinity;
     let maxKm = 0, maxPhiVuot = 0, maxTgOt = 0, maxPhiOt = 0, maxPhiCau = 0;
 
@@ -1536,6 +1541,8 @@ function renderNcc(pivotData) {
         grandTgOt += d.thoiGianTangCa;
         grandPhiOt += d.phiTangCa;
         grandPhiCau += d.phiCauDuong;
+        grandPhiKhongChay += (d.phiKhongChay || 0);
+        grandPhiLe += (d.phiNgayLe || 0);
 
         if (d.chiPhi < minCost) minCost = d.chiPhi;
         if (d.chiPhi > maxCost) maxCost = d.chiPhi;
@@ -1628,11 +1635,15 @@ function renderNcc(pivotData) {
     html += '<tr style="background: rgba(20, 184, 166, 0.15); border-bottom: 2px solid rgba(20, 184, 166, 0.3);">' +
                 '<td colspan="3" style="font-weight: bold; color: var(--accent); font-size: 14px; text-align: center; letter-spacing: 1px;">TỔNG CỘNG</td>' +
                 '<td style="text-align:right; font-weight: bold; color:var(--text-primary); font-size: 14px;">' + Math.round(grandTotalCost).toLocaleString('vi-VN') + ' đ</td>' +
+                '<td style="text-align:right;font-weight:900;color:var(--text-secondary);">-</td>' +
+                '<td style="text-align:right;font-weight:900;color:var(--text-secondary);">-</td>' +
                 '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandKm).toLocaleString('vi-VN') + '</td>' +
                 '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiVuot).toLocaleString('vi-VN') + ' đ</td>' +
                 '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandTgOt).toLocaleString('vi-VN') + '</td>' +
                 '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiOt).toLocaleString('vi-VN') + ' đ</td>' +
                 '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + Math.round(grandPhiCau).toLocaleString('vi-VN') + ' đ</td>' +
+                '<td style="text-align:right; font-weight: bold; color:var(--text-primary);">' + (grandPhiLe > 0 ? Math.round(grandPhiLe).toLocaleString('vi-VN') + ' đ' : '-') + '</td>' +
+                '<td style="text-align:right; font-weight: bold; color:var(--danger);">' + (grandPhiKhongChay > 0 ? Math.round(grandPhiKhongChay).toLocaleString('vi-VN') + ' đ' : '-') + '</td>' +
             '</tr>\n';
 
     // Sắp xếp: Kho -> NCC -> Biển số
@@ -1660,6 +1671,7 @@ function renderNcc(pivotData) {
                 '<td style="text-align:right;color:' + getDivergingColor(data.phiTangCa, parsedKhoStats[data.kho || 'Unknown'].phiOt, parsedKhoStats[data.kho || 'Unknown'].mPhiOt) + ';font-weight:700;">' + Math.round(data.phiTangCa).toLocaleString('vi-VN') + ' đ</td>\n' +
                 '<td style="text-align:right;color:' + getDivergingColor(data.phiCauDuong, parsedKhoStats[data.kho || 'Unknown'].phiCau, parsedKhoStats[data.kho || 'Unknown'].mPhiCau) + ';font-weight:700;">' + Math.round(data.phiCauDuong).toLocaleString('vi-VN') + ' đ</td>\n' +
                 '<td style="text-align:right;color:var(--text-secondary);font-weight:700;">' + (data.phiNgayLe > 0 ? Math.round(data.phiNgayLe).toLocaleString('vi-VN') + ' đ' : '-' ) + '</td>\n' +
+                '<td style="text-align:right;color:var(--danger);font-weight:700;" title="' + (data.ngayKhongChay > 0 ? data.ngayKhongChay + ' ngày' : '') + '">' + (data.phiKhongChay > 0 ? Math.round(data.phiKhongChay).toLocaleString('vi-VN') + ' đ' : '-' ) + '</td>\n' +
             '</tr>\n';
     });
 
@@ -6506,7 +6518,7 @@ async function loadLastmileData() {
             logTitle = escapeHtml(logs.map(l => '- ' + l.time + ' (' + (l.user||'Ẩn danh') + '): ' + l.action + ' - ' + l.details).join('\n'));
         }
         html += '<td style="text-align:center; cursor:pointer;" title="' + logTitle + '">' + logHtml + '</td>';
-        html += '</tr>';
+        html += '</tr>\n';
     }
     html += '</tbody></table></div></div>';
     

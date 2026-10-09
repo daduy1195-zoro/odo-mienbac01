@@ -4667,6 +4667,10 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 let diff = pKmEnd - pKmStart;
                 if (diff > 0 && diff < 10) diff = diff * 1000;
                 kmDiff = Math.round(diff).toString();
+            } else if (!isNaN(pKmEnd) && pKmEnd > 0 && pKmEnd < 1000) {
+                kmDiff = pKmEnd.toString();
+            } else if (!isNaN(pKmStart) && pKmStart > 0 && pKmStart < 1000) {
+                kmDiff = pKmStart.toString();
             } else if (parsedKmDiff > 3000) {
                 kmDiff = 'Lỗi Data';
             }

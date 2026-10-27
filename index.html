@@ -3314,7 +3314,7 @@ function renderRanking(filtered, month, whFilter) {
                         if (isZeroDays) {
                             missingHtml = '<span style="color:var(--text-muted);font-size:12px;">—</span>';
                         } else if (e.missingDates.length > 0) {
-                            missingHtml = `<span style="color:var(--danger);font-size:12px;">${e.missingDates.join(', ')}</span>`;
+                            missingHtml = `<span style="color:var(--danger);font-size:15px;font-weight:700;">${e.missingDates.join(', ')}</span>`;
                         }
 
                         const offDaysHtml = e.offDays && e.offDays.length > 0

@@ -710,6 +710,7 @@
                 <div class="dropdown" style="display:inline-block;position:relative;">
     <button class="btn btn-outline" style="padding:6px 14px;font-size:13px;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">📋 Copy dữ liệu ▾</button>
     <div class="dropdown-content" style="display:none;position:absolute;right:0;background:var(--bg-card);min-width:160px;box-shadow:0 8px 16px rgba(0,0,0,0.5);z-index:1000;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
+        <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1GNAXAdRCwvoZ_l4TpW1JCPV6QWGzEQiYYezYnliR7Mo')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">📄 Copy Tháng 10</button>
         <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">📄 Copy Tháng 9</button>
         <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1Ls3_WDZBzEXfNu2vJOPJI18kKQbvyZIkLPtAYJUngqk')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">📄 Copy Tháng 8</button>
         <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1bpahLTCIP7gUnEmn0zaQpKGxu7MS2NBVhCTxTVg_XAM')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;">📄 Copy Tháng 5, 6, 7</button>
@@ -817,7 +818,9 @@ const CONFIG = {
         // THCP Tổng hợp Tháng 8
         { id: '1Ls3_WDZBzEXfNu2vJOPJI18kKQbvyZIkLPtAYJUngqk', gid: '', ncc: 'ALL', label: 'Tháng 8', cycles: ['2026-07'] },
         // THCP Tổng hợp Tháng 9
-        { id: '1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78', gid: '14915787', ncc: 'ALL', label: 'Tháng 9', cycles: ['2026-08', '2026-09'] }
+        { id: '1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78', gid: '14915787', ncc: 'ALL', label: 'Tháng 9', cycles: ['2026-08'] },
+        // THCP Tổng hợp Tháng 10
+        { id: '1GNAXAdRCwvoZ_l4TpW1JCPV6QWGzEQiYYezYnliR7Mo', gid: '678803836', ncc: 'ALL', label: 'Tháng 10', cycles: ['2026-09', '2026-10'] }
     ],
 
     // Telegram Proxy (token ẩn trên server Google Apps Script)
@@ -4368,7 +4371,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     // Final fallback
     
     const sheetConfig = CONFIG.NCC_TRIP_SHEETS.find(s => s.id === sheetId);
-    const isMonth9 = sheetConfig && sheetConfig.label === 'Tháng 9';
+    const isMonth9 = sheetConfig && (sheetConfig.label === 'Tháng 9' || sheetConfig.label === 'Tháng 10');
     if (colKmStart === -1) colKmStart = isMonth9 ? 13 : 14;
     if (colKmEnd === -1) colKmEnd = isMonth9 ? 14 : 15;
     if (colKmDiff === -1) colKmDiff = isMonth9 ? 15 : 16;
@@ -4486,17 +4489,21 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         const stt = (row[0] || '').toString().trim();
         let dateStr = (row[colDate] || '').toString().trim();
         // ★ Chuẩn hóa ngày thành DD/MM/YYYY và sửa lỗi gõ nhầm M/D/YYYY (tự động đảo ngược nếu lọt vào chu kỳ)
-        const _dp = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        const _dp = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4,5})$/);
         if (_dp) {
             let d = parseInt(_dp[1], 10);
             let m = parseInt(_dp[2], 10);
             let y = parseInt(_dp[3], 10);
+            if (y > 2100 && String(y).startsWith('202') && String(y).endsWith('6')) y = 2026;
             
             const sheetConfig = typeof CONFIG !== 'undefined' && CONFIG.NCC_TRIP_SHEETS ? CONFIG.NCC_TRIP_SHEETS.find(s => s.id === sheetId) : null;
             const sheetLabel = sheetConfig ? sheetConfig.label : '';
             const isInsideCycle = (dd, mm, yy) => {
                 if (yy !== 2026) return false;
-                if (sheetLabel === 'Tháng 9') {
+                if (sheetLabel === 'Tháng 10') {
+                    if (mm === 9 && dd >= 26) return true;
+                    if (mm === 10 && dd <= 25) return true;
+                } else if (sheetLabel === 'Tháng 9') {
                     if (mm === 8 && dd >= 26) return true;
                     if (mm === 9 && dd <= 25) return true;
                 } else if (sheetLabel === 'Tháng 8') {
@@ -4507,9 +4514,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                     if (mm >= 5 && mm <= 6) return true;
                     if (mm === 7 && dd <= 25) return true;
                 } else {
-                    // Fallback to Month 9
-                    if (mm === 8 && dd >= 26) return true;
-                    if (mm === 9 && dd <= 25) return true;
+                    // Fallback to Month 10
+                    if (mm === 9 && dd >= 26) return true;
+                    if (mm === 10 && dd <= 25) return true;
                 }
                 return false;
             };
@@ -4546,7 +4553,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         // Nếu không có biển số, và cũng không phải ngày nghỉ -> bỏ qua luôn
         if (!plate && !isOffByPlate) continue;
         
-        if (isOffByPlate) {
+        const plateUpperCheck = plate.toUpperCase();
+        const needInferPlate = !plate || plateUpperCheck.includes('OFF') || plateUpperCheck.includes('NGHỈ') || plateUpperCheck.includes('NGHI') || plate.length < 5;
+        if (isOffByPlate && needInferPlate) {
             let inferred = '';
             
             // Hàm quét lấy kho từ 1 dòng
@@ -4559,24 +4568,68 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                 return detectWH(rKho) || detectWH(rKho + ' ' + rRoute);
             };
 
-            // Quét lên trước (ưu tiên biển số liền trước đó)
-            for (let j = i - 1; j >= Math.max(0, i - 31); j--) {
-                if (!rawData[j] || !rawData[j][colDate > -1 ? colDate : 1] || !rawData[j][colDate > -1 ? colDate : 1].toString().match(/\d/)) continue;
-                let p = (rawData[j][colPlate > -1 ? colPlate : 2] || '').toString().trim().toUpperCase();
-                if (p && !p.includes('OFF') && !p.includes('NGHỈ') && !p.includes('NGHI') && p.length >= 6) {
-                    inferred = p;
-                    inferredWH = extractWHFromRow(rawData[j]);
-                    break;
+            const isValidPlateStr = (p) => p && !p.includes('OFF') && !p.includes('NGHỈ') && !p.includes('NGHI') && p.length >= 6;
+            const getRowNcc = (r) => (colNcc > -1 && r[colNcc]) ? normalizeSupplierName(r[colNcc].toString().trim()) : actualNcc;
+            const rowVeh = colVehicle > -1 ? (row[colVehicle] || '').toString().trim().toUpperCase() : '';
+
+            // 1. Ưu tiên khớp theo NCC + Mã số xe (VD: "Xe 24", "Xe 123") trên toàn bộ sheet
+            if (rowVeh && !rowVeh.includes('OFF')) {
+                for (let j = startRow; j < rawData.length; j++) {
+                    const rj = rawData[j];
+                    if (!rj) continue;
+                    const p = (rj[colPlate > -1 ? colPlate : 2] || '').toString().trim().toUpperCase();
+                    if (!isValidPlateStr(p)) continue;
+                    const vj = (rj[colVehicle] || '').toString().trim().toUpperCase();
+                    if (vj === rowVeh && getRowNcc(rj) === actualNcc) {
+                        inferred = p;
+                        inferredWH = extractWHFromRow(rj);
+                        break;
+                    }
                 }
             }
-            // Nếu không có, quét xuống
+
+            // 2. Quét lên trước / xuống sau (chỉ khớp dòng cùng NCC)
+            if (!inferred) {
+                for (let j = i - 1; j >= Math.max(0, i - 31); j--) {
+                    if (!rawData[j] || !rawData[j][colDate > -1 ? colDate : 1] || !rawData[j][colDate > -1 ? colDate : 1].toString().match(/\d/)) continue;
+                    if (getRowNcc(rawData[j]) !== actualNcc) continue;
+                    let p = (rawData[j][colPlate > -1 ? colPlate : 2] || '').toString().trim().toUpperCase();
+                    if (isValidPlateStr(p)) {
+                        inferred = p;
+                        inferredWH = extractWHFromRow(rawData[j]);
+                        break;
+                    }
+                }
+            }
             if (!inferred) {
                 for (let j = i + 1; j <= Math.min(rawData.length - 1, i + 31); j++) {
                     if (!rawData[j] || !rawData[j][colDate > -1 ? colDate : 1] || !rawData[j][colDate > -1 ? colDate : 1].toString().match(/\d/)) continue;
+                    if (getRowNcc(rawData[j]) !== actualNcc) continue;
                     let p = (rawData[j][colPlate > -1 ? colPlate : 2] || '').toString().trim().toUpperCase();
-                    if (p && !p.includes('OFF') && !p.includes('NGHỈ') && !p.includes('NGHI') && p.length >= 6) {
+                    if (isValidPlateStr(p)) {
                         inferred = p;
                         inferredWH = extractWHFromRow(rawData[j]);
+                        break;
+                    }
+                }
+            }
+
+            // 3. Nếu sheet bị sort theo Biển số đẩy dòng OFF không có Mã xe xuống cuối: tìm biển số của cùng NCC bị thiếu ngày (< 30 dòng)
+            if (!inferred) {
+                const nccPlateCounts = new Map();
+                const nccPlateSampleRow = new Map();
+                for (let j = startRow; j < rawData.length; j++) {
+                    const rj = rawData[j];
+                    if (!rj || getRowNcc(rj) !== actualNcc) continue;
+                    const p = (rj[colPlate > -1 ? colPlate : 2] || '').toString().trim().toUpperCase();
+                    if (!isValidPlateStr(p)) continue;
+                    nccPlateCounts.set(p, (nccPlateCounts.get(p) || 0) + 1);
+                    if (!nccPlateSampleRow.has(p)) nccPlateSampleRow.set(p, rj);
+                }
+                for (const [p, cnt] of nccPlateCounts.entries()) {
+                    if (cnt < 30) {
+                        inferred = p;
+                        inferredWH = extractWHFromRow(nccPlateSampleRow.get(p));
                         break;
                     }
                 }
@@ -4772,11 +4825,13 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             otHours = '';
         }
 
-        // 5. Sanity check for fee columns (nếu có giá trị < 1000đ thì đó là đọc nhầm cột KM, không phải tiền VND)
-        if (parseVietnameseNumber(kmOverFee) > 0 && parseVietnameseNumber(kmOverFee) < 1000) kmOverFee = '';
-        if (parseVietnameseNumber(otFee) > 0 && parseVietnameseNumber(otFee) < 1000) otFee = '';
-        if (parseVietnameseNumber(tollFee) > 0 && parseVietnameseNumber(tollFee) < 1000) tollFee = '';
-        if (parseVietnameseNumber(holidayFee) > 0 && parseVietnameseNumber(holidayFee) < 1000) holidayFee = '';
+        // 5. Sanity check for fee columns (nếu có giá trị < 1000đ ở sheet lẻ thì đó là đọc nhầm cột KM, không phải tiền VND)
+        if (nccName !== 'ALL') {
+            if (parseVietnameseNumber(kmOverFee) > 0 && parseVietnameseNumber(kmOverFee) < 1000) kmOverFee = '';
+            if (parseVietnameseNumber(otFee) > 0 && parseVietnameseNumber(otFee) < 1000) otFee = '';
+            if (parseVietnameseNumber(tollFee) > 0 && parseVietnameseNumber(tollFee) < 1000) tollFee = '';
+            if (parseVietnameseNumber(holidayFee) > 0 && parseVietnameseNumber(holidayFee) < 1000) holidayFee = '';
+        }
 
         // 6. Tự động đánh dấu Phạt nếu tổng chi phí âm
         if (!matchedTripCode && totVal < 0) {

@@ -1734,6 +1734,49 @@ function fetchViaProxy(action, extraParams) {
     });
 }
 
+async function enrichSheetRowsWithCsv(sheetId, gid, rawData) {
+    if (!rawData || !rawData.length || typeof fetch !== 'function') return;
+    try {
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv` + (gid !== undefined && gid !== '' ? `&gid=${gid}` : '');
+        const res = await fetch(csvUrl, { credentials: 'omit' });
+        if (!res.ok) return;
+        const text = await res.text();
+        if (!text) return;
+        const csvRows = [];
+        let row = [], cur = '', inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i], next = text[i + 1];
+            if (inQuotes) {
+                if (ch === '"' && next === '"') { cur += '"'; i++; }
+                else if (ch === '"') inQuotes = false;
+                else cur += ch;
+            } else {
+                if (ch === '"') inQuotes = true;
+                else if (ch === ',') { row.push(cur); cur = ''; }
+                else if (ch === '\r' && next === '\n') { row.push(cur); csvRows.push(row); row = []; cur = ''; i++; }
+                else if (ch === '\n') { row.push(cur); csvRows.push(row); row = []; cur = ''; }
+                else cur += ch;
+            }
+        }
+        if (cur !== '' || row.length > 0) { row.push(cur); csvRows.push(row); }
+        if (csvRows.length !== rawData.length) return;
+        for (let r = 0; r < rawData.length; r++) {
+            const gRow = rawData[r];
+            const cRow = csvRows[r];
+            if (!gRow || !cRow) continue;
+            for (let c = 0; c < cRow.length; c++) {
+                const cVal = String(cRow[c] || '').normalize('NFC').trim();
+                const gVal = String(gRow[c] || '').trim();
+                if (cVal && (!gVal || /\b(off|nghỉ|nghi)\b/i.test(cVal))) {
+                    gRow[c] = cVal;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('CSV enrich skipped:', e.message);
+    }
+}
+
 function fetchSheetJSONP(sheetId, gid, headersCount = 1) {
     return new Promise((resolve, reject) => {
         const callbackName = '_sheetCB_' + (++_jsonpCounter) + '_' + Date.now();
@@ -4556,12 +4599,15 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         if (!dateStr) continue;
         
         let isOffByPlate = false;
+        let isGhnOffByCol = false;
         let inferredWH = '';
-        // Quét tìm chữ OFF/NGHỈ trên tất cả các cột
-        for (let c = 2; c < row.length; c++) {
+        // Quét tìm chữ OFF/NGHỈ trên tất cả các cột bất kỳ (Biển số, Lộ trình, Giờ, KM vào/ra/chạy, Ghi chú...)
+        for (let c = 1; c < row.length; c++) {
             let val = (row[c] || '').toString().trim().toUpperCase();
-            if (val === 'OFF' || val === 'NGHỈ' || val === 'NGHI' || val === 'GHN OFF' || val === 'NCC OFF') {
+            if (!val) continue;
+            if (val === 'OFF' || val === 'NGHỈ' || val === 'NGHI' || val === 'GHN OFF' || val === 'NCC OFF' || val === 'GHN_OFF' || val === 'NCC_OFF' || /\b(GHN[\s_]*OFF|NCC[\s_]*OFF|OFF)\b/.test(val)) {
                 isOffByPlate = true;
+                if (val.includes('GHN')) isGhnOffByCol = true;
                 break;
             }
         }
@@ -4752,42 +4798,44 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
         // Ghép mã chuyến GHN
         const normPlate = normalizeStr(plate);
         const matchKey = `${normPlate}_${dateStr}`;
-          let mCodes = ghnTripMap.get(matchKey); let matchedTripCode = mCodes ? mCodes.join(' | ') : null;
-          if (matchedTripCode) {
-              const autoCodes = matchedTripCode.split('|').map(c => c.trim()).filter(c => c);
-              let validCodes = [];
-              for (let ac of autoCodes) {
-                  const acClean = ac.replace(/[-\s\.]/g, '').toUpperCase();
-                  if (usedGhnCodes.has(acClean)) {
-                      // Bỏ qua để chống trùng lặp
-                  } else {
-                      validCodes.push(ac);
-                      usedGhnCodes.set(acClean, plate);
-                  }
-              }
-              matchedTripCode = validCodes.length > 0 ? validCodes.join(' | ') : null;
-          }
-          
-          const routeLower = (route || '').toLowerCase();
-          const kmStartLower = kmStart.toLowerCase();
-          const kmEndLower = kmEnd.toLowerCase();
-          const kmDiffLower = kmDiff.toLowerCase();
-          
-          const isOffStr = (str) => {
-              return str === 'off' || str.includes('ncc off') || str.includes('nghỉ') || str === 'nghi';
-          };
-          
-          if (isOffByPlate || isOffStr(routeLower) || routeLower.includes(' off ') || routeLower.startsWith('off ') || isOffStr(kmStartLower) || isOffStr(kmEndLower) || isOffStr(kmDiffLower)) {
-              if (routeLower.includes('ghn off')) {
-                  matchedTripCode = 'GHN OFF';
-              } else {
-                  matchedTripCode = 'NCC OFF';
-              }
-          } else if (!matchedTripCode) {
-              if (routeLower.includes('phạt') || routeLower.includes('phat')) {
-                  matchedTripCode = 'Phạt';
-              }
-          }
+        const routeLower = (route || '').toLowerCase();
+        const kmStartLower = kmStart.toLowerCase();
+        const kmEndLower = kmEnd.toLowerCase();
+        const kmDiffLower = kmDiff.toLowerCase();
+
+        const isOffStr = (str) => {
+            return str === 'off' || str.includes('ncc off') || str.includes('ghn off') || str.includes('nghỉ') || str.includes('nghi') || /\boff\b/.test(str);
+        };
+        const isRowOff = isOffByPlate || isOffStr(routeLower) || routeLower.includes(' off ') || routeLower.startsWith('off ') || isOffStr(kmStartLower) || isOffStr(kmEndLower) || isOffStr(kmDiffLower);
+
+        let matchedTripCode = null;
+        if (isRowOff) {
+            if (isGhnOffByCol || routeLower.includes('ghn off') || kmStartLower.includes('ghn off') || kmEndLower.includes('ghn off')) {
+                matchedTripCode = 'GHN OFF';
+            } else {
+                matchedTripCode = 'NCC OFF';
+            }
+        } else {
+            let mCodes = ghnTripMap.get(matchKey);
+            matchedTripCode = mCodes ? mCodes.join(' | ') : null;
+            if (matchedTripCode) {
+                const autoCodes = matchedTripCode.split('|').map(c => c.trim()).filter(c => c);
+                let validCodes = [];
+                for (let ac of autoCodes) {
+                    const acClean = ac.replace(/[-\s\.]/g, '').toUpperCase();
+                    if (usedGhnCodes.has(acClean)) {
+                        // Bỏ qua để chống trùng lặp
+                    } else {
+                        validCodes.push(ac);
+                        usedGhnCodes.set(acClean, plate);
+                    }
+                }
+                matchedTripCode = validCodes.length > 0 ? validCodes.join(' | ') : null;
+            }
+            if (!matchedTripCode && (routeLower.includes('phạt') || routeLower.includes('phat'))) {
+                matchedTripCode = 'Phạt';
+            }
+        }
         const defaultSourceRow = headerRowIdx > -1 ? (i + 1) : (i + 2);
         const sourceRow = sourceRowsArray ? sourceRowsArray[i] : defaultSourceRow;
         
@@ -5053,6 +5101,7 @@ async function loadNccTripData() {
                 if (sheet.ncc === 'ALL') {
                     console.log(`⏩ Bỏ qua lấy tab name cho ALL sheet, tải trực tiếp bằng GID`);
                     const rawData = await fetchSheetJSONP(sheet.id, sheet.gid, 0);
+                    await enrichSheetRowsWithCsv(sheet.id, sheet.gid, rawData);
                     const parsed = parseNccTabData(rawData, sheet.ncc, ghnTripMap, sheet.id, '', sheet.gid, undefined, globalUsedCodes);
                 if (!window.rawSheetTrips[sheet.id]) window.rawSheetTrips[sheet.id] = [];
                 window.rawSheetTrips[sheet.id].push(...parsed);
@@ -5594,13 +5643,14 @@ function rematchNccTrips() {
         if (r.isManualMatch) return;
 
         const routeLower = String(r.route || '').toLowerCase();
-        if (routeLower.includes('ghn off')) {
+        const kmFieldsLower = `${r.kmStart || ''} ${r.kmEnd || ''} ${r.kmDiff || ''}`.toLowerCase();
+        if (routeLower.includes('ghn off') || kmFieldsLower.includes('ghn off')) {
             r.ghnTripCode = 'GHN OFF';
             return;
         } else if (routeLower.includes('phạt') || routeLower.includes('phat')) {
             r.ghnTripCode = 'Phạt';
             return;
-        } else if (routeLower.includes('ncc off') || routeLower.includes('off') || routeLower.includes('nghỉ') || routeLower.includes('nghi')) {
+        } else if (routeLower.includes('ncc off') || routeLower.includes('off') || routeLower.includes('nghỉ') || routeLower.includes('nghi') || /\b(off|nghỉ|nghi)\b/.test(kmFieldsLower)) {
             r.ghnTripCode = 'NCC OFF';
             return;
         }

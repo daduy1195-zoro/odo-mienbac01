@@ -710,6 +710,7 @@
                 <div class="dropdown" style="display:inline-block;position:relative;">
     <button class="btn btn-outline" style="padding:6px 14px;font-size:13px;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">📋 Copy dữ liệu ▾</button>
     <div class="dropdown-content" style="display:none;position:absolute;right:0;background:var(--bg-card);min-width:160px;box-shadow:0 8px 16px rgba(0,0,0,0.5);z-index:1000;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
+        <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1VQF2sovkkD3HiB89qTiuZoSqwA9-0iNGiTIa3FPmxzk')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">📄 Copy Tháng 11</button>
         <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1GNAXAdRCwvoZ_l4TpW1JCPV6QWGzEQiYYezYnliR7Mo')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">📄 Copy Tháng 10</button>
         <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">📄 Copy Tháng 9</button>
         <button onclick="this.parentElement.style.display='none'; copyNccDataToClipboard('1Ls3_WDZBzEXfNu2vJOPJI18kKQbvyZIkLPtAYJUngqk')" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">📄 Copy Tháng 8</button>
@@ -820,7 +821,9 @@ const CONFIG = {
         // THCP Tổng hợp Tháng 9
         { id: '1baESgXT21dWnZM2D7jllgPDWoPNjAVhhD_6db0eYG78', gid: '14915787', ncc: 'ALL', label: 'Tháng 9', cycles: ['2026-08'] },
         // THCP Tổng hợp Tháng 10
-        { id: '1GNAXAdRCwvoZ_l4TpW1JCPV6QWGzEQiYYezYnliR7Mo', gid: '678803836', ncc: 'ALL', label: 'Tháng 10', cycles: ['2026-09', '2026-10'] }
+        { id: '1GNAXAdRCwvoZ_l4TpW1JCPV6QWGzEQiYYezYnliR7Mo', gid: '678803836', ncc: 'ALL', label: 'Tháng 10', cycles: ['2026-09'] },
+        // THCP Tổng hợp Tháng 11
+        { id: '1VQF2sovkkD3HiB89qTiuZoSqwA9-0iNGiTIa3FPmxzk', gid: '268120428', ncc: 'ALL', label: 'Tháng 11', cycles: ['2026-10', '2026-11'] }
     ],
 
     // Telegram Proxy (token ẩn trên server Google Apps Script)
@@ -3194,6 +3197,16 @@ function renderRanking(filtered, month, whFilter) {
                 if (sIdx !== -1) {
                     // Ưu tiên sử dụng startDate (ngày vào làm) để không tính quá khứ
                     firstActiveIndex = sIdx;
+                } else {
+                    const sp = String(e.startDate).split('/');
+                    const cp = allDatesInCycle.length > 0 ? String(allDatesInCycle[0]).split('/') : [];
+                    if (sp.length === 3 && cp.length === 3) {
+                        const sDate = new Date(parseInt(sp[2]), parseInt(sp[1]) - 1, parseInt(sp[0]));
+                        const cStart = new Date(parseInt(cp[2]), parseInt(cp[1]) - 1, parseInt(cp[0]));
+                        if (sDate <= cStart) firstActiveIndex = actualFirstIdx;
+                    } else {
+                        firstActiveIndex = actualFirstIdx;
+                    }
                 }
             } else {
                 firstActiveIndex = actualFirstIdx;
@@ -4371,7 +4384,7 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
     // Final fallback
     
     const sheetConfig = CONFIG.NCC_TRIP_SHEETS.find(s => s.id === sheetId);
-    const isMonth9 = sheetConfig && (sheetConfig.label === 'Tháng 9' || sheetConfig.label === 'Tháng 10');
+    const isMonth9 = sheetConfig && (sheetConfig.label === 'Tháng 9' || sheetConfig.label === 'Tháng 10' || sheetConfig.label === 'Tháng 11');
     if (colKmStart === -1) colKmStart = isMonth9 ? 13 : 14;
     if (colKmEnd === -1) colKmEnd = isMonth9 ? 14 : 15;
     if (colKmDiff === -1) colKmDiff = isMonth9 ? 15 : 16;
@@ -4500,7 +4513,10 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
             const sheetLabel = sheetConfig ? sheetConfig.label : '';
             const isInsideCycle = (dd, mm, yy) => {
                 if (yy !== 2026) return false;
-                if (sheetLabel === 'Tháng 10') {
+                if (sheetLabel === 'Tháng 11') {
+                    if (mm === 10 && dd >= 26) return true;
+                    if (mm === 11 && dd <= 25) return true;
+                } else if (sheetLabel === 'Tháng 10') {
                     if (mm === 9 && dd >= 26) return true;
                     if (mm === 10 && dd <= 25) return true;
                 } else if (sheetLabel === 'Tháng 9') {
@@ -4514,9 +4530,9 @@ function parseNccTabData(rawData, nccName, ghnTripMap, sheetId, tabName, tabGid,
                     if (mm >= 5 && mm <= 6) return true;
                     if (mm === 7 && dd <= 25) return true;
                 } else {
-                    // Fallback to Month 10
-                    if (mm === 9 && dd >= 26) return true;
-                    if (mm === 10 && dd <= 25) return true;
+                    // Fallback to Month 11
+                    if (mm === 10 && dd >= 26) return true;
+                    if (mm === 11 && dd <= 25) return true;
                 }
                 return false;
             };
